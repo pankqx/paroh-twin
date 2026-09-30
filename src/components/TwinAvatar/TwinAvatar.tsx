@@ -99,6 +99,8 @@ function Strand({ d, order, w = 1, o = 1, sway, dir = 1, dur = 9, rip = false }:
   );
 }
 
+const NOSE_T = "translate(300 456) scale(0.5) translate(-300 -434)";
+
 export default function TwinAvatar({
   state,
   level = 0,
@@ -355,7 +357,7 @@ export default function TwinAvatar({
   const fm = blooming ? `url(#${id("bloom")})` : undefined; // bloom mask for colour layers
 
   const eye = (side: "left" | "right", c: { cx: number; cy: number }, order: number) => (
-    <g key={side} transform={`translate(${c.cx} ${c.cy}) scale(1.16)`}>
+    <g key={side} transform={`translate(${c.cx} ${c.cy + 24}) scale(1.3 1.75)`}>
       <g className="tf-eye">
         <g transform={`translate(${-c.cx} ${-c.cy})`}>
           <g className="ta-flesh" mask={fm}>
@@ -411,13 +413,17 @@ export default function TwinAvatar({
       </g>
       <Line d={A.CONTOUR_L} order={0.3} reduce={reduce} />
       <Line d={A.CONTOUR_R} order={0.3} reduce={reduce} />
-      <Line d={G.BROWS.left} order={0.5} reduce={reduce} w={2.2} />
-      <Line d={G.BROWS.right} order={0.5} reduce={reduce} w={2.2} />
-      <Line d={G.NOSE_BRIDGE} order={0.6} reduce={reduce} />
-      <Line d={G.NOSE_BASE} order={0.62} reduce={reduce} />
-      {G.NOSE_NOSTRILS.map((d) => (
-        <Line key={d} d={d} order={0.66} reduce={reduce} w={1.3} />
-      ))}
+      <g transform="translate(0 26)">
+        <Line d={G.BROWS.left} order={0.5} reduce={reduce} w={2.2} />
+        <Line d={G.BROWS.right} order={0.5} reduce={reduce} w={2.2} />
+      </g>
+      <g transform={NOSE_T}>
+        <Line d={G.NOSE_BRIDGE} order={0.6} reduce={reduce} />
+        <Line d={G.NOSE_BASE} order={0.62} reduce={reduce} />
+        {G.NOSE_NOSTRILS.map((d) => (
+          <Line key={d} d={d} order={0.66} reduce={reduce} w={1.3} />
+        ))}
+      </g>
       <Line d={G.CHIN_LINE} order={0.7} reduce={reduce} o={0.45} w={1.2} />
     </g>
   );
@@ -527,7 +533,7 @@ export default function TwinAvatar({
             <stop offset="0" stopColor="color-mix(in srgb, var(--outfit) 75%, var(--outfit-hi))" />
             <stop offset="1" stopColor="color-mix(in srgb, var(--outfit) 75%, #000)" />
           </linearGradient>
-          <linearGradient id={id("lip")} gradientUnits="userSpaceOnUse" x1="0" y1="466" x2="0" y2="500">
+          <linearGradient id={id("lip")} gradientUnits="userSpaceOnUse" x1="0" y1="476" x2="0" y2="512">
             <stop offset="0" stopColor="color-mix(in srgb, var(--lip) 80%, #fff)" />
             <stop offset="1" stopColor="color-mix(in srgb, var(--lip) 88%, #000)" />
           </linearGradient>
@@ -643,19 +649,21 @@ export default function TwinAvatar({
                 <path d={A.FACE_FILL} fill={`url(#${id("skin")})`} />
                 <path d={A.FACE_FILL} fill={`url(#${id("faceshade")})`} />
                 <ellipse cx="262" cy="292" rx="56" ry="34" fill={`url(#${id("glow")})`} />
-                <ellipse cx="236" cy="430" rx="44" ry="34" fill={`url(#${id("blush")})`} />
-                <ellipse cx="364" cy="430" rx="44" ry="34" fill={`url(#${id("blush")})`} />
-                <ellipse cx="300" cy="438" rx="14" ry="8" fill={`url(#${id("glow")})`} />
-                <path d={G.NOSE_BRIDGE} className="ta-nose" />
-                <path d={G.BROWS.left} className="ta-brow" />
-                <path d={G.BROWS.right} className="ta-brow" />
+                <ellipse cx="232" cy="456" rx="46" ry="32" fill={`url(#${id("blush")})`} />
+                <ellipse cx="368" cy="456" rx="46" ry="32" fill={`url(#${id("blush")})`} />
+                <ellipse cx="300" cy="448" rx="10" ry="6" fill={`url(#${id("glow")})`} />
+                <path d={G.NOSE_BRIDGE} className="ta-nose" transform={NOSE_T} />
+                <g transform="translate(0 26)">
+                  <path d={G.BROWS.left} className="ta-brow" />
+                  <path d={G.BROWS.right} className="ta-brow" />
+                </g>
               </g>
               {eye("left", G.LEFT_EYE, 0.45)}
               {eye("right", G.RIGHT_EYE, 0.45)}
               <g className="ta-flesh" mask={fm}>
                 <path ref={lipFillRef} d={A.lipFillPath(closed.upper, closed.lower)} fill={`url(#${id("lip")})`} />
                 <path ref={gapFleshRef} d={closed.gap} className="ta-mouth-dark" />
-                <path d="M 282 484 C 292 490, 308 490, 318 484" className="ta-lipshine" />
+                <path d="M 286 494 C 294 499, 306 499, 314 494" className="ta-lipshine" />
               </g>
               <g className="ta-flesh" mask={fm}>
                 <path d={A.HAIR_CAP} fill={`url(#${id("hair")})`} />

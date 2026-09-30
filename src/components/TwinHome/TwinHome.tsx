@@ -15,6 +15,7 @@ import Heatmap from "@/components/Heatmap/Heatmap";
 import Ring from "@/components/Ring/Ring";
 import Sparkline from "@/components/Sparkline/Sparkline";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
+import HomeLife from "./HomeLife";
 import TwinFace, { type TwinFaceHandle } from "@/components/TwinFace/TwinFace";
 import { SAMPLE_STUDENT_NAME } from "@/mock/sample";
 import { simulate } from "@/lib/twin/scenarios";
@@ -185,6 +186,13 @@ export default function TwinHome() {
 
       <section className="twin-hero">
         <div className="twin-stage">
+          <HomeLife
+            name={name}
+            deadline={deadlines[0] ? { title: deadlines[0].title.length > 28 ? `${deadlines[0].title.slice(0, 26)}…` : deadlines[0].title, days: Math.max(0, Math.ceil((new Date(deadlines[0].due).getTime() - Date.now()) / 86400000)) } : undefined}
+            habitPct={Math.round(twin.habitConsistency * 100)}
+            loadPct={load}
+            approvedCount={approved.length}
+          />
           <Constellation facts={approved} onFocusFact={setFocused} />
           <div className="twin-stage-face">
             <TwinFace ref={face} state="idle" />

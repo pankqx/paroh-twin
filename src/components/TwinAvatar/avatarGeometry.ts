@@ -27,11 +27,11 @@ export const BODY_SHIFT = -44;
 
 // ---- Head ----------------------------------------------------------------------------------
 
-export const CONTOUR_L = "M 196 290 C 182 352, 188 432, 222 494 C 244 540, 274 566, 300 570";
+export const CONTOUR_L = "M 198 290 C 182 350, 180 424, 198 470 C 218 520, 258 552, 300 554";
 export const CONTOUR_R = mirror(CONTOUR_L);
 /** Face fill: follows the avatar contour (a touch wider and rounder than the line-art face). */
 export const FACE_FILL =
-  "M 196 290 C 182 352, 188 432, 222 494 C 244 540, 274 566, 300 570 C 326 566, 356 540, 378 494 C 412 432, 418 352, 404 290 C 400 226, 352 186, 300 184 C 248 186, 200 226, 196 290 Z";
+  "M 198 290 C 182 350, 180 424, 198 470 C 218 520, 258 552, 300 554 C 342 552, 382 520, 402 470 C 420 424, 418 350, 402 290 C 398 226, 352 186, 300 184 C 248 186, 202 226, 198 290 Z";
 
 /** Skin of the neck and the open neckline. */
 export const NECK_FILL =
@@ -42,7 +42,7 @@ export const NECK_SHADOW = "M 262 548 C 264 572, 270 588, 300 596 C 330 588, 336
 
 /** Hair that frames the forehead: everything outside the two fringe curves, above the temples. */
 export const HAIR_CAP =
-  "M 300 214 C 262 214, 228 232, 212 272 C 206 290, 205 312, 205 336 C 197 334, 191 330, 187 324 C 177 250, 212 156, 300 144 C 388 156, 423 250, 413 324 C 409 330, 403 334, 395 336 C 395 312, 394 290, 388 272 C 372 232, 338 214, 300 214 Z";
+  "M 300 236 C 258 238, 226 262, 208 304 C 200 324, 196 344, 194 366 C 184 356, 176 340, 172 322 C 162 246, 206 156, 300 144 C 394 156, 438 246, 428 322 C 424 340, 416 356, 406 366 C 404 344, 400 324, 392 304 C 374 262, 342 238, 300 236 Z";
 
 /** The large mass of hair behind the head and shoulders. */
 export const HAIR_BACK_FILL =
@@ -50,7 +50,7 @@ export const HAIR_BACK_FILL =
 
 /** Locks that fall in front of each shoulder (outer guide to inner guide of the front strands). */
 const LOCK_L =
-  "M 298 186 C 244 194, 204 248, 196 322 C 190 386, 180 456, 164 530 C 152 590, 160 690, 146 796 C 170 760, 190 700, 198 630 C 204 560, 208 500, 210 444 C 212 390, 214 350, 222 320 C 232 270, 256 236, 298 206 Z";
+  "M 298 150 C 230 156, 176 226, 170 318 C 164 400, 156 470, 142 540 C 130 600, 138 700, 126 800 C 152 764, 172 704, 180 634 C 186 570, 186 520, 184 470 C 182 430, 182 380, 192 330 C 190 290, 198 268, 210 250 Z";
 export const LOCK_LEFT = LOCK_L;
 export const LOCK_RIGHT = mirror(LOCK_L);
 
@@ -97,17 +97,18 @@ export function lipFillPath(upper: string, lower: string): string {
 /** Mouth paths with fuller lips than the line-art version (same structure, so any opening works). */
 const rnd = (v: number) => Math.round(v * 100) / 100;
 export function mouthPathsAv(h: number) {
-  const cy = 484;
-  const lx = 257;
-  const rx = 343;
+  const cy = 494;
+  const cyc = cy - 5; // corners lifted: a small smile
+  const lx = 268;
+  const rx = 332;
   const lift = h * 0.22;
-  const up = cy - 15 - lift;
+  const up = cy - 12 - lift;
   const gapTop = cy - 1.5 - lift * 0.6;
   const gapBottom = cy + 1.5 + h * 0.78;
-  const lowerBottom = cy + 22 + h * 0.9;
+  const lowerBottom = cy + 19 + h * 0.9;
   const pinch = h * 0.04;
-  const upper = `M ${rnd(lx + pinch)} ${cy} C ${rnd(276)} ${rnd(cy - 7 - lift)}, ${rnd(289)} ${rnd(up - 1)}, 300 ${rnd(up)} C ${rnd(311)} ${rnd(up - 1)}, ${rnd(324)} ${rnd(cy - 7 - lift)}, ${rnd(rx - pinch)} ${cy}`;
-  const lower = `M ${rnd(lx + pinch)} ${cy} C ${rnd(281)} ${rnd(lowerBottom)}, ${rnd(319)} ${rnd(lowerBottom)}, ${rnd(rx - pinch)} ${cy}`;
-  const gap = `M ${rnd(lx + pinch)} ${cy} C ${rnd(281)} ${rnd(gapTop)}, ${rnd(319)} ${rnd(gapTop)}, ${rnd(rx - pinch)} ${cy} C ${rnd(319)} ${rnd(gapBottom)}, ${rnd(281)} ${rnd(gapBottom)}, ${rnd(lx + pinch)} ${cy}`;
+  const upper = `M ${rnd(lx + pinch)} ${cyc} C ${rnd(282)} ${rnd(cy - 6 - lift)}, ${rnd(292)} ${rnd(up - 1)}, 300 ${rnd(up)} C ${rnd(308)} ${rnd(up - 1)}, ${rnd(318)} ${rnd(cy - 6 - lift)}, ${rnd(rx - pinch)} ${cyc}`;
+  const lower = `M ${rnd(lx + pinch)} ${cyc} C ${rnd(287)} ${rnd(lowerBottom)}, ${rnd(313)} ${rnd(lowerBottom)}, ${rnd(rx - pinch)} ${cyc}`;
+  const gap = `M ${rnd(lx + pinch)} ${cyc} C ${rnd(287)} ${rnd(gapTop)}, ${rnd(313)} ${rnd(gapTop)}, ${rnd(rx - pinch)} ${cyc} C ${rnd(313)} ${rnd(gapBottom)}, ${rnd(287)} ${rnd(gapBottom)}, ${rnd(lx + pinch)} ${cyc}`;
   return { upper, lower, gap };
 }

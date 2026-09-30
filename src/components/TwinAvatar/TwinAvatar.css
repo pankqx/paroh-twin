@@ -159,3 +159,12 @@
     opacity: var(--form, 0);
   }
 }
+
+/* Colour mode: the drawn front strands would run across the cheeks; let the fill carry the hair. */
+.ta .tf-hair.front {
+  opacity: calc(1 - var(--form, 0) * 0.9);
+}
+.ta .ta-nose {
+  stroke-width: 10;
+  opacity: 0.3;
+}

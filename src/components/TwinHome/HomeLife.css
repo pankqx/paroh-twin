@@ -1,0 +1,89 @@
+.hl {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hl-rings {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(118%, 2000px);
+  height: auto;
+  transform: translate(-50%, -50%);
+  opacity: 0.9;
+}
+.hl-spin {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: hl-rot 60s linear infinite;
+}
+.hl-spin.b {
+  animation-duration: 42s;
+  animation-direction: reverse;
+}
+.hl-spin.c {
+  animation-duration: 90s;
+}
+@keyframes hl-rot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hl-bubble {
+  position: absolute;
+  left: calc(50% + min(14cqw, 210px));
+  top: 12%;
+  max-width: min(260px, 22cqw);
+  padding: 0.7rem 1rem;
+  border-radius: 18px 18px 18px 4px;
+  background: color-mix(in srgb, var(--bg) 55%, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.35;
+  animation: hl-pop 4200ms var(--ease) both;
+}
+@keyframes hl-pop {
+  0% { opacity: 0; transform: translateY(8px) scale(0.96); }
+  8% { opacity: 1; transform: none; }
+  88% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+
+.hl-chip {
+  position: absolute;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  animation: hl-float 7s ease-in-out infinite;
+  white-space: nowrap;
+}
+.hl-chip b {
+  color: var(--text);
+  font-weight: 600;
+}
+.hl-chip.c1 { right: 4%; top: 30%; animation-delay: -1s; border-color: rgba(94, 234, 212, 0.35); }
+.hl-chip.c2 { left: 33%; top: 5%; animation-delay: -3s; border-color: rgba(167, 139, 250, 0.35); }
+.hl-chip.c3 { right: 4%; top: 39%; animation-delay: -2s; border-color: rgba(251, 191, 36, 0.4); }
+.hl-chip.c4 { display: none; }
+@keyframes hl-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@media (max-width: 900px) {
+  .hl-chip, .hl-bubble { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hl-spin, .hl-chip, .hl-bubble { animation: none; }
+  .hl-bubble { opacity: 1; }
+}
