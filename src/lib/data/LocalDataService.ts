@@ -2,7 +2,7 @@ import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, H
 import type { DataService, Repo } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { extractCanned } from "../ai/extractCanned";
-import { demoFacts, demoEntry } from "../../mock/demoEntry";
+import { buildTwinContext } from "../ai/buildTwinContext";
 import { deriveTwinState } from "../twin";
 import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
 
@@ -106,8 +106,33 @@ export class LocalDataService implements DataService {
   }
   async extractFacts(input: { text: string; source: "journal" | "question"; sourceId: string }) {
     if (!this.state.consent.journal) return [];
-    const sourceEntry = (await this.entries.list()).find(entry => entry.id === input.sourceId);
-    const result = sourceEntry?.id === demoEntry.id || input.text.trim() === demoEntry.body.trim() ? clone(demoFacts) : extractCanned(input.text, input.sourceId, input.source);
+    let result: Fact[];
+    try {
+      const context = await buildTwinContext(this.state.consent, this);
+      const response = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...input, context }),
+      });
+      if (!response.ok) throw new Error("Fact extraction route failed");
+      const payload: unknown = await response.json();
+      if (!payload || typeof payload !== "object" || !Array.isArray((payload as { facts?: unknown }).facts)) throw new Error("Fact extraction route returned an invalid response");
+      const facts = (payload as { facts: unknown[] }).facts;
+      if (facts.some(fact => !fact || typeof fact !== "object" || typeof (fact as { text?: unknown }).text !== "string" || typeof (fact as { kind?: unknown }).kind !== "string")) throw new Error("Fact extraction route returned invalid facts");
+      const now = stamp();
+      result = facts.map((value, index) => {
+        const fact = value as Partial<Fact>;
+        return {
+          id: `${input.sourceId}-fact-${index + 1}`,
+          kind: fact.kind!, text: fact.text!, category: fact.category ?? "other", data: fact.data ?? {},
+          sourceId: input.sourceId, sourceType: input.source, status: "pending",
+          confidence: typeof fact.confidence === "number" ? Math.max(0, Math.min(1, fact.confidence)) : 0.65,
+          createdAt: now, updatedAt: now,
+        };
+      });
+    } catch {
+      result = extractCanned(input.text, input.sourceId, input.source);
+    }
     for (const fact of result) await this.facts.upsert(fact);
     return result;
   }
@@ -119,10 +144,26 @@ export class LocalDataService implements DataService {
   async explain(decisionId: string) {
     const decision = await this.decisions.get(decisionId);
     if (!decision) return { text: "I do not have enough saved scenario data to explain this yet.", spoken: "I need more saved data to explain this choice.", usedFactIds: [] };
-    const usedFactIds = (await this.facts.list()).filter(f => f.status === "approved").slice(-3).map(f => f.id);
-    const best = recommend(decision.scenarios);
-    const text = best ? `${best.label} is the stronger option in the current estimates. ${best.assumptions.join(" ")}` : "I do not have enough scenario data to compare these options.";
-    return { text, spoken: text.slice(0, 220), usedFactIds };
+    let usedFactIds: string[] = [];
+    try {
+      const context = await buildTwinContext(this.state.consent, this);
+      usedFactIds = context.approvedFacts.map(fact => fact.id);
+      const response = await fetch("/api/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenarios: decision.scenarios, recommendedId: decision.recommendedId, approvedFacts: context.approvedFacts, context }),
+      });
+      if (!response.ok) throw new Error("Explain route failed");
+      const payload: unknown = await response.json();
+      if (!payload || typeof payload !== "object" || typeof (payload as { text?: unknown }).text !== "string" || typeof (payload as { spoken?: unknown }).spoken !== "string") throw new Error("Explain route returned an invalid response");
+      const result = payload as { text: string; spoken: string; usedFactIds?: unknown };
+      const allowedIds = new Set(usedFactIds);
+      return { text: result.text, spoken: result.spoken.split(/\s+/).slice(0, 55).join(" "), usedFactIds: Array.isArray(result.usedFactIds) ? result.usedFactIds.filter((id): id is string => typeof id === "string" && allowedIds.has(id)) : usedFactIds };
+    } catch {
+      const best = recommend(decision.scenarios);
+      const text = best ? `${best.label} fits the current comparison. ${best.summary}` : "I do not have enough scenario data to compare these options.";
+      return { text, spoken: text.split(/\s+/).slice(0, 55).join(" "), usedFactIds };
+    }
   }
   async previewPayload(kind: "extract" | "scenarios" | "explain", input: unknown) {
     const categories: ConsentCategory[] = kind === "extract" ? ["journal"] : kind === "scenarios" ? ["tasks", "planner", "decisions"] : ["tasks", "decisions"];
