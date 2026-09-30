@@ -1,0 +1,62 @@
+import type {
+  CheckIn,
+  ConsentCategory,
+  ConsentSettings,
+  Decision,
+  Fact,
+  Goal,
+  Habit,
+  JournalEntry,
+  Scenario,
+  Task,
+  TwinState,
+} from "../types";
+
+/** Generic CRUD surface shared by every stored entity. */
+export interface Repo<T extends { id: string }> {
+  list(): Promise<T[]>;
+  get(id: string): Promise<T | undefined>;
+  upsert(item: T): Promise<T>;
+  remove(id: string): Promise<void>;
+}
+
+/**
+ * The only way the UI reads or writes data. Never call storage or the network
+ * from components. See docs/HANDOFF.md section 8.
+ */
+export interface DataService {
+  // CRUD
+  entries: Repo<JournalEntry>;
+  facts: Repo<Fact>;
+  tasks: Repo<Task>;
+  goals: Repo<Goal>;
+  habits: Repo<Habit>;
+  checkins: Repo<CheckIn>;
+  decisions: Repo<Decision>;
+
+  // consent
+  getConsent(): Promise<ConsentSettings>;
+  setConsent(consent: ConsentSettings): Promise<void>;
+
+  // twin (derived from approved facts and permitted data)
+  getTwinState(): Promise<TwinState>;
+
+  // AI (server-side, OpenRouter, with canned fallback)
+  extractFacts(input: {
+    text: string;
+    source: "journal" | "question";
+    sourceId: string;
+  }): Promise<Fact[]>;
+  proposeScenarios(prompt: string): Promise<Scenario[]>;
+  explain(
+    decisionId: string,
+  ): Promise<{ text: string; spoken: string; usedFactIds: string[] }>;
+  previewPayload(
+    kind: "extract" | "scenarios" | "explain",
+    input: unknown,
+  ): Promise<{ categories: ConsentCategory[]; text: string }>;
+
+  // seed
+  loadSampleData(): Promise<void>;
+  resetAll(): Promise<void>;
+}

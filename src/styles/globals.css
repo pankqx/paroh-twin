@@ -1,0 +1,329 @@
+/* Paroh global styles — implemented from docs/DESIGN_SYSTEM.md */
+
+:root {
+  --ink: #23291f;
+  --ink-soft: #4b5245;
+  --muted: #7a7566;
+  --paper: #f6f4ee;
+  --paper-raised: #ffffff;
+  --line: #dcd6c6;
+  --forest: #2f5d50;
+  --forest-dark: #1f4038;
+  --forest-tint: #e4eee7;
+  --amber: #a8752c;
+  --amber-tint: #f6ecd9;
+  --rust: #a34d3d;
+  --rust-tint: #f5e2dd;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --radius: 3px;
+  --shadow-card: 0 1px 0 rgba(35, 41, 31, 0.06);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 0.4em;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 2.1rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.35rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0 0 1em;
+  color: var(--ink-soft);
+  max-width: 62ch;
+}
+
+a {
+  color: var(--forest);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.05s;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--forest-tint);
+  color: var(--forest-dark);
+}
+
+/* ---------- Buttons ---------- */
+
+.btn-primary {
+  background: var(--forest);
+  color: #fff;
+  padding: 0.85rem 1.6rem;
+  font-weight: 500;
+  font-size: 1rem;
+  border-radius: 4px;
+}
+
+.btn-primary:hover {
+  background: var(--forest-dark);
+}
+
+.btn-primary:disabled {
+  background: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-soft);
+  padding: 0.7rem 1.3rem;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  border-color: var(--forest);
+  color: var(--forest);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--forest);
+  padding: 0.4rem 0.2rem;
+  font-weight: 500;
+}
+
+.btn-text:hover {
+  text-decoration: underline;
+}
+
+.btn-small {
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+}
+
+/* ---------- Forms ---------- */
+
+input[type="text"],
+input[type="email"],
+input[type="search"],
+input[type="number"],
+input[type="date"],
+input:not([type]),
+select,
+textarea,
+.field {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.75rem;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input:not([type]):focus,
+select:focus,
+textarea:focus,
+.field:focus {
+  border-color: var(--forest);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+
+::placeholder {
+  color: var(--muted);
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
+/* ---------- Card ---------- */
+
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------- Status pills ---------- */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25em 0.75em;
+  border-radius: 100px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-approved {
+  background: var(--forest-tint);
+  color: var(--forest-dark);
+}
+
+.status-pending {
+  background: var(--amber-tint);
+  color: var(--amber);
+}
+
+.status-rejected {
+  background: var(--rust-tint);
+  color: var(--rust);
+}
+
+/* ---------- Filter chips ---------- */
+
+.chip {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.4rem 0.9rem;
+  border-radius: 100px;
+}
+
+.chip:hover {
+  color: var(--ink);
+}
+
+.chip.active,
+.chip[aria-pressed="true"] {
+  border-color: var(--forest);
+  color: var(--forest);
+  background: var(--forest-tint);
+}
+
+/* ---------- Recurring patterns ---------- */
+
+.empty-state {
+  font-size: 0.9rem;
+  color: var(--muted);
+  padding: 1.25rem;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+}
+
+.error-text {
+  color: var(--rust);
+  font-size: 0.85rem;
+  margin: 0.75rem 0 0;
+}
+
+.ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.ledger > li {
+  border-bottom: 1px solid var(--line);
+  padding: 0.9rem 0.25rem;
+}
+
+/* ---------- Page shell ---------- */
+
+.page {
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+  max-width: 920px;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 2rem 1.25rem 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
