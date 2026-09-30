@@ -1,40 +1,59 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { approveFact, editFact, rejectFact } from "@/app/factActions";
 import { dataService } from "@/app/dataService";
+import Doodle from "@/components/Doodle/Doodle";
 import FactCard from "@/components/FactCard/FactCard";
+import { notifyFactsChanged } from "@/components/shell/events";
 import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
-import AvatarAnchor from "@/components/TwinAvatar/AvatarAnchor";
-import { play, setLive, type AvatarState } from "@/components/TwinAvatar/avatarStore";
+import { ViewTransition } from "react";
+import TwinAvatar, { type AvatarState, type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
+import { onAction, usePrefs } from "@/components/TwinAvatar/avatarStore";
 import ChooseTwin from "@/components/TwinStage/ChooseTwin";
 import Gauges from "@/components/TwinStage/Gauges";
-import MemoryStream from "@/components/TwinStage/MemoryStream";
+import "@/components/TwinAvatar/TwinAvatar.css";
 import Waveform from "@/components/Waveform/Waveform";
+import Karaoke from "./Karaoke";
 import * as listen from "@/lib/voice/listen";
 import * as speech from "@/lib/voice/speak";
 import type { Fact } from "@/lib/types";
-import { converse, openingTurn, type ConverseTurn } from "./converse";
-import Karaoke from "./Karaoke";
 import "./TalkStage.css";
 
-interface Turn {
-  id: number;
-  who: "you" | "twin";
-  text: string; // what is shown (her spoken line, or what you said)
-  reply?: string; // her written reply, when it differs from what she says
-  offer?: { kind: "whatif" | "journal"; text: string };
+interface Question {
+  id: string;
+  text: string;
+  domain: string;
+  quickReplies: string[];
 }
 
-interface Card {
-  fact: Fact;
-  said: string;
-}
+// Used only if the engine returns no questions (nothing to ask, or it is unavailable).
+// TODO: drop once nextQuestions() is always populated.
+const FALLBACK: Question[] = [
+  {
+    id: "twin-question-routines",
+    text: "When do you usually focus best?",
+    domain: "routines",
+    quickReplies: ["Morning", "Afternoon", "Evening"],
+  },
+  {
+    id: "twin-question-goals",
+    text: "Which goal matters most to you this week?",
+    domain: "goals",
+    quickReplies: ["Exam preparation", "Project", "Steady routine"],
+  },
+];
 
 // A tapped reply becomes a first-person sentence, so the extractor can read it like a
-// journal line. The transcript shows the label; the sentence is what is sent.
+// journal line. The card shows exactly that sentence; you approve or change it.
 const STATEMENT: Record<string, (a: string) => string> = {
   tasks: (a) => `I will work on ${a.toLowerCase()} this week.`,
   habits: (a) => `I want to keep my ${a.toLowerCase()} habit.`,
@@ -44,73 +63,60 @@ const STATEMENT: Record<string, (a: string) => string> = {
   planner: (a) => `I can study for ${a.toLowerCase()} tomorrow.`,
 };
 
-const CONFIRMATIONS = ["Got it. I'll remember that.", "Noted. Thank you.", "That helps. Thank you."];
-const UNSUPPORTED = "Voice input isn't available in this browser.";
-const FAILED = "Something went wrong on my side. Try again, or type it below.";
+const CONFIRMATIONS = [
+  "Got it. I'll remember that.",
+  "Noted. Thank you.",
+  "That helps. Thank you.",
+];
+
+type Step = "start" | "ask" | "listening" | "thinking" | "review" | "done";
 
 const noopSubscribe = () => () => {};
-const entryId = () => `talk-${Date.now()}`;
 
 export default function TalkStage() {
-  const router = useRouter();
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [learned, setLearned] = useState<string[]>([]);
-  const [quick, setQuick] = useState<string[]>([]);
-  const [listening, setListening] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [qi, setQi] = useState(0);
+  const [step, setStep] = useState<Step>("start");
+  const [line, setLine] = useState(""); // what she is saying (also the caption)
+  const [sentence, setSentence] = useState(""); // the sentence being spoken right now
   const [speaking, setSpeaking] = useState(false);
-  const [sentence, setSentence] = useState("");
   const [mouth, setMouth] = useState<0 | 1 | 2 | 3>(0);
-  const [interim, setInterim] = useState("");
+  const [learned, setLearned] = useState<string[]>([]); // facts approved today
+  const [heard, setHeard] = useState(""); // live transcript while listening
   const [typed, setTyped] = useState("");
   const [level, setLevel] = useState(0);
-  const [error, setError] = useState("");
-  const [offline, setOffline] = useState(false);
-  const [voiceConsent, setVoiceConsent] = useState(true); // "voice" consent category: may answers become facts?
-  const [navTo, setNavTo] = useState(""); // what-if prompt we are about to open in Ask
-  const [saved, setSaved] = useState<Record<number, string>>({}); // turn id -> note under a journal offer
+  const [cards, setCards] = useState<Array<{ fact: Fact; said: string }>>([]);
+  const [notice, setNotice] = useState("");
+  const [history, setHistory] = useState<Array<{ who: "twin" | "you"; text: string }>>([]);
+  const histRef = useRef<HTMLOListElement>(null);
   const [voiceOn] = useVoicePref();
 
-  const canListen = useSyncExternalStore(noopSubscribe, listen.isSupported, () => true);
+  const canDictate = useSyncExternalStore(
+    noopSubscribe,
+    listen.isSupported,
+    () => false,
+  );
+  const canSpeak = useSyncExternalStore(
+    noopSubscribe,
+    speech.isSupported,
+    () => false,
+  );
 
-  const turnsRef = useRef<Turn[]>([]);
-  const nextId = useRef(1);
-  const reqId = useRef(0);
-  const listeningRef = useRef(false);
-  const pendingRef = useRef(false);
-  const interimRef = useRef("");
-  const domainRef = useRef<string | undefined>(undefined);
-  const navRef = useRef("");
-  const lastLevel = useRef(0);
+  const approved = useRef(0); // approvals in this round
   const confirmIdx = useRef(0);
-  const logRef = useRef<HTMLOListElement>(null);
-  const actions = useRef<{ send: (t: string, label?: string) => Promise<void>; toggleMic: () => void; stopAll: () => void }>({
-    send: async () => {},
-    toggleMic: () => {},
-    stopAll: () => {},
-  });
+  const lastLevel = useRef(0);
+  const submitRef = useRef<(raw: string, tapped: boolean) => void>(() => {});
 
-  const pushTurn = useCallback((t: Omit<Turn, "id">) => {
-    const turn = { ...t, id: nextId.current++ };
-    turnsRef.current = [...turnsRef.current, turn];
-    setTurns(turnsRef.current);
-    return turn;
-  }, []);
-
-  const setPendingBoth = useCallback((v: boolean) => {
-    pendingRef.current = v;
-    setPending(v);
-  }, []);
-
-  const setListeningBoth = useCallback((v: boolean) => {
-    listeningRef.current = v;
-    setListening(v);
-    if (!v) {
-      interimRef.current = "";
-      setInterim("");
-      setLevel(0);
-    }
+  // Questions come from the engine, lowest-confidence domain first.
+  useEffect(() => {
+    let live = true;
+    dataService
+      .nextQuestions()
+      .then((q) => live && setQuestions(q.length ? q : FALLBACK))
+      .catch(() => live && setQuestions(FALLBACK));
+    return () => {
+      live = false;
+    };
   }, []);
 
   // "Learned today": facts approved today, newest first.
@@ -121,212 +127,39 @@ export default function TalkStage() {
       .then((list) =>
         setLearned(
           list
-            .filter((f) => f.status === "approved" && new Date(f.updatedAt).toDateString() === today)
+            .filter(
+              (f) =>
+                f.status === "approved" &&
+                new Date(f.updatedAt).toDateString() === today,
+            )
             .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
             .map((f) => f.text),
         ),
       )
       .catch(() => {});
   }, []);
-
-  // Her opening line. It is shown but not spoken: speech needs a tap first.
   useEffect(() => {
-    let live = true;
-    openingTurn()
-      .then((o) => {
-        if (!live || turnsRef.current.length > 0) return;
-        pushTurn({ who: "twin", text: o.text });
-        setQuick(o.quickReplies);
-        domainRef.current = o.domain;
-      })
-      .catch(() => {
-        if (live && turnsRef.current.length === 0) pushTurn({ who: "twin", text: "Hi, I'm your twin. Tell me about your week or ask me a what-if." });
-      });
     refreshLearned();
-    dataService
-      .getConsent()
-      .then((c) => live && setVoiceConsent(c.voice))
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [pushTurn, refreshLearned]);
+  }, [refreshLearned]);
 
-  const goAsk = useCallback(() => {
-    const prompt = navRef.current;
-    if (!prompt) return;
-    navRef.current = "";
-    setNavTo("");
-    router.push(`/ask?q=${encodeURIComponent(prompt)}&run=1`);
-  }, [router]);
-
-  const cancelNav = useCallback(() => {
-    navRef.current = "";
-    setNavTo("");
-  }, []);
-
-  const scheduleNav = useCallback(
-    (prompt: string, said: string) => {
-      navRef.current = prompt;
-      setNavTo(prompt);
-      // With voice on, leave once she finishes speaking (see the speech subscription). The timer
-      // is the backstop for a speech engine that never reports back, sized to what she says.
-      const words = said.split(/\s+/).filter(Boolean).length;
-      const wait = speech.isSupported() && speech.getEnabled() ? Math.min(20000, 3000 + words * 450) : 1800;
-      window.setTimeout(() => {
-        if (navRef.current === prompt) goAsk();
-      }, wait);
-    },
-    [goAsk],
-  );
-
-  const stopAll = useCallback(() => {
-    reqId.current++;
-    speech.stop();
-    listen.stop();
-    navRef.current = "";
-    setNavTo("");
-    setPendingBoth(false);
-    setListeningBoth(false);
-  }, [setPendingBoth, setListeningBoth]);
-
-  // Candidate facts must exist in the store before they can be approved. converse() returns
-  // them without saving, so save any that are new (never overwrite one already decided).
-  const storeCandidates = useCallback(async (facts: Fact[]): Promise<Fact[]> => {
-    const fresh: Fact[] = [];
-    try {
-      // list() rather than get(): get() on an id that doesn't exist throws in LocalDataService.
-      const stored = new Map((await dataService.facts.list()).map((f) => [f.id, f]));
-      for (const fact of facts) {
-        const existing = stored.get(fact.id);
-        if (existing) {
-          if (existing.status === "pending") fresh.push(existing);
-          continue;
-        }
-        await dataService.facts.upsert({ ...fact, status: "pending" });
-        fresh.push(fact);
-      }
-    } catch {
-      /* cards that can't be stored are skipped rather than shown broken */
-    }
-    return fresh;
-  }, []);
-
-  // One turn: send the utterance, show and speak her answer, then her follow-up.
-  const send = useCallback(
-    async (raw: string, label?: string) => {
-      const text = raw.trim();
-      if (!text) return;
-      speech.stop();
-      listen.stop();
-      setListeningBoth(false);
-      setError("");
-      setQuick([]);
-      setTyped("");
-      const me = reqId.current + 1;
-      reqId.current = me;
-
-      const history: ConverseTurn[] = turnsRef.current.slice(-8).map((t) => ({ role: t.who === "you" ? "user" : "twin", text: t.text }));
-      pushTurn({ who: "you", text: label ?? text });
-      setPendingBoth(true);
-
-      try {
-        const r = await converse(text, history);
-        const facts = r.candidateFacts.length ? await storeCandidates(r.candidateFacts) : [];
-        if (me !== reqId.current) return; // cancelled or superseded
-        setPendingBoth(false);
-        setOffline(Boolean(r.degraded));
-
-        const main = r.spoken || r.reply;
-        // Some replies already end with the follow-up question; don't say it twice.
-        const follow = r.followUp?.text && !main.includes(r.followUp.text) ? r.followUp.text : "";
-        const said = [main, follow].filter(Boolean).join(" ");
-        const offer =
-          r.intent === "whatif"
-            ? { kind: "whatif" as const, text: r.whatIfPrompt || text }
-            : r.intent === "journal"
-              ? { kind: "journal" as const, text }
-              : undefined;
-        pushTurn({ who: "twin", text: said || r.reply, reply: r.reply && r.reply !== r.spoken && r.reply !== said ? r.reply : undefined, offer });
-
-        if (facts.length) setCards((list) => [...list, ...facts.map((fact) => ({ fact, said: `You said: “${label ?? text}”` }))]);
-        setQuick(r.followUp?.quickReplies ?? []);
-        domainRef.current = r.followUp?.domain;
-        if (said) speech.speak(said);
-        if (r.intent === "whatif") scheduleNav(r.whatIfPrompt || text, said);
-      } catch {
-        if (me !== reqId.current) return;
-        setPendingBoth(false);
-        setOffline(true);
-        pushTurn({ who: "twin", text: FAILED });
-      }
-    },
-    [pushTurn, scheduleNav, setListeningBoth, setPendingBoth, storeCandidates],
-  );
-
-  const startListening = useCallback(() => {
-    setVoiceEnabled(true); // the tap is the gesture that lets her speak
-    setError("");
-    listen.stop();
-    if (!listen.start({ measureLevel: true })) {
-      setError(UNSUPPORTED);
-      return;
-    }
-    setListeningBoth(true);
-  }, [setListeningBoth]);
-
-  const toggleMic = useCallback(() => {
-    if (pendingRef.current) {
-      // Thinking: cancel and get the screen back.
-      reqId.current++;
-      setPendingBoth(false);
-      return;
-    }
-    if (listeningRef.current) {
-      // Tap to stop: send what was heard so far, if anything.
-      const heard = interimRef.current;
-      listen.stop();
-      setListeningBoth(false);
-      if (heard) void send(heard);
-      return;
-    }
-    speech.stop(); // barge-in when she is speaking
-    startListening();
-  }, [send, startListening, setPendingBoth, setListeningBoth]);
-
-  useEffect(() => {
-    actions.current = { send, toggleMic, stopAll };
-  });
-
-  // Speech synthesis, microphone events, keyboard.
+  // Speech synthesis state, and the live microphone result and level.
   useEffect(() => {
     const offSpeak = speech.subscribe((s) => {
       setSpeaking(s.isSpeaking);
       setSentence(s.currentSentence);
       setMouth(s.mouth);
-      if (!s.isSpeaking && navRef.current) window.setTimeout(goAsk, 500);
     });
-    const offInterim = listen.onInterim((t) => {
-      if (!listeningRef.current) return;
-      interimRef.current = t;
-      setInterim(t);
-    });
-    const offFinal = listen.onFinal((t) => {
-      if (!listeningRef.current) return;
-      setListeningBoth(false);
-      listen.stop();
-      void actions.current.send(t);
+    const offResult = listen.onResult(({ transcript, isFinal }) => {
+      setHeard(transcript);
+      if (isFinal) {
+        listen.stop();
+        setLevel(0);
+        submitRef.current(transcript, false);
+      }
     });
     const offEnd = listen.onEnd(() => {
       setLevel(0);
-      if (!listeningRef.current) return;
-      const heard = interimRef.current;
-      setListeningBoth(false);
-      if (heard) void actions.current.send(heard);
-    });
-    const offError = listen.onError((_code, friendly) => {
-      setListeningBoth(false);
-      setError(friendly);
+      setStep((s) => (s === "listening" ? "ask" : s));
     });
     const offLevel = listen.onLevel((l) => {
       const now = performance.now();
@@ -335,212 +168,345 @@ export default function TalkStage() {
         setLevel(l);
       }
     });
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        actions.current.stopAll();
-        return;
-      }
-      if (e.key !== " " || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      // Leave typing and any focused control alone (Space already activates buttons).
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A") return;
-      e.preventDefault();
-      actions.current.toggleMic();
-    };
-    window.addEventListener("keydown", onKey);
-
     return () => {
       offSpeak();
-      offInterim();
-      offFinal();
+      offResult();
       offEnd();
-      offError();
       offLevel();
-      window.removeEventListener("keydown", onKey);
-      reqId.current++;
-      navRef.current = "";
       listen.stop();
       speech.stop();
     };
-  }, [goAsk, setListeningBoth]);
+  }, []);
 
-  // Keep the newest turn in view (inside the transcript only).
+  const say = useCallback((text: string) => {
+    setLine(text);
+    setHistory((h) => [...h.slice(-19), { who: "twin" as const, text }]);
+    speech.speak(text);
+  }, []);
+
+  const ask = useCallback(
+    (i: number, list: Question[]) => {
+      setQi(i);
+      setCards([]);
+      setNotice("");
+      setHeard("");
+      setTyped("");
+      approved.current = 0;
+      setStep("ask");
+      say(list[i].text);
+    },
+    [say],
+  );
+
+  function start() {
+    if (!questions) return;
+    // A click is the gesture that lets her speak. Captions always show either way.
+    setVoiceEnabled(true);
+    ask(0, questions);
+  }
+
+  async function submit(raw: string, tapped: boolean) {
+    if (!questions) return;
+    const answer = raw.trim();
+    if (!answer) return;
+    const q = questions[qi];
+    speech.stop();
+    listen.stop();
+    setStep("thinking");
+    setHeard(answer);
+    setHistory((h) => [...h.slice(-19), { who: "you" as const, text: answer }]);
+    setNotice("");
+
+    const consent = await dataService.getConsent();
+    if (!consent.journal) {
+      setStep("ask");
+      say(
+        "Journal is switched off, so I can't keep answers. You can change that in Sources.",
+      );
+      return;
+    }
+
+    const text = tapped ? (STATEMENT[q.domain]?.(answer) ?? answer) : answer;
+    const facts = await dataService.extractFacts({
+      text,
+      source: "question",
+      sourceId: `${q.id}-${Date.now()}`, // unique, so a repeat answer never overwrites an earlier fact
+    });
+    notifyFactsChanged();
+
+    if (facts.length === 0) {
+      setStep("ask");
+      setNotice(
+        "I couldn't turn that into a fact. A full sentence works best, like “I work best in the morning.”",
+      );
+      say(
+        "I couldn't turn that into something to remember. Try a full sentence.",
+      );
+      return;
+    }
+    approved.current = 0;
+    setCards(facts.map((fact) => ({ fact, said: `You said: “${answer}”` })));
+    setStep("review");
+    say("Here is what I understood. Approve what is right.");
+  }
   useEffect(() => {
-    const el = logRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [turns, pending]);
+    submitRef.current = submit;
+  });
 
-  function tapChip(label: string) {
-    const domain = domainRef.current;
-    const sentenceText = domain && STATEMENT[domain] ? STATEMENT[domain](label) : label;
-    void send(sentenceText, label);
+  function afterRound() {
+    if (!questions) return;
+    if (qi + 1 < questions.length) {
+      window.setTimeout(() => ask(qi + 1, questions), 900);
+    } else {
+      setStep("done");
+      say("That is enough for now. Thank you.");
+    }
   }
 
   function dismissCard(id: string) {
-    setCards((list) => list.filter((c) => c.fact.id !== id));
+    setCards((list) => {
+      const next = list.filter((c) => c.fact.id !== id);
+      if (next.length === 0) afterRound();
+      return next;
+    });
   }
 
   function arrived() {
+    approved.current += 1;
     refreshLearned();
-    play("delighted");
     speech.speak(CONFIRMATIONS[confirmIdx.current++ % CONFIRMATIONS.length]);
   }
 
-  async function allowVoiceAnswers() {
-    try {
-      const c = await dataService.getConsent();
-      await dataService.setConsent({ ...c, voice: true });
-      setVoiceConsent(true);
-    } catch {
-      setError("I couldn't change that setting. You can switch it on in Sources.");
+  function dictate() {
+    if (step === "listening") {
+      listen.stop();
+      setLevel(0);
+      setStep("ask");
+      return;
+    }
+    speech.stop();
+    setHeard("");
+    setNotice("");
+    if (listen.start({ measureLevel: true })) {
+      setStep("listening");
+      setLine("I'm listening.");
+    } else {
+      setNotice("Dictation isn't available here. Tap a reply or type instead.");
     }
   }
 
-  async function saveJournal(turn: Turn) {
-    if (!turn.offer) return;
-    const note = (msg: string) => setSaved((s) => ({ ...s, [turn.id]: msg }));
-    try {
-      const consent = await dataService.getConsent();
-      if (!consent.journal) return note("Journal is switched off in Sources, so I didn't save it.");
-      const now = new Date().toISOString();
-      const entry = { id: entryId(), title: turn.offer.text.slice(0, 40), body: turn.offer.text, tags: ["voice"], createdAt: now, updatedAt: now };
-      if (dataService.saveEntry) await dataService.saveEntry(entry);
-      else await dataService.entries.upsert(entry);
-      note("Saved to your Journal.");
-    } catch {
-      note("I couldn't save that. Try again from the Journal page.");
-    }
+  function stopAll() {
+    speech.stop();
+    listen.stop();
+    setLevel(0);
+    setHeard("");
+    if (step === "listening" || step === "thinking") setStep("ask");
   }
 
-  const faceState: AvatarState = listening ? "listening" : pending ? "thinking" : speaking ? "speaking" : "idle";
-  const micState = listening ? "listening" : pending ? "thinking" : speaking ? "speaking" : "idle";
-  const micLabel = { idle: "Tap to talk", listening: "Listening… tap to stop", thinking: "Thinking… tap to cancel", speaking: "Tap to interrupt" }[micState];
-  const lastTwin = [...turns].reverse().find((t) => t.who === "twin");
+  const faceState: AvatarState =
+    step === "listening"
+      ? "listening"
+      : step === "thinking"
+        ? "thinking"
+        : speaking
+          ? "speaking"
+          : "idle";
+  const q = questions?.[qi];
 
-  // The one persistent avatar (mounted in the layout) mirrors what this screen is doing.
+  const prefs = usePrefs();
+  const faceRef = useRef<TwinAvatarHandle>(null);
+  useEffect(() => onAction((a) => faceRef.current?.react(a)), []);
+
+  const [bloom, setBloom] = useState(false);
   useEffect(() => {
-    setLive({ state: faceState, mouth: speaking ? mouth : undefined, level });
-  }, [faceState, speaking, mouth, level]);
-  useEffect(() => () => setLive({ state: "idle", mouth: undefined, level: 0 }), []);
+    const id = window.setTimeout(() => setBloom(true), 750);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    histRef.current?.scrollTo({ top: histRef.current.scrollHeight, behavior: "smooth" });
+  }, [history.length]);
+  // Everything said before the line she is on right now (that one is shown large).
+  const past = history.length && history[history.length - 1].who === "twin" ? history.slice(0, -1) : history;
+
+  const listening = step === "listening";
+  const asking = step === "ask" || listening;
 
   return (
     <main className="talk">
       <div className="talk-stage">
         <div className="talk-face">
-          <AvatarAnchor kind="talk" />
+          <ViewTransition name="twin" share="morph" default="none">
+            <div className="twin-morph">
+              <TwinAvatar
+                ref={faceRef}
+                style={prefs}
+                state={faceState}
+                level={level}
+                mouth={speaking ? mouth : undefined}
+                form={bloom ? 1 : 0}
+              />
+            </div>
+          </ViewTransition>
         </div>
 
-        {/* Left: the conversation. */}
-        <section className="talk-left" aria-label="Conversation">
-          <header className="talk-log-head">
-            <p className="talk-eyebrow">Conversation</p>
-            {offline && (
-              <span className="talk-offline" title="The language model didn't answer, so these are built-in replies.">
-                offline mode
-              </span>
-            )}
-            <button type="button" className="talk-voice" onClick={() => setVoiceEnabled(!voiceOn)} aria-pressed={voiceOn}>
-              voice {voiceOn ? "on" : "off"}
-            </button>
-          </header>
-
-          {!voiceConsent && (
-            <p className="talk-consent">
-              Voice answers are off, so nothing you say becomes a fact. I can still chat.{" "}
-              <button type="button" className="btn-text" onClick={allowVoiceAnswers}>
-                Turn on voice answers
-              </button>
-            </p>
-          )}
-
-          <ol className="talk-log" ref={logRef} aria-live="polite">
-            <AnimatePresence initial={false}>
-              {turns.map((t) => (
-                <motion.li
-                  key={t.id}
-                  className={`turn ${t.who}`}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, ease: [0.2, 0.7, 0.2, 1] }}
-                >
-                  <span className="turn-who">{t.who === "you" ? "You" : "Twin"}</span>
-                  <p className="turn-text">
-                    {t.who === "twin" && t.id === lastTwin?.id ? <Karaoke line={t.text} sentence={sentence} speaking={speaking} /> : t.text}
-                  </p>
-                  {t.reply && <p className="turn-reply">{t.reply}</p>}
-                  {t.offer?.kind === "whatif" && t.id === lastTwin?.id && navTo && (
-                    <p className="turn-offer">
-                      Opening Ask…{" "}
-                      <button type="button" className="btn-text" onClick={cancelNav}>
-                        Stay here
-                      </button>
-                      <button type="button" className="btn-text" onClick={goAsk}>
-                        Go now
-                      </button>
-                    </p>
-                  )}
-                  {t.offer?.kind === "journal" && (
-                    <p className="turn-offer">
-                      {saved[t.id] ?? (
-                        <button type="button" className="btn-ghost btn-small" onClick={() => saveJournal(t)}>
-                          Save as a journal entry
-                        </button>
-                      )}
-                    </p>
-                  )}
-                </motion.li>
+        {/* Left: her question, big, with the word being spoken lit. */}
+        <section className="talk-left" aria-live="polite">
+          {past.length > 0 && (
+            <ol className="talk-history" ref={histRef} aria-label="Conversation so far">
+              {past.map((m, i) => (
+                <li key={i} className={m.who}>
+                  <span>{m.who === "twin" ? "Twin" : "You"}</span>
+                  {m.text}
+                </li>
               ))}
-              {pending && (
-                <motion.li key="pending" className="turn twin pending" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <span className="turn-who">Twin</span>
-                  <p className="turn-text" aria-label="Thinking">
-                    <span className="dots" aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                  </p>
-                </motion.li>
+            </ol>
+          )}
+          {step === "start" ? (
+            <div className="talk-start">
+              <p className="talk-eyebrow">Voice check-in</p>
+              <h1>Talk to your twin</h1>
+              <p>
+                She asks a few short questions. Answer by voice, a tap, or
+                typing. Nothing joins her memory until you approve it.
+              </p>
+              <div className="talk-start-row">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={start}
+                  disabled={!questions}
+                >
+                  Start talking
+                </button>
+                <Doodle
+                  text="tap to talk"
+                  arrow="up-left"
+                  tone="teal"
+                  className="talk-doodle"
+                />
+              </div>
+              <p className="talk-fine">
+                {canSpeak
+                  ? "She speaks aloud once you start. "
+                  : "This browser can't speak aloud, so you get captions only. "}
+                Voice input uses your browser&rsquo;s speech service; Paroh
+                never records or stores audio.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div
+                className="talk-steps"
+                role="img"
+                aria-label={
+                  questions
+                    ? `Question ${Math.min(qi + 1, questions.length)} of ${questions.length}`
+                    : "Questions"
+                }
+              >
+                {(questions ?? []).map((_, i) => (
+                  <span
+                    key={i}
+                    className={
+                      i < qi || (i === qi && step === "done")
+                        ? "done"
+                        : i === qi
+                          ? "now"
+                          : ""
+                    }
+                  />
+                ))}
+                <span className="talk-steps-num num">
+                  {questions
+                    ? `${Math.min(qi + 1, questions.length)} / ${questions.length}`
+                    : ""}
+                </span>
+              </div>
+
+              <p className="talk-eyebrow">{q ? q.domain : "Check-in"}</p>
+              <p className="talk-caption">
+                <Karaoke line={line} sentence={sentence} speaking={speaking} />
+              </p>
+
+              {listening && (
+                <p className="talk-heard">
+                  {heard || "Go ahead, I'm listening…"}
+                </p>
               )}
-            </AnimatePresence>
-          </ol>
-          <p className="talk-keys">Space to talk · Esc to stop</p>
-          <MemoryStream />
+              {step === "thinking" && (
+                <p className="talk-heard">Reading “{heard}”…</p>
+              )}
+              {notice && <p className="talk-notice">{notice}</p>}
+
+              {step === "done" && (
+                <div className="talk-done">
+                  <Link href="/" className="btn-primary">
+                    See your twin
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => questions && ask(0, questions)}
+                  >
+                    Talk again
+                  </button>
+                </div>
+              )}
+
+              <div className="talk-foot">
+                <button type="button" className="talk-stop" onClick={stopAll}>
+                  <span aria-hidden="true" /> Stop
+                </button>
+                <span className="talk-voice">
+                  {voiceOn ? "voice on" : "voice off, captions only"}
+                </span>
+              </div>
+            </>
+          )}
         </section>
 
         {/* Right: candidate facts to approve, and what she learned today. */}
         <aside className="talk-right">
-          <ChooseTwin />
-          <Gauges />
-          <div className="talk-cards" aria-label="Facts to approve">
-            <AnimatePresence>
-              {cards.map(({ fact, said }) => (
-                <motion.div key={fact.id} layout="position" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.45, ease: [0.2, 0.7, 0.2, 1] }}>
+          <AnimatePresence>
+            {step === "review" && cards.length > 0 && (
+              <motion.div
+                className="talk-cards"
+                aria-label="Facts to approve"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
+              >
+                {cards.map(({ fact, said }) => (
                   <FactCard
+                    key={fact.id}
                     fact={fact}
                     quote={said}
-                    onApprove={async () => {
-                      await approveFact(fact);
-                      setLearned((l) => [fact.text, ...l.filter((x) => x !== fact.text)]); // counts straight away
-                    }}
+                    onApprove={() => approveFact(fact)}
                     onReject={() => rejectFact(fact)}
                     onEdit={(text) => editFact(fact, text)}
                     onArrive={arrived}
                     onDone={() => dismissCard(fact.id)}
                   />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <section className="glass talk-learned" aria-label="Learned today" style={{ ["--glass-accent" as string]: "var(--green)" }}>
+          <section
+            className="glass talk-learned"
+            aria-label="Learned today"
+            style={{ ["--glass-accent" as string]: "var(--green)" }}
+          >
             <header>
               <h2>Learned today</h2>
               <span className="talk-learned-count num">{learned.length}</span>
             </header>
             {learned.length === 0 ? (
-              <p className="talk-learned-empty">Nothing yet. Approve a card and it lands here.</p>
+              <p className="talk-learned-empty">
+                Nothing yet. Approve a card and it lands here.
+              </p>
             ) : (
               <ul>
                 {learned.slice(0, 5).map((t, i) => (
@@ -549,85 +515,78 @@ export default function TalkStage() {
               </ul>
             )}
           </section>
+          <ChooseTwin />
+          <Gauges />
         </aside>
 
-        {/* Bottom centre: the mic, what she hears, typing, quick replies. */}
+        {/* Bottom centre: quick replies, dictate, live waveform, typing. */}
         <div className="talk-dock-wrap">
-          <section className="glass glass-blur talk-dock" aria-label="Your answer">
-            {error ? (
-              <div className="talk-error" role="alert">
-                <strong>{error}</strong> <span>Try Chrome, or type below.</span>
-              </div>
-            ) : !canListen ? (
-              <div className="talk-error soft">
-                <strong>{UNSUPPORTED}</strong> <span>Try Chrome, or type below.</span>
-              </div>
-            ) : null}
-
-            <div className="talk-dock-main">
-              <div className="talk-mic-col">
-                <button type="button" className={`talk-mic ${micState}`} onClick={toggleMic} aria-label={micLabel}>
-                  <span className="talk-mic-ring" aria-hidden="true" />
-                  {micState === "speaking" ? (
-                    <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true">
-                      <rect x="6" y="6" width="12" height="12" rx="2.5" />
-                    </svg>
-                  ) : micState === "thinking" ? (
-                    <span className="dots" aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                  ) : (
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <rect x="9" y="3" width="6" height="11" rx="3" />
-                      <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
-                    </svg>
+          <AnimatePresence>
+            {asking && q && (
+              <motion.section
+                className="glass glass-blur talk-dock"
+                aria-label="Your answer"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.4, ease: [0.2, 0.7, 0.2, 1] }}
+              >
+                <div className={`talk-input-row${canDictate ? "" : " no-mic"}`}>
+                  {canDictate && (
+                    <button
+                      type="button"
+                      className={`talk-mic${listening ? " on" : ""}`}
+                      onClick={dictate}
+                      aria-pressed={listening}
+                      aria-label={
+                        listening ? "Stop dictating" : "Dictate your answer"
+                      }
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="22"
+                        height="22"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <rect x="9" y="3" width="6" height="11" rx="3" />
+                        <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
+                      </svg>
+                    </button>
                   )}
-                </button>
-                <span className="talk-mic-label" aria-live="polite">
-                  {micLabel}
-                </span>
-              </div>
-
-              <div className="talk-dock-side">
-                <div className="talk-heard-row">
-                  <p className={`talk-interim${interim ? " live" : ""}`}>{listening ? interim || "Go ahead, I'm listening…" : pending ? "Working on it…" : ""}</p>
                   <Waveform level={level} live={listening} />
+                  <form
+                    className="talk-type"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      submit(typed, false);
+                      setTyped("");
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={typed}
+                      onChange={(e) => setTyped(e.target.value)}
+                      placeholder="or type a sentence…"
+                      aria-label="Type your answer"
+                      disabled={listening}
+                    />
+                    <button
+                      type="submit"
+                      className="btn-ghost btn-small"
+                      disabled={!typed.trim() || listening}
+                    >
+                      Send
+                    </button>
+                  </form>
                 </div>
-
-                {quick.length > 0 && !listening && !pending && (
-                  <div className="talk-chips" role="group" aria-label="Quick replies">
-                    {quick.map((r) => (
-                      <button key={r} type="button" className="chip" onClick={() => tapChip(r)}>
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <form
-                  className="talk-type"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void send(typed);
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={typed}
-                    onChange={(e) => setTyped(e.target.value)}
-                    placeholder="Type to your twin…"
-                    aria-label="Type to your twin"
-                    autoComplete="off"
-                  />
-                  <button type="submit" className="btn-primary btn-small" disabled={!typed.trim()}>
-                    Send
-                  </button>
-                </form>
-              </div>
-            </div>
-          </section>
+              </motion.section>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </main>

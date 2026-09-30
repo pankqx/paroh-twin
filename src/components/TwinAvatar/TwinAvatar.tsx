@@ -1,45 +1,45 @@
 "use client";
 
-import { animate } from "motion/react";
-import { memo, useEffect, useId, useImperativeHandle, useRef, useState, type Ref, type RefObject } from "react";
-import { onAction, play, type AvatarAction, type AvatarState, type LookKind, type Mouth } from "./avatarStore";
+import { motion } from "motion/react";
+import { useEffect, useId, useImperativeHandle, useRef, useState, type Ref } from "react";
 import * as G from "./geometry";
 import { registerMindPoint } from "./mindPoint";
-import { ACTION_LENGTH, REST, ease, target, type Pose } from "./pose";
+import * as A from "./avatarGeometry";
+import { DEFAULT_STYLE, styleVars, type AvatarStyle } from "./looks";
+import { Rig, type AvatarAction, type AvatarState, type RigRefs } from "./rig";
+import "./TwinFace.css";
 import "./TwinAvatar.css";
 
-export type { AvatarState };
-export type Expression = "neutral" | "smile" | "curious";
+export type { AvatarAction, AvatarState };
 
 export interface TwinAvatarHandle {
-  /** Flare the mind point (an approved fact just arrived). */
+  /** A fact just arrived: flare the mind point and let her celebrate. */
   flare(): void;
-  /** Mind point centre in viewport coordinates. */
   mindPoint(): { x: number; y: number } | null;
-  play(action: AvatarAction): void;
+  /** Play an action for a while (ms). */
+  react(action: AvatarAction, ms?: number): void;
 }
 
-export interface TwinAvatarProps {
-  /** 0 = pure line art, 1 = fully coloured. Changes animate over about 1.6s. */
-  form: number;
+interface Props {
   state: AvatarState;
-  mouth?: Mouth;
   level?: number;
-  look?: LookKind;
-  skin?: string;
-  hair?: string;
-  outfit?: string;
-  expression?: Expression;
-  /** Hold the animation loop (she is off screen). */
-  paused?: boolean;
-  /** Where she looks, -1..1 on each axis. Omit to follow the cursor. */
+  /** 0 closed .. 3 wide. Leave undefined to let her talk on her own while speaking. */
+  mouth?: 0 | 1 | 2 | 3;
   lookAt?: { x: number; y: number };
+  /** 0 = line art, 1 = fully coloured. Animates between values. */
+  form?: number;
+  style?: AvatarStyle;
+  /** Play this action continuously (used by the lab page and the Dance button). */
+  action?: AvatarAction;
+  /** Deterministic time in seconds: stops the loop and renders one frame (for screenshots). */
+  freezeT?: number;
   className?: string;
   ref?: Ref<TwinAvatarHandle>;
 }
 
+const EASE = [0.2, 0.7, 0.2, 1] as const;
 const clamp = (v: number, lo = -1, hi = 1) => Math.min(hi, Math.max(lo, v));
-const SMILE: Record<Expression, number> = { neutral: 0.05, smile: 0.35, curious: 0.15 };
+const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
 function useReducedMotionState(): boolean {
   const [reduce, setReduce] = useState(false);
@@ -53,413 +53,208 @@ function useReducedMotionState(): boolean {
   return reduce;
 }
 
-/** Elements the pose engine moves. Filled in by ref callbacks, read by the engine. */
-interface Bag {
-  fig: SVGGElement | null;
-  headB: SVGGElement | null;
-  headF: SVGGElement | null;
-  torso: SVGGElement | null;
-  armLU: SVGGElement | null;
-  armLF: SVGGElement | null;
-  armRU: SVGGElement | null;
-  armRF: SVGGElement | null;
-  brows: SVGGElement | null;
-  upper: SVGPathElement | null;
-  lower: SVGPathElement | null;
-  gap: SVGPathElement | null;
-  lips: SVGPathElement | null;
-  lipLine: SVGPathElement | null;
-  mind: SVGCircleElement | null;
-}
-const emptyBag = (): Bag => ({ fig: null, headB: null, headF: null, torso: null, armLU: null, armLF: null, armRU: null, armRF: null, brows: null, upper: null, lower: null, gap: null, lips: null, lipLine: null, mind: null });
-
-// ---- Small drawing helpers ------------------------------------------------------------------
-
-/** A line that draws itself on (CSS dash, no JS per path). The aurora line at form 0, a soft rim light later. */
-function Ln({ d, order = 0, w = 1.5, o = 1, fade = 0.55, grad }: { d: string; order?: number; w?: number; o?: number; fade?: number; grad: string }) {
-  return <path d={d} pathLength={1} className={`ln draw${fade >= 1 ? " detail" : ""}`} stroke={`url(#${grad})`} strokeWidth={w} style={{ ["--o" as string]: o, ["--fade" as string]: fade, animationDelay: `${0.1 + order}s` }} />;
-}
-/** A darker drawn feature that takes over from the aurora line as she gains colour. */
-function Dk({ d, w = 1.5, o = 1 }: { d: string; w?: number; o?: number }) {
-  return <path d={d} className="dk" strokeWidth={w} style={{ ["--o" as string]: o }} />;
-}
-/** A filled shape that blooms in with the form (opacity, staggered by `fd`). */
-function Fl({ d, fill, fd = 0, cls = "" }: { d: string; fill: string; fd?: number; cls?: string }) {
-  return <path d={d} fill={fill} className={`fill ${cls}`} style={{ ["--fd" as string]: fd }} />;
-}
-
-/** Hair strands in bundles: each bundle sways on its own clock, so 140 strands need only ~25 animations. */
-function Bundles({ parts, grad, w, o, fade, per = 6, dur = 9, dirSeed = 0 }: { parts: G.Part[]; grad: string; w: number; o: number; fade: number; per?: number; dur?: number; dirSeed?: number }) {
-  const groups: G.Part[][] = [];
-  for (let i = 0; i < parts.length; i += per) groups.push(parts.slice(i, i + per));
+function Line({ d, order = 0, w, o = 1, reduce, pathRef, fill, fillOpacity }: {
+  d: string;
+  order?: number;
+  w?: number;
+  o?: number;
+  reduce: boolean;
+  pathRef?: Ref<SVGPathElement>;
+  fill?: string;
+  fillOpacity?: number;
+}) {
+  if (reduce) return <path ref={pathRef} d={d} strokeWidth={w} opacity={o} fill={fill} fillOpacity={fillOpacity} />;
   return (
-    <>
-      {groups.map((g, gi) => (
-        <g key={gi} className="tf-sway rip" style={{ ["--dir" as string]: (gi + dirSeed) % 2 ? 1 : -1, ["--d" as string]: `${dur + (gi % 5) * 1.3}s`, animationDelay: `${-gi * 0.73}s` }}>
-          {g.map((p) => (
-            <Ln key={p.id} d={p.d} order={p.order} w={w} o={o} fade={fade} grad={grad} />
-          ))}
-        </g>
-      ))}
-    </>
+    <motion.path
+      ref={pathRef}
+      d={d}
+      strokeWidth={w}
+      fill={fill}
+      fillOpacity={fillOpacity}
+      initial={{ pathLength: 0, opacity: 0 }}
+      animate={{ pathLength: 1, opacity: o }}
+      transition={{ duration: 0.95, delay: 0.1 + order, ease: EASE }}
+    />
   );
 }
 
-// ---- The art ---------------------------------------------------------------------------------
-// Memoised: it only re-renders when the look changes. Everything that moves is driven by the
-// engine through the `bag` refs, so speaking and listening never re-render these ~700 nodes.
-
-const Art = memo(function Art({ uid, bagRef, look }: { uid: string; bagRef: RefObject<Bag>; look: LookKind }) {
-  const grad = `g-${uid}`;
-  const gradB = `gb-${uid}`;
-  const id = (n: string) => `${n}-${uid}`;
-  const man = look === "man";
-  const closed = G.mouthPaths(0);
-  const cl = man ? G.MAN_CONTOUR_LEFT : G.CONTOUR_LEFT;
-  const cr = man ? G.MAN_CONTOUR_RIGHT : G.CONTOUR_RIGHT;
-  const faceFill = man ? G.MAN_FACE_FILL : G.FACE_FILL;
-  const ref =
-    <K extends keyof Bag>(k: K) =>
-    (el: Bag[K]) => {
-      bagRef.current[k] = el;
-    };
-
-  const eye = (side: "left" | "right") => {
-    const c = side === "left" ? G.LEFT_EYE : G.RIGHT_EYE;
-    return (
-      <g key={side} transform={`translate(${c.cx} ${c.cy})`}>
-        <g className="tf-eye">
-          <g transform={`translate(${-c.cx} ${-c.cy})`}>
-            <clipPath id={id(`clip-${side}`)}>
-              <path d={G.EYE[side].clip} />
-            </clipPath>
-            <path d={G.EYE[side].clip} fill={`url(#${id("sclera")})`} className="fill" style={{ ["--fd" as string]: 0.3 }} />
-            <g clipPath={`url(#${id(`clip-${side}`)})`}>
-              <g className="tf-pupil">
-                <g transform={`translate(${c.cx} ${c.cy})`}>
-                  <circle r="11.8" fill={`url(#${id("iris")})`} className="fill" style={{ ["--fd" as string]: 0.3 }} />
-                  <circle r="11.5" className="ln" stroke={`url(#${grad})`} fill="none" strokeWidth="1.5" style={{ ["--fade" as string]: 0.8 }} />
-                  <circle r="7.6" stroke={`url(#${grad})`} fill="none" strokeWidth="0.7" className="ln" style={{ ["--o" as string]: 0.5, ["--fade" as string]: 1 }} />
-                  <path d={G.IRIS_SPOKES} stroke={`url(#${grad})`} strokeWidth="0.7" className="ln" style={{ ["--o" as string]: 0.6, ["--fade" as string]: 0.6 }} />
-                  <g className="tf-pupil-dot">
-                    <circle r="4.8" className="tf-pupil-fill" />
-                  </g>
-                  <circle cx={side === "left" ? 4 : -4} cy="-3.6" r="2.1" className="tf-glint" />
-                  <circle cx={side === "left" ? -3.4 : 3.4} cy="3.6" r="1" className="tf-glint small" />
-                </g>
-              </g>
-              <path d={G.EYE[side].upper} className="lidshade" strokeWidth="7" />
-            </g>
-            <Ln d={G.EYE[side].upper} order={0.45} w={1.9} grad={grad} fade={1} />
-            <Dk d={G.EYE[side].upper} w={2.6} o={0.95} />
-            <Ln d={G.EYE[side].lower} order={0.45} grad={grad} fade={1} />
-            <Dk d={G.EYE[side].lower} w={1} o={0.35} />
-            <Ln d={G.EYE[side].crease} order={0.5} w={1.2} o={0.55} grad={grad} fade={1} />
-            <Dk d={G.EYE[side].crease} w={1} o={0.3} />
-            <Ln d={G.EYE[side].flick} order={0.5} w={1.4} grad={grad} fade={1} />
-            <Ln d={G.LASHES[side]} order={0.6} w={1.25} o={man ? 0.35 : 0.9} grad={grad} fade={1} />
-            <Dk d={G.LASHES[side]} w={1.3} o={man ? 0.3 : 0.9} />
-          </g>
-        </g>
-      </g>
-    );
-  };
-
-  const arm = (side: "l" | "r") => {
-    const A = side === "l" ? G.ARM : G.ARM_R;
-    const up = side === "l" ? "armLU" : "armRU";
-    const fo = side === "l" ? "armLF" : "armRF";
-    return (
-      <g key={side} className="joint" ref={ref(up)} style={{ transformOrigin: `${A.shoulder.x}px ${A.shoulder.y}px` }}>
-        <path d={A.upper} className="occ" />
-        <Fl d={A.upper} fill={`url(#${id("outfit")})`} fd={0.08} />
-        <Ln d={A.upper} order={0.6} grad={gradB} />
-        <g className="joint" ref={ref(fo)} style={{ transformOrigin: `${A.elbow.x}px ${A.elbow.y}px` }}>
-          <path d={A.fore} className="occ" />
-          <Fl d={A.fore} fill={`url(#${id("outfit")})`} fd={0.1} />
-          <Ln d={A.fore} order={0.65} grad={gradB} />
-          <Ln d={A.cuff} order={0.7} grad={gradB} o={0.7} />
-          <path d={A.hand} className="occ" />
-          <Fl d={A.hand} fill={`url(#${id("skinB")})`} fd={0.12} />
-          <Fl d={A.thumb} fill={`url(#${id("skinB")})`} fd={0.12} />
-          <Ln d={A.hand} order={0.75} grad={gradB} />
-          <Ln d={A.thumb} order={0.78} grad={gradB} o={0.8} />
-          <Ln d={A.fingers.join(" ")} order={0.8} grad={gradB} o={0.5} w={1} fade={1} />
-          <Dk d={A.fingers.join(" ")} w={1} o={0.3} />
-          <Dk d={A.cuff} w={2} o={0.3} />
-        </g>
-      </g>
-    );
-  };
-
-  const stop = (o: number, expr: string) => <stop offset={o} style={{ stopColor: expr }} />;
-  const bodyScale = man ? "translate(300 0) scale(1.1 1) translate(-300 0)" : undefined;
-
-  return (
-    <svg viewBox={`0 0 ${G.VIEW_W} ${G.VIEW_H}`} aria-hidden="true">
-      <defs>
-        <linearGradient id={grad} gradientUnits="userSpaceOnUse" x1="120" y1="180" x2="480" y2="780">
-          <stop offset="0" className="tf-stop a" />
-          <stop offset="0.55" className="tf-stop b" />
-          <stop offset="1" className="tf-stop c" />
-        </linearGradient>
-        <linearGradient id={gradB} gradientUnits="userSpaceOnUse" x1="110" y1="380" x2="490" y2="960">
-          <stop offset="0" className="tf-stop a" />
-          <stop offset="0.55" className="tf-stop b" />
-          <stop offset="1" className="tf-stop c" />
-        </linearGradient>
-        <radialGradient id={id("skinF")} cx="0.42" cy="0.36" r="0.8">
-          {stop(0, "color-mix(in srgb, var(--skin) 76%, white)")}
-          {stop(0.55, "var(--skin)")}
-          {stop(1, "color-mix(in srgb, var(--skin) 60%, #5a2540)")}
-        </radialGradient>
-        <linearGradient id={id("skinB")} x1="0" y1="0" x2="1" y2="0">
-          {stop(0, "color-mix(in srgb, var(--skin) 78%, #4a2236)")}
-          {stop(0.5, "color-mix(in srgb, var(--skin) 92%, white)")}
-          {stop(1, "color-mix(in srgb, var(--skin) 72%, #4a2236)")}
-        </linearGradient>
-        <linearGradient id={id("hair")} x1="0" y1="0" x2="0.35" y2="1">
-          {stop(0, "color-mix(in srgb, var(--hair) 65%, #000)")}
-          {stop(0.3, "color-mix(in srgb, var(--hair) 72%, white)")}
-          {stop(0.55, "var(--hair)")}
-          {stop(1, "color-mix(in srgb, var(--hair) 55%, #000)")}
-        </linearGradient>
-        <linearGradient id={id("outfit")} x1="0" y1="0" x2="1" y2="1">
-          {stop(0, "color-mix(in srgb, var(--outfit) 72%, white)")}
-          {stop(0.5, "var(--outfit)")}
-          {stop(1, "color-mix(in srgb, var(--outfit) 55%, #0a0818)")}
-        </linearGradient>
-        <radialGradient id={id("iris")} cx="0.5" cy="0.5" r="0.5">
-          {stop(0, "#0d3b3d")}
-          {stop(0.62, "#1f8f86")}
-          {stop(1, "#7be9d8")}
-        </radialGradient>
-        <linearGradient id={id("sclera")} x1="0" y1="0" x2="0" y2="1">
-          {stop(0, "#cfc6df")}
-          {stop(0.4, "#f6f2fb")}
-          {stop(1, "#ffffff")}
-        </linearGradient>
-        <radialGradient id={id("cheek")}>
-          <stop offset="0" stopColor="#ff7a93" stopOpacity="0.34" />
-          <stop offset="1" stopColor="#ff7a93" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id={id("lip")} x1="0" y1="0" x2="0" y2="1">
-          {stop(0, man ? "color-mix(in srgb, var(--skin) 70%, #b04a5c)" : "color-mix(in srgb, var(--skin) 35%, #c2415f)")}
-          {stop(1, man ? "color-mix(in srgb, var(--skin) 62%, #b8525f)" : "color-mix(in srgb, var(--skin) 25%, #d8566f)")}
-        </linearGradient>
-        <radialGradient id={id("bloom")} cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="#fff" />
-          <stop offset="0.72" stopColor="#fff" />
-          <stop offset="1" stopColor="#000" />
-        </radialGradient>
-        {/* The colour bloom: a soft circle that grows from her mind point. */}
-        <mask id={id("mH")} maskUnits="userSpaceOnUse" x="-1500" y="-1500" width="4000" height="4000">
-          <circle className="bloom" style={{ ["--bs" as string]: 120, transformOrigin: `${G.MIND_POINT.x}px ${G.MIND_POINT.y}px` }} cx={G.MIND_POINT.x} cy={G.MIND_POINT.y} r="10" fill={`url(#${id("bloom")})`} />
-        </mask>
-        <mask id={id("mB")} maskUnits="userSpaceOnUse" x="-1500" y="-1500" width="4000" height="4000">
-          <circle className="bloom" style={{ ["--bs" as string]: 100, transformOrigin: `${G.toAvatar(G.MIND_POINT.x, G.MIND_POINT.y).x}px ${G.toAvatar(G.MIND_POINT.x, G.MIND_POINT.y).y}px` }} cx={G.toAvatar(G.MIND_POINT.x, G.MIND_POINT.y).x} cy={G.toAvatar(G.MIND_POINT.x, G.MIND_POINT.y).y} r="10" fill={`url(#${id("bloom")})`} />
-        </mask>
-      </defs>
-
-      <g className="fig" ref={ref("fig")}>
-        {/* 1. Hair behind the head and shoulders */}
-        <g className="head" ref={ref("headB")}>
-          <g transform={G.HEAD_T}>
-            <g mask={`url(#${id("mH")})`}>
-              <Fl d={man ? G.MAN_HAIR_FILL : G.HAIR_FILL_BACK} fill={`url(#${id("hair")})`} />
-            </g>
-            {!man && (
-              <>
-                <Bundles parts={G.HAIR_BACK} grad={grad} w={1} o={0.42} fade={0.3} />
-                <Bundles parts={G.HAIR_MID} grad={grad} w={1.05} o={0.6} fade={0.3} dirSeed={1} />
-              </>
-            )}
-          </g>
-        </g>
-
-        <g transform={bodyScale}>
-          {/* 2. Neck, chest, garment */}
-          <g className="torso" ref={ref("torso")}>
-            <path d={G.NECK_CHEST} className="occ" />
-            <path d={G.GARMENT} className="occ" />
-            <g mask={`url(#${id("mB")})`}>
-              <Fl d={G.NECK_CHEST} fill={`url(#${id("skinB")})`} fd={0.04} />
-              <Fl d={G.NECK_SHADOW} fill="color-mix(in srgb, var(--skin) 45%, #3a1630)" fd={0.06} cls="shade" />
-              <Fl d={G.GARMENT} fill={`url(#${id("outfit")})`} fd={0.06} />
-            </g>
-            <Ln d={G.GARMENT} order={0.35} grad={gradB} />
-            <Ln d={G.COLLAR_BAND} order={0.5} w={2.4} grad={gradB} fade={0.3} />
-            <Ln d={G.NECK_EDGES} order={0.3} grad={gradB} fade={0.8} />
-            <Ln d={G.COLLARBONES.join(" ")} order={0.6} w={1.1} o={0.6} grad={gradB} fade={1} />
-            <Ln d={G.GARMENT_FOLDS.join(" ")} order={0.7} w={1} o={0.35} grad={gradB} fade={1} />
-            <Dk d={G.GARMENT_FOLDS.join(" ")} w={1.6} o={0.16} />
-            <Dk d={G.COLLARBONES.join(" ")} w={1.2} o={0.22} />
-          </g>
-
-          {/* 3. Arms: upper arm, forearm, hand, each turning on its own joint. The shoulder caps stay on the body so a swung arm never leaves a gap. */}
-          {[G.ARM.shoulder, G.ARM_R.shoulder].map((sp, i) => (
-            <g key={i}>
-              <circle cx={sp.x + (i ? -8 : 8)} cy={sp.y + 6} r="36" className="occ" />
-              <circle cx={sp.x + (i ? -8 : 8)} cy={sp.y + 6} r="36" fill={`url(#${id("outfit")})`} className="fill" style={{ ["--fd" as string]: 0.06 }} />
-            </g>
-          ))}
-          {arm("l")}
-          {arm("r")}
-        </g>
-
-        {/* 4. Head: face, features, hair in front */}
-        <g className="head" ref={ref("headF")}>
-          <g transform={G.HEAD_T}>
-            <path d={faceFill} className="occ" />
-            <g mask={`url(#${id("mH")})`}>
-              <Fl d={faceFill} fill={`url(#${id("skinF")})`} fd={0.02} />
-              {G.CHEEKS.map((c) => (
-                <circle key={c.cx} cx={c.cx} cy={c.cy} r={c.r} fill={`url(#${id("cheek")})`} className="fill" style={{ ["--fd" as string]: 0.15 }} />
-              ))}
-              {man ? (
-                <Fl d={G.MAN_HAIR_TOP} fill={`url(#${id("hair")})`} fd={0.04} />
-              ) : (
-                <>
-                  {G.HAIR_FILL_SIDES.map((d, i) => (
-                    <Fl key={i} d={d} fill={`url(#${id("hair")})`} fd={0.04} />
-                  ))}
-                  <Fl d={G.HAIR_FILL_FRINGE} fill={`url(#${id("hair")})`} fd={0.04} />
-                </>
-              )}
-            </g>
-
-            {/* Outlines: neon at form 0, a soft rim light once she has colour */}
-            <Ln d={cl} order={0.3} grad={grad} />
-            <Ln d={cr} order={0.3} grad={grad} />
-            <Ln d={G.JAW_HATCH.join(" ")} order={0.75} w={0.9} o={0.5} grad={grad} fade={1} />
-            <Ln d={G.CHEEK_LINES.join(" ")} order={0.8} w={0.9} o={0.4} grad={grad} fade={1} />
-            <Dk d={G.CHEEK_LINES.slice(0, 1).join(" ")} w={1.4} o={0.1} />
-            <Ln d={G.TEMPLE_LINES.join(" ")} order={0.7} w={0.9} o={0.4} grad={grad} fade={1} />
-
-            <g ref={ref("brows")} className="brows">
-              <Ln d={G.BROWS.left} order={0.5} w={man ? 3.4 : 2.2} grad={grad} fade={1} />
-              <Ln d={G.BROWS.right} order={0.5} w={man ? 3.4 : 2.2} grad={grad} fade={1} />
-              <Dk d={G.BROWS.left} w={man ? 5.2 : 3.4} o={0.88} />
-              <Dk d={G.BROWS.right} w={man ? 5.2 : 3.4} o={0.88} />
-            </g>
-
-            {eye("left")}
-            {eye("right")}
-
-            <Ln d={G.NOSE_BRIDGE} order={0.6} grad={grad} fade={1} />
-            <Ln d={G.NOSE_BASE} order={0.62} grad={grad} fade={1} />
-            {G.NOSE_NOSTRILS.map((d) => (
-              <Ln key={d} d={d} order={0.66} w={1.3} grad={grad} fade={1} />
-            ))}
-            <Dk d={G.NOSE_BRIDGE} w={1.3} o={0.22} />
-            <Dk d={G.NOSE_BASE} w={1.6} o={0.34} />
-            {G.NOSE_NOSTRILS.map((d) => (
-              <Dk key={d} d={d} w={1.6} o={0.4} />
-            ))}
-            <Ln d={G.NOSE_SHADE.join(" ")} order={0.85} w={0.9} o={0.45} grad={grad} fade={1} />
-            <Ln d={G.CHIN_LINE} order={0.7} w={1.2} o={0.45} grad={grad} fade={1} />
-
-            {/* Mouth: lips fill, outlines and the open gap are rewritten by the engine */}
-            <path ref={ref("lips")} d={closed.lips} fill={`url(#${id("lip")})`} className="fill" style={{ ["--fd" as string]: 0.3 }} />
-            <path ref={ref("upper")} d={closed.upper} className="ln" stroke={`url(#${grad})`} strokeWidth="1.7" style={{ ["--fade" as string]: 1 }} />
-            <path ref={ref("lower")} d={closed.lower} className="ln" stroke={`url(#${grad})`} strokeWidth="1.7" style={{ ["--fade" as string]: 1 }} />
-            <path ref={ref("gap")} d={closed.gap} className="gap" stroke={`url(#${grad})`} strokeWidth="1.3" />
-            <path ref={ref("lipLine")} d={closed.gap} className="lipline dk" strokeWidth="1.4" />
-
-            {man ? (
-              <Bundles parts={G.MAN_STRANDS} grad={grad} w={1.2} o={0.8} fade={0.35} per={5} dur={10} />
-            ) : (
-              <>
-                <Bundles parts={G.HAIR_FRONT} grad={grad} w={1.15} o={0.8} fade={0.35} dur={8} />
-                <Bundles parts={G.FRINGE} grad={grad} w={1.3} o={0.9} fade={0.35} per={2} dur={7} />
-              </>
-            )}
-
-            {/* thought dots (thinking) */}
-            <g className="tf-thought">
-              {G.THOUGHT_DOTS.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r={3 + i} style={{ animationDelay: `${i * 0.28}s` }} />
-              ))}
-            </g>
-
-            {/* mind point: approved facts fly in here */}
-            <g className="tf-mind" transform={`translate(${G.MIND_POINT.x} ${G.MIND_POINT.y})`}>
-              <circle r="14" className="tf-mind-halo" />
-              <circle ref={ref("mind")} r="4.5" className="tf-mind-core" />
-            </g>
-          </g>
-        </g>
-      </g>
-    </svg>
+function Strand({ d, order, w = 1, o = 1, sway, dir = 1, dur = 9, rip = false }: {
+  d: string;
+  order: number;
+  w?: number;
+  o?: number;
+  sway?: number;
+  dir?: 1 | -1;
+  dur?: number;
+  rip?: boolean;
+}) {
+  const path = (
+    <path d={d} pathLength={1} className="tf-strand" strokeWidth={w} style={{ ["--o" as string]: o, animationDelay: `${0.1 + order}s` }} />
   );
-});
+  if (sway === undefined) return path;
+  return (
+    <g className={`tf-sway${rip ? " rip" : ""}`} style={{ ["--dir" as string]: dir, ["--d" as string]: `${dur}s`, animationDelay: `${-sway * 0.73}s` }}>
+      {path}
+    </g>
+  );
+}
 
-// ---- The avatar ------------------------------------------------------------------------------
+const NOSE_T = "translate(300 456) scale(0.62) translate(-300 -434)";
 
-export default function TwinAvatar({ form, state, mouth, level = 0, look = "woman", skin, hair, outfit, expression = "smile", paused = false, lookAt, className, ref }: TwinAvatarProps) {
+export default function TwinAvatar({
+  state,
+  level = 0,
+  mouth,
+  lookAt,
+  form = 0,
+  style = DEFAULT_STYLE,
+  action,
+  freezeT,
+  className,
+  ref,
+}: Props) {
   const reduce = useReducedMotionState();
   const uid = useId().replace(/:/g, "");
+  const id = (n: string) => `ta-${n}-${uid}`;
+  const grad = id("line");
+
   const rootRef = useRef<HTMLDivElement>(null);
-  const bagRef = useRef<Bag>(emptyBag());
-  const [initialForm] = useState(form);
+  const mindRef = useRef<SVGCircleElement>(null);
+  const upperRef = useRef<SVGPathElement>(null);
+  const lowerRef = useRef<SVGPathElement>(null);
+  const gapRef = useRef<SVGPathElement>(null);
+  const lipFillRef = useRef<SVGPathElement>(null);
+  const gapFleshRef = useRef<SVGPathElement>(null);
+  const bloomRef = useRef<SVGCircleElement>(null);
+  const refs = useRef<RigRefs>({ body: null, headFront: null, headBack: null, armL: null, foreL: null, armR: null, foreR: null });
+  const rig = useRef(new Rig());
+  const openRef = useRef(0);
+  const lookRef = useRef<{ x: number; y: number } | null>(null);
   const [flareKey, setFlareKey] = useState(0);
-  const [burst, setBurst] = useState(0);
+  const [blooming, setBlooming] = useState(false);
 
-  // Live inputs for the engine (read every frame, no re-render needed).
-  const live = useRef({ state, mouth, level, expression, paused });
-  useEffect(() => {
-    live.current = { state, mouth, level, expression, paused };
-  });
+  // Live props for the animation loop (so it never restarts).
+  const live = useRef({ state, level, action, form, freezeT, reduce });
+  live.current = { state, level, action, form, freezeT, reduce };
+  const tween = useRef({ from: form, to: form, start: 0, dur: 1700, cur: form });
+  const act = useRef<{ type: AvatarAction; start: number; until: number; amt: number }>({ type: "none", start: 0, until: 0, amt: 0 });
 
+  const react = (type: AvatarAction, ms = 2200) => {
+    if (live.current.reduce) return;
+    const now = performance.now();
+    act.current = { type, start: now, until: now + ms, amt: act.current.amt };
+  };
   const mindPoint = () => {
-    const r = bagRef.current.mind?.getBoundingClientRect();
+    const r = mindRef.current?.getBoundingClientRect();
     return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
   };
-  const flare = () => setFlareKey((k) => k + 1);
-  useImperativeHandle(ref, () => ({ flare, mindPoint, play }), []);  
-  useEffect(() => registerMindPoint({ point: mindPoint, flare }), []);  
+  const flare = () => {
+    setFlareKey((k) => k + 1);
+    if (tween.current.cur > 0.6) react("delighted", 2400);
+  };
+  useImperativeHandle(ref, () => ({ flare, mindPoint, react }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => registerMindPoint({ point: mindPoint, flare }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ---- Form: 0 line art -> 1 coloured, about 1.6s. The CSS reads --form. ----
+  // A continuous action prop (lab page, Dance button).
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const from = parseFloat(root.style.getPropertyValue("--form"));
-    const start = Number.isFinite(from) ? from : form;
-    // "formed" drops the line-art details (already invisible) from painting once she is coloured.
-    const setFormed = (on: boolean) => root.toggleAttribute("data-formed", on);
-    if (reduce || start === form) {
-      root.style.setProperty("--form", String(form));
-      setFormed(form >= 1);
+    if (!action || action === "none") {
+      act.current.until = 0;
       return;
     }
-    setFormed(false);
-    const c = animate(start, form, {
-      duration: 1.6,
-      ease: [0.2, 0.7, 0.2, 1],
-      onUpdate: (v) => root.style.setProperty("--form", v.toFixed(3)),
-      onComplete: () => setFormed(form >= 1),
-    });
-    return () => c.stop();
-  }, [form, reduce]);
+    const now = performance.now();
+    act.current = { type: action, start: now, until: now + 1e9, amt: act.current.amt };
+  }, [action]);
 
-  // Sparkle burst when she is delighted.
+  // Form: tween toward the requested value.
   useEffect(() => {
-    if (state !== "delighted") return;
-    const k = window.setTimeout(() => setBurst((b) => b + 1), 0);
-    return () => window.clearTimeout(k);
-  }, [state]);
+    const t = tween.current;
+    if (live.current.freezeT !== undefined || live.current.reduce) {
+      t.from = t.to = t.cur = form;
+      return;
+    }
+    t.from = t.cur;
+    t.to = form;
+    t.start = performance.now();
+    t.dur = Math.abs(form - t.cur) < 0.05 ? 1 : 1700;
+  }, [form, freezeT, reduce]);
 
-  // ---- Eyes: follow the cursor; thinking glances up and left. ----
-  const gaze = lookAt ?? (state === "thinking" ? { x: -1, y: -1 } : null);
-  const gazeRef = useRef<{ x: number; y: number } | null>(null);
+  // ---- The frame loop: form tween, action envelope, rig. ----
   useEffect(() => {
-    gazeRef.current = gaze ? { x: clamp(gaze.x), y: clamp(gaze.y) } : null;
     const root = rootRef.current;
     if (!root) return;
-    const t = gazeRef.current ?? { x: 0, y: 0 };
+    let raf = 0;
+    let last = performance.now();
+    let wasBloom = false;
+
+    const paintForm = (f: number) => {
+      root.style.setProperty("--form", String(Math.round(f * 1000) / 1000));
+      root.dataset.flat = f < 0.002 ? "true" : "false";
+      const bloom = f > 0.002 && f < 0.995;
+      if (bloom !== wasBloom) {
+        wasBloom = bloom;
+        setBlooming(bloom);
+      }
+      bloomRef.current?.setAttribute("r", String(Math.round(easeInOut(Math.min(1, f * 1.08)) * 1250)));
+    };
+
+    const frame = (now: number, snap: boolean) => {
+      const L = live.current;
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+
+      const tw = tween.current;
+      if (snap) tw.cur = tw.to;
+      else {
+        const x = clamp((now - tw.start) / tw.dur, 0, 1);
+        tw.cur = tw.from + (tw.to - tw.from) * easeInOut(x);
+      }
+      paintForm(tw.cur);
+
+      const a = act.current;
+      const active = now < a.until && a.type !== "none";
+      const goal = active && (L.reduce ? 0 : 1) ? 1 : 0;
+      a.amt += (goal - a.amt) * (snap ? 1 : 1 - Math.exp(-dt * 7));
+      const t = L.freezeT ?? now / 1000;
+      const actionT = L.freezeT !== undefined ? L.freezeT : (now - a.start) / 1000;
+      // Flat line art keeps still apart from breathing: only full-colour she dances.
+      const allow = tw.cur > 0.5 || L.freezeT !== undefined;
+      rig.current.step(
+        dt,
+        t,
+        {
+          state: L.state,
+          level: L.level,
+          action: a.type,
+          actionAmt: allow ? a.amt : 0,
+          actionT,
+        },
+        refs.current,
+        snap,
+      );
+    };
+
+    if (freezeT !== undefined || reduce) {
+      frame(performance.now(), true);
+      return;
+    }
+    const tick = (now: number) => {
+      frame(now, false);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [freezeT, reduce, state, action, form]);
+
+  // ---- Eyes follow the cursor or look where told. ----
+  const target = lookAt ?? (state === "thinking" ? { x: -1, y: -1 } : null);
+  useEffect(() => {
+    lookRef.current = target ? { x: clamp(target.x), y: clamp(target.y) } : null;
+    const root = rootRef.current;
+    if (!root) return;
+    const t = lookRef.current ?? { x: 0, y: 0 };
     root.style.setProperty("--px", `${t.x * 4.5}px`);
     root.style.setProperty("--py", `${t.y * 3.5}px`);
-  }, [gaze?.x, gaze?.y]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target?.x, target?.y]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const root = rootRef.current;
@@ -473,10 +268,10 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
       root.style.setProperty("--py", `${ty * 3.5}px`);
     };
     const onMove = (e: PointerEvent) => {
-      if (gazeRef.current) return;
+      if (lookRef.current) return;
       const r = root.getBoundingClientRect();
       tx = clamp((e.clientX - (r.left + r.width / 2)) / (window.innerWidth / 2));
-      ty = clamp((e.clientY - (r.top + r.height * 0.22)) / (window.innerHeight / 2));
+      ty = clamp((e.clientY - (r.top + r.height * 0.3)) / (window.innerHeight / 2));
       if (!raf) raf = requestAnimationFrame(apply);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -486,7 +281,7 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
     };
   }, [reduce]);
 
-  // ---- Blink every 3-6s. ----
+  // ---- Blink. ----
   useEffect(() => {
     const root = rootRef.current;
     if (!root || reduce) return;
@@ -494,191 +289,411 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
     let off = 0;
     const loop = () => {
       timer = window.setTimeout(() => {
-        root.setAttribute("data-blink", "");
-        off = window.setTimeout(() => root.removeAttribute("data-blink"), 120);
+        root.classList.add("blinking");
+        off = window.setTimeout(() => root.classList.remove("blinking"), 120);
         loop();
-      }, 3000 + Math.random() * 3000);
+      }, 2600 + Math.random() * 3000);
     };
     loop();
     return () => {
       clearTimeout(timer);
       clearTimeout(off);
-      root.removeAttribute("data-blink");
+      root.classList.remove("blinking");
     };
   }, [reduce]);
 
-  // ---- The engine: pose every frame + mouth shape. Paused when the page is hidden. ----
+  // ---- Mouth: four shapes, she talks on her own when no shape is passed. ----
   useEffect(() => {
-    const bag = bagRef.current;
-    const writeMouth = (h: number, smile: number) => {
-      const p = G.mouthPaths(h, smile);
-      bag.upper?.setAttribute("d", p.upper);
-      bag.lower?.setAttribute("d", p.lower);
-      bag.gap?.setAttribute("d", p.gap);
-      bag.lipLine?.setAttribute("d", p.gap);
-      bag.lips?.setAttribute("d", p.lips);
+    const up = upperRef.current;
+    const lo = lowerRef.current;
+    const gp = gapRef.current;
+    if (!up || !lo || !gp) return;
+    const write = (h: number) => {
+      const p = A.mouthPathsAv(h);
+      up.setAttribute("d", p.upper);
+      lo.setAttribute("d", p.lower);
+      gp.setAttribute("d", p.gap);
+      gapFleshRef.current?.setAttribute("d", p.gap);
+      lipFillRef.current?.setAttribute("d", A.lipFillPath(p.upper, p.lower));
     };
-    const pose: Pose = { ...REST };
-    let action: { name: AvatarAction; t0: number } | undefined;
-    const offAction = onAction((name) => {
-      action = { name, t0: performance.now() / 1000 };
-    });
-
-    const applyPose = (p: Pose) => {
-      const f = (n: number) => n.toFixed(2);
-      if (bag.fig) bag.fig.style.transform = `translate(${f(p.bx)}px, ${f(p.by)}px) rotate(${f(p.lean)}deg) scale(${f(1 + p.zoom)})`;
-      const head = `translate(${f(p.hx)}px, ${f(p.hy + p.sh)}px) rotate(${f(p.hr)}deg)`;
-      if (bag.headB) bag.headB.style.transform = head;
-      if (bag.headF) bag.headF.style.transform = head;
-      if (bag.torso) bag.torso.style.transform = `translateY(${f(p.sh)}px) scale(${f(1 + p.br * 0.006)}, ${f(1 + p.br * 0.01)})`;
-      if (bag.armLU) bag.armLU.style.transform = `translateY(${f(p.sh)}px) rotate(${f(p.lu)}deg)`;
-      if (bag.armLF) bag.armLF.style.transform = `rotate(${f(p.lf)}deg)`;
-      if (bag.armRU) bag.armRU.style.transform = `translateY(${f(p.sh)}px) rotate(${f(-p.ru)}deg)`;
-      if (bag.armRF) bag.armRF.style.transform = `rotate(${f(-p.rf)}deg)`;
-      if (bag.brows) bag.brows.style.transform = `translateY(${f(-p.brow)}px)`;
-    };
-
-    if (reduce) {
-      applyPose(REST);
-      writeMouth(0, SMILE[live.current.expression]);
-      return () => offAction();
+    const talking = state === "speaking" && mouth === undefined;
+    const base = mouth !== undefined ? G.MOUTH_OPEN[mouth] : 0;
+    // A slight smile when she is at rest: the corners lift a hair by keeping the mouth barely open.
+    if (reduce || freezeT !== undefined) {
+      openRef.current = talking ? G.MOUTH_OPEN[1] : base;
+      write(openRef.current);
+      return;
     }
-
     let raf = 0;
     let last = performance.now();
-    let open = 0; // current mouth opening
-    let lastMouth = 0;
-    let beat = 0;
-    let beat2 = 0;
-    let beatIdx = 0;
-    let nextFake = 0;
-    let mouthGoal = 0;
+    let goal = base;
     let nextPick = 0;
-    let shown = -1;
-
     const tick = (now: number) => {
-      raf = requestAnimationFrame(tick);
-      const L = live.current;
-      if (L.paused) {
-        last = now;
-        return;
-      }
-      // Resting breathing is slow: 30 updates a second is plenty. Anything livelier gets every frame.
-      const busy = L.state !== "idle" || action !== undefined;
-      if (!busy && now - last < 32) return;
-      const dt = Math.min((now - last) / 1000, 0.05);
+      const dt = Math.min(now - last, 50);
       last = now;
-      const t = now / 1000;
-      const speaking = L.state === "speaking";
-
-      // Word boundaries: the mouth leaving 0 is a beat. Without speech data, make our own.
-      const m = L.mouth;
-      if (speaking && m !== undefined) {
-        if (lastMouth === 0 && m > 0) {
-          beat = 1;
-          beat2 = 1;
-          beatIdx++;
-        }
-        lastMouth = m;
-      } else if (speaking && t >= nextFake) {
-        beat = 1;
-        beat2 = 1;
-        beatIdx++;
-        nextFake = t + 0.3 + Math.random() * 0.25;
-      } else if (!speaking) {
-        lastMouth = 0;
-      }
-      beat *= Math.exp(-dt / 0.14);
-      beat2 *= Math.exp(-dt / 0.42);
-
-      if (action && t - action.t0 > ACTION_LENGTH[action.name]) action = undefined;
-      const goal = target({ t, state: L.state, level: L.level, beat, beat2, beatIdx, action: action ? { name: action.name, u: t - action.t0 } : undefined });
-      ease(pose, goal, dt);
-      applyPose(pose);
-
-      // Mouth: a given shape, or a lively random loop when she speaks with no data.
-      const talking = speaking && m === undefined;
-      if (talking && t >= nextPick) {
+      if (talking && now >= nextPick) {
         const r = Math.random();
-        mouthGoal = r < 0.2 ? G.MOUTH_OPEN[0] : r < 0.5 ? G.MOUTH_OPEN[1] : r < 0.82 ? G.MOUTH_OPEN[2] : G.MOUTH_OPEN[3];
-        nextPick = t + 0.11 + Math.random() * 0.055;
-      } else if (!talking) {
-        mouthGoal = speaking && m !== undefined ? G.MOUTH_OPEN[m] : 0;
+        goal = r < 0.2 ? G.MOUTH_OPEN[0] : r < 0.5 ? G.MOUTH_OPEN[1] : r < 0.82 ? G.MOUTH_OPEN[2] : G.MOUTH_OPEN[3];
+        nextPick = now + 110 + Math.random() * 55;
       }
-      const grin = L.state === "delighted" || (action?.name === "delighted") || action?.name === "dance";
-      if (grin) mouthGoal = G.MOUTH_OPEN[2];
-      const smile = SMILE[L.expression] + (grin ? 0.5 : 0);
-      const diff = mouthGoal - open;
-      if (Math.abs(diff) > 0.02 || talking || smile !== shown) {
-        open += diff * (1 - Math.exp(-dt / 0.038));
-        shown = smile;
-        writeMouth(open, smile);
+      const diff = goal - openRef.current;
+      openRef.current += diff * (1 - Math.exp(-dt / 38));
+      if (Math.abs(diff) > 0.02 || talking) {
+        write(openRef.current);
+        raf = requestAnimationFrame(tick);
+      } else {
+        openRef.current = goal;
+        write(goal);
       }
     };
     raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [state, mouth, reduce, freezeT]);
 
-    const onVis = () => {
-      if (document.hidden) cancelAnimationFrame(raf);
-      else {
-        last = performance.now();
-        raf = requestAnimationFrame(tick);
-      }
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      cancelAnimationFrame(raf);
-      document.removeEventListener("visibilitychange", onVis);
-      offAction();
-    };
-  }, [reduce]);  
+  const closed = A.mouthPathsAv(0);
+  const swayDur = state === "thinking" ? 3.6 : 9;
+  const amp = state === "speaking" ? Math.max(clamp(level, 0, 1), mouth === undefined ? 0.6 : mouth / 3) : clamp(level, 0, 1);
+  const figureProps = { fill: "none", stroke: `url(#${grad})`, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+  const fm = blooming ? `url(#${id("bloom")})` : undefined; // bloom mask for colour layers
 
-  // With reduced motion the engine is off; write the expression once.
-  useEffect(() => {
-    if (!reduce) return;
-    const bag = bagRef.current;
-    const p = G.mouthPaths(0, SMILE[expression]);
-    bag.upper?.setAttribute("d", p.upper);
-    bag.lower?.setAttribute("d", p.lower);
-    bag.gap?.setAttribute("d", p.gap);
-    bag.lipLine?.setAttribute("d", p.gap);
-    bag.lips?.setAttribute("d", p.lips);
-  }, [expression, reduce]);  
+  const eye = (side: "left" | "right", c: { cx: number; cy: number }, order: number) => (
+    <g key={side} transform={`translate(${c.cx} ${c.cy + 20}) scale(1.28 1.5)`}>
+      <g className="tf-eye">
+        <g transform={`translate(${-c.cx} ${-c.cy})`}>
+          <g className="ta-flesh" mask={fm}>
+            <path d={G.EYE[side].crease} className="ta-lidshade" />
+            <path d={G.EYE[side].clip} className="ta-sclera" />
+          </g>
+          <clipPath id={`${id("clip")}-${side}`}>
+            <path d={G.EYE[side].clip} />
+          </clipPath>
+          <g clipPath={`url(#${id("clip")}-${side})`}>
+            <g className="tf-pupil">
+              <g transform={`translate(${c.cx} ${c.cy})`}>
+                <circle r="11.8" fill={`url(#${id("iris")})`} className="ta-flesh" mask={fm} />
+                <circle r="11.5" className="tf-iris" stroke={`url(#${grad})`} fill="none" strokeWidth="1.5" />
+                <circle r="7.6" stroke={`url(#${grad})`} fill="none" strokeWidth="0.7" opacity="0.5" />
+                <path d={G.IRIS_SPOKES} stroke={`url(#${grad})`} strokeWidth="0.7" opacity="0.6" />
+                <g className="tf-pupil-dot">
+                  <circle r="4.8" className="tf-pupil-fill ta-pupil-light" />
+                  <circle r="5.4" className="ta-pupil-dark ta-flesh" mask={fm} />
+                </g>
+                <circle cx={side === "left" ? 4 : -4} cy="-3.4" r="1.7" className="tf-glint ta-glint-line" />
+                <g className="ta-flesh" mask={fm}>
+                  <circle cx={side === "left" ? 4.2 : -4.2} cy="-4" r="3" className="ta-catch" />
+                  <circle cx={side === "left" ? -3.6 : 3.6} cy="3.6" r="1.3" className="ta-catch soft" />
+                </g>
+              </g>
+            </g>
+          </g>
+          <g className="ta-flesh ta-ink" mask={fm}>
+            <path d={G.EYE[side].upper} strokeWidth="3.6" />
+            <path d={G.LASHES[side].split(/(?=M )/).slice(0, 9).join(" ")} strokeWidth="1.3" />
+          </g>
+          <g {...figureProps} strokeWidth="1.6" className="ta-lines">
+            <Line d={G.EYE[side].upper} order={order} reduce={reduce} w={1.9} />
+            <Line d={G.EYE[side].lower} order={order} reduce={reduce} />
+            <Line d={G.EYE[side].crease} order={order + 0.05} reduce={reduce} o={0.55} w={1.2} />
+            <Line d={G.EYE[side].flick} order={order + 0.05} reduce={reduce} w={1.4} />
+            <Strand d={G.LASHES[side]} order={order + 0.15} w={1.25} o={0.9} />
+          </g>
+        </g>
+      </g>
+    </g>
+  );
 
-  const style = {
-    ["--form"]: initialForm,
-    ["--skin"]: skin ?? "#e0b08a",
-    ["--hair"]: hair ?? "#5a3a2a",
-    ["--outfit"]: outfit ?? "#7c5fe0",
-    ["--lvl"]: clamp(level, 0, 1),
-  } as React.CSSProperties;
+  // Face line art (kept softly over the colour, it reads as rim light).
+  const faceLines = (
+    <g {...figureProps} strokeWidth="1.5" className="ta-lines">
+      <g className="ta-hatch">
+        <Strand d={G.JAW_HATCH.join(" ")} order={0.75} w={0.9} o={0.5} />
+        <Strand d={G.CHEEK_LINES.join(" ")} order={0.8} w={0.9} o={0.4} />
+        <Strand d={G.TEMPLE_LINES.join(" ")} order={0.7} w={0.9} o={0.4} />
+        <Strand d={G.NOSE_SHADE.join(" ")} order={0.85} w={0.9} o={0.45} />
+      </g>
+      <Line d={A.CONTOUR_L} order={0.3} reduce={reduce} />
+      <Line d={A.CONTOUR_R} order={0.3} reduce={reduce} />
+      <g transform="translate(0 22)">
+        <Line d={G.BROWS.left} order={0.5} reduce={reduce} w={2.2} />
+        <Line d={G.BROWS.right} order={0.5} reduce={reduce} w={2.2} />
+      </g>
+      <g transform={NOSE_T}>
+        <Line d={G.NOSE_BRIDGE} order={0.6} reduce={reduce} />
+        <Line d={G.NOSE_BASE} order={0.62} reduce={reduce} />
+        {G.NOSE_NOSTRILS.map((d) => (
+          <Line key={d} d={d} order={0.66} reduce={reduce} w={1.3} />
+        ))}
+      </g>
+      <Line d={G.CHIN_LINE} order={0.7} reduce={reduce} o={0.45} w={1.2} />
+    </g>
+  );
 
-  const mp = G.toAvatar(G.MIND_POINT.x, G.MIND_POINT.y);
+  // Body line art: fades out entirely once she is coloured (the garment takes over).
+  const bodyLines = (
+    <g {...figureProps} strokeWidth="1.5" className="ta-bodylines">
+      <Strand d={G.NECK_SHADE.join(" ")} order={0.8} w={0.9} o={0.4} />
+      <Strand d={G.THROAT} order={0.85} w={1} o={0.5} />
+      <Strand d={G.SHOULDER_DETAIL.join(" ")} order={0.6} w={1} o={0.45} />
+      <Line d={G.NECK_LEFT} order={0.35} reduce={reduce} />
+      <Line d={G.NECK_RIGHT} order={0.35} reduce={reduce} />
+      <Line d={G.SHOULDER_LEFT} order={0.45} reduce={reduce} />
+      <Line d={G.SHOULDER_RIGHT} order={0.45} reduce={reduce} />
+      <Line d={G.COLLAR} order={0.55} reduce={reduce} />
+      <Line d={G.COLLARBONE_LEFT} order={0.6} reduce={reduce} o={0.55} w={1.2} />
+      <Line d={G.COLLARBONE_RIGHT} order={0.6} reduce={reduce} o={0.55} w={1.2} />
+    </g>
+  );
+
+  const arm = (side: "L" | "R") => (
+    <g
+      ref={(el) => {
+        refs.current[side === "L" ? "armL" : "armR"] = el;
+      }}
+      key={side}
+    >
+      <g
+        ref={(el) => {
+          refs.current[side === "L" ? "foreL" : "foreR"] = el;
+        }}
+        transform={`translate(0 ${A.UPPER_LEN})`}
+      >
+        <g className="ta-flesh" mask={fm}>
+          <path d={A.FOREARM} fill={`url(#${id("arm")})`} />
+          <g transform="translate(0 158)">
+            <path d={A.THUMB} className="ta-thumb" />
+            <path d={A.HAND} fill={`url(#${id("arm")})`} />
+            <path d={A.FINGER_LINES} className="ta-fingers" />
+          </g>
+          <path d={A.CUFF} fill={`url(#${id("sleeve")})`} />
+        </g>
+      </g>
+      <g className="ta-flesh" mask={fm}>
+        <path d={A.UPPER_ARM} fill={`url(#${id("sleeve")})`} />
+        <path d="M -30 150 C -10 166, 10 166, 30 150" className="ta-sleeve-fold" />
+      </g>
+    </g>
+  );
+
   return (
     <div
       ref={rootRef}
-      className={`twin-avatar state-${state}${className ? ` ${className}` : ""}`}
-      data-look={look}
+      className={`twin-face ta state-${state} ${style.look === "man" ? "look-man" : "look-woman"} ${className ?? ""}`}
+      data-flat={form < 0.002 ? "true" : "false"}
       role="img"
-      aria-label={`Illustration of the student's twin, a ${look === "man" ? "young man" : "young woman"}. ${state === "idle" ? "Resting." : `Currently ${state}.`}`}
-      style={style}
+      aria-label={`Illustrated twin, a young ${style.look === "man" ? "man" : "woman"}. ${state === "idle" ? "Resting" : state}.`}
+      style={{
+        ["--form" as string]: form,
+        ["--lvl" as string]: clamp(level, 0, 1),
+        ["--amp" as string]: amp,
+        ...styleVars(style),
+      }}
     >
-      <Art uid={uid} bagRef={bagRef} look={look} />
-      <svg className="ta-fx" viewBox={`0 0 ${G.VIEW_W} ${G.VIEW_H}`} aria-hidden="true">
-        {flareKey > 0 && (
-          <g key={`flare-${flareKey}`} transform={`translate(${mp.x} ${mp.y})`}>
-            <circle r="10" className="tf-flare" />
-            <circle r="10" className="tf-flare ring" />
+      <svg viewBox={A.AV_VIEWBOX} aria-hidden="true">
+        <defs>
+          <linearGradient id={grad} gradientUnits="userSpaceOnUse" x1="120" y1="180" x2="480" y2="780">
+            <stop offset="0" className="tf-stop a" />
+            <stop offset="0.55" className="tf-stop b" />
+            <stop offset="1" className="tf-stop c" />
+          </linearGradient>
+
+          <linearGradient id={id("skin")} gradientUnits="userSpaceOnUse" x1="250" y1="190" x2="360" y2="570">
+            <stop offset="0" stopColor="var(--skin-hi)" />
+            <stop offset="0.5" stopColor="var(--skin)" />
+            <stop offset="1" stopColor="color-mix(in srgb, var(--skin) 72%, var(--skin-sh))" />
+          </linearGradient>
+          <linearGradient id={id("faceshade")} gradientUnits="userSpaceOnUse" x1="197" y1="0" x2="403" y2="0">
+            <stop offset="0" stopColor="var(--skin-hi)" stopOpacity="0.18" />
+            <stop offset="0.45" stopColor="var(--skin-sh)" stopOpacity="0" />
+            <stop offset="1" stopColor="var(--skin-sh)" stopOpacity="0.55" />
+          </linearGradient>
+          <linearGradient id={id("neck")} gradientUnits="userSpaceOnUse" x1="0" y1="548" x2="0" y2="734">
+            <stop offset="0" stopColor="color-mix(in srgb, var(--skin) 65%, var(--skin-sh))" />
+            <stop offset="1" stopColor="var(--skin)" />
+          </linearGradient>
+          <linearGradient id={id("neckshadow")} gradientUnits="userSpaceOnUse" x1="0" y1="548" x2="0" y2="598">
+            <stop offset="0" stopColor="var(--skin-sh)" stopOpacity="0.75" />
+            <stop offset="1" stopColor="var(--skin-sh)" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id={id("arm")} gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="var(--skin-hi)" />
+            <stop offset="0.55" stopColor="var(--skin)" />
+            <stop offset="1" stopColor="color-mix(in srgb, var(--skin) 60%, var(--skin-sh))" />
+          </linearGradient>
+          <linearGradient id={id("hair")} gradientUnits="userSpaceOnUse" x1="170" y1="150" x2="430" y2="900">
+            <stop offset="0" stopColor="color-mix(in srgb, var(--hair) 55%, var(--hair-hi))" />
+            <stop offset="0.3" stopColor="var(--hair)" />
+            <stop offset="1" stopColor="color-mix(in srgb, var(--hair) 55%, #000)" />
+          </linearGradient>
+          <linearGradient id={id("garment")} gradientUnits="userSpaceOnUse" x1="200" y1="690" x2="400" y2="1080">
+            <stop offset="0" stopColor="color-mix(in srgb, var(--outfit) 70%, var(--outfit-hi))" />
+            <stop offset="0.5" stopColor="var(--outfit)" />
+            <stop offset="1" stopColor="color-mix(in srgb, var(--outfit) 60%, #000)" />
+          </linearGradient>
+          <linearGradient id={id("sleeve")} gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="color-mix(in srgb, var(--outfit) 75%, var(--outfit-hi))" />
+            <stop offset="1" stopColor="color-mix(in srgb, var(--outfit) 75%, #000)" />
+          </linearGradient>
+          <linearGradient id={id("lip")} gradientUnits="userSpaceOnUse" x1="0" y1="476" x2="0" y2="512">
+            <stop offset="0" stopColor="color-mix(in srgb, var(--lip) 80%, #fff)" />
+            <stop offset="1" stopColor="color-mix(in srgb, var(--lip) 88%, #000)" />
+          </linearGradient>
+          <radialGradient id={id("iris")} cx="0.5" cy="0.45" r="0.6">
+            <stop offset="0" stopColor="#8be9d8" />
+            <stop offset="0.55" stopColor="#3f7fc4" />
+            <stop offset="1" stopColor="#3a2b82" />
+          </radialGradient>
+          <radialGradient id={id("blush")} cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor="#ff6f8d" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#ff6f8d" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={id("glow")} cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor="#fff" stopOpacity="0.34" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={id("bloomg")} cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor="#fff" />
+            <stop offset="0.7" stopColor="#fff" />
+            <stop offset="1" stopColor="#000" />
+          </radialGradient>
+
+          <mask id={id("bloom")} maskUnits="userSpaceOnUse" x="-300" y="-200" width="1300" height="1600">
+            <rect x="-300" y="-200" width="1300" height="1600" fill="#000" />
+            <circle ref={bloomRef} cx={G.MIND_POINT.x} cy={G.MIND_POINT.y} r="0" fill={`url(#${id("bloomg")})`} />
+          </mask>
+
+          {/* Fade at the bottom: line art fades early, colour runs further down. */}
+          <linearGradient id={id("fadea")} gradientUnits="userSpaceOnUse" x1="0" y1="560" x2="0" y2="800">
+            <stop offset="0" stopColor="#fff" />
+            <stop offset="0.45" stopColor="#fff" stopOpacity="0.7" />
+            <stop offset="1" stopColor="#000" />
+          </linearGradient>
+          <linearGradient id={id("fadeb")} gradientUnits="userSpaceOnUse" x1="0" y1="930" x2="0" y2="1070">
+            <stop offset="0" stopColor="#fff" />
+            <stop offset="1" stopColor="#000" />
+          </linearGradient>
+          <mask id={id("fade")} maskUnits="userSpaceOnUse" x="-300" y="-200" width="1300" height="1400">
+            <rect x="-300" y="-200" width="1300" height="1400" fill={`url(#${id("fadea")})`} style={{ opacity: "calc(1 - var(--form))" }} />
+            <rect x="-300" y="-200" width="1300" height="1400" fill={`url(#${id("fadeb")})`} style={{ opacity: "var(--form)" }} />
+          </mask>
+        </defs>
+
+        <g mask={`url(#${id("fade")})`}>
+          <g
+            ref={(el) => {
+              refs.current.body = el;
+            }}
+          >
+            {/* ---- Hair behind the head and shoulders ---- */}
+            <g
+              ref={(el) => {
+                refs.current.headBack = el;
+              }}
+            >
+              <g className="ta-flesh" mask={fm}>
+                <path d={A.HAIR_BACK_FILL} fill={`url(#${id("hair")})`} />
+                <path d="M 200 200 C 150 260, 130 380, 118 500 C 106 600, 84 690, 62 770" className="ta-sheen" />
+                <path d="M 400 200 C 450 260, 470 380, 482 500 C 494 600, 516 690, 538 770" className="ta-sheen b" />
+              </g>
+              <g {...figureProps} strokeWidth="1.5">
+                <g className="tf-hair back">
+                  {G.HAIR_BACK.map((p, i) => (
+                    <Strand key={p.id} d={p.d} order={p.order} w={1} o={0.42} sway={i} dir={i % 2 ? 1 : -1} dur={swayDur + (i % 5) * 1.3} rip />
+                  ))}
+                </g>
+              </g>
+            </g>
+
+            {/* ---- Neck, garment, arms (shifted up a little so the neck is not too long) ---- */}
+            {bodyLines}
+            <g transform={`translate(0 ${A.BODY_SHIFT})`}>
+              <g className="ta-flesh" mask={fm}>
+                <path d={A.NECK_FILL} fill={`url(#${id("neck")})`} />
+                <path d={A.GARMENT} fill={`url(#${id("garment")})`} />
+                <path d={A.GARMENT_FOLD_L} className="ta-fold" />
+                <path d={A.GARMENT_FOLD_R} className="ta-fold" />
+                <path d={A.GARMENT_CENTRE} className="ta-fold soft" />
+                <path d={A.GARMENT} fill="none" stroke={`url(#${grad})`} strokeWidth="1.5" opacity="0.5" />
+                <path d={A.GARMENT_TRIM} className="ta-trim" />
+              </g>
+              {arm("L")}
+              {arm("R")}
+            </g>
+            <g className="ta-flesh" mask={fm}>
+              <path d={A.NECK_SHADOW} fill={`url(#${id("neckshadow")})`} />
+            </g>
+
+            {/* ---- Head ---- */}
+            <g
+              ref={(el) => {
+                refs.current.headFront = el;
+              }}
+            >
+              <g className="ta-flesh" mask={fm}>
+                <path d={A.FACE_FILL} fill={`url(#${id("skin")})`} />
+                <path d={A.FACE_FILL} fill={`url(#${id("faceshade")})`} />
+                <ellipse cx="262" cy="292" rx="56" ry="34" fill={`url(#${id("glow")})`} />
+                <ellipse cx="232" cy="456" rx="46" ry="32" fill={`url(#${id("blush")})`} />
+                <ellipse cx="368" cy="456" rx="46" ry="32" fill={`url(#${id("blush")})`} />
+                <ellipse cx="300" cy="448" rx="10" ry="6" fill={`url(#${id("glow")})`} />
+                <ellipse cx="228" cy="410" rx="30" ry="14" fill={`url(#${id("glow")})`} transform="rotate(-18 228 410)" />
+                <ellipse cx="372" cy="410" rx="30" ry="14" fill={`url(#${id("glow")})`} transform="rotate(18 372 410)" />
+                <path d="M 214 486 C 232 520, 262 540, 298 546" fill="none" stroke="var(--skin-sh)" strokeWidth="14" strokeLinecap="round" opacity="0.13" />
+                <path d="M 386 486 C 368 520, 338 540, 302 546" fill="none" stroke="var(--skin-sh)" strokeWidth="14" strokeLinecap="round" opacity="0.13" />
+                <path d={G.NOSE_BRIDGE} className="ta-nose" transform={NOSE_T} />
+                <g transform="translate(0 22)">
+                  <path d={G.BROWS.left} className="ta-brow" />
+                  <path d={G.BROWS.right} className="ta-brow" />
+                </g>
+              </g>
+              {eye("left", G.LEFT_EYE, 0.45)}
+              {eye("right", G.RIGHT_EYE, 0.45)}
+              <g className="ta-flesh" mask={fm}>
+                <path ref={lipFillRef} d={A.lipFillPath(closed.upper, closed.lower)} fill={`url(#${id("lip")})`} />
+                <path ref={gapFleshRef} d={closed.gap} className="ta-mouth-dark" />
+                <path d="M 286 494 C 294 499, 306 499, 314 494" className="ta-lipshine" />
+              </g>
+              <g className="ta-flesh" mask={fm}>
+                <path d={A.HAIR_CAP} fill={`url(#${id("hair")})`} />
+                <path d={A.LOCK_LEFT} fill={`url(#${id("hair")})`} />
+                <path d={A.LOCK_RIGHT} fill={`url(#${id("hair")})`} />
+                <path d="M 296 160 C 250 170, 214 214, 200 280" className="ta-sheen b" />
+                <path d="M 304 160 C 350 170, 386 214, 400 280" className="ta-sheen b" />
+              </g>
+              {faceLines}
+              <g {...figureProps} strokeWidth="1.5">
+                <g className="tf-hair front">
+                  {G.HAIR_FRONT.map((p, i) => (
+                    <Strand key={p.id} d={p.d} order={p.order} w={1.15} o={0.8} sway={i + 3} dir={i % 2 ? -1 : 1} dur={swayDur + (i % 4) * 1.1} rip />
+                  ))}
+                  {G.FRINGE.map((p, i) => (
+                    <Strand key={p.id} d={p.d} order={p.order} w={1.3} o={0.9} sway={i} dir={i % 2 ? -1 : 1} dur={swayDur * 0.8} rip />
+                  ))}
+                </g>
+                <g className="ta-lines">
+                  <Line d={closed.upper} order={0.72} reduce={reduce} pathRef={upperRef} w={1.7} />
+                  <Line d={closed.lower} order={0.72} reduce={reduce} pathRef={lowerRef} w={1.7} />
+                  <Line d={closed.gap} order={0.76} reduce={reduce} pathRef={gapRef} w={1.3} fill="var(--teal)" fillOpacity={0.12} />
+                </g>
+              </g>
+
+              <g className="tf-thought">
+                {G.THOUGHT_DOTS.map((p, i) => (
+                  <circle key={i} cx={p.x} cy={p.y} r={3 + i} style={{ animationDelay: `${i * 0.28}s` }} />
+                ))}
+              </g>
+              <g className="tf-mind" transform={`translate(${G.MIND_POINT.x} ${G.MIND_POINT.y})`}>
+                <circle r="14" className="tf-mind-halo" />
+                <circle ref={mindRef} r="4.5" className="tf-mind-core" />
+                {flareKey > 0 && (
+                  <g key={flareKey}>
+                    <circle r="10" className="tf-flare" />
+                    <circle r="10" className="tf-flare ring" />
+                  </g>
+                )}
+              </g>
+            </g>
           </g>
-        )}
-        {burst > 0 && (
-          <g key={`burst-${burst}`} transform="translate(300 260)">
-            {Array.from({ length: 14 }, (_, i) => {
-              const a = (i / 14) * Math.PI * 2;
-              const r = 170 + (i % 3) * 50;
-              return <path key={i} className="spark" d="M 0 -11 L 3 -3 L 11 0 L 3 3 L 0 11 L -3 3 L -11 0 L -3 -3 Z" style={{ fill: ["var(--amber)", "var(--rose)", "var(--teal)"][i % 3], ["--sx" as string]: `${Math.cos(a) * r}px`, ["--sy" as string]: `${Math.sin(a) * r - 20}px`, animationDelay: `${(i % 4) * 0.05}s` }} />;
-            })}
-          </g>
-        )}
+        </g>
       </svg>
     </div>
   );

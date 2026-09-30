@@ -1,25 +1,27 @@
 import type { ConnectorKind } from "../lib/data/DataService";
 
-/** Fictional student-life messages used to preview connector fact extraction. */
+export type { ConnectorKind };
+
+/** Fictional messages for the sample-only connector preview. */
 export const connectorSamples: Record<ConnectorKind, string[]> = {
   gmail: [
-    "The history assignment deadline is October 5.",
-    "I will submit my biology assignment by October 7.",
-    "The exam timetable has chemistry on October 9.",
+    "Professor says the biology assignment is due tomorrow.",
+    "Exam timetable: chemistry exam on October 7.",
+    "Can we meet for group study in the library tomorrow at 4 pm?",
   ],
   whatsapp: [
-    "We have a group study plan for biology tomorrow at 4 pm.",
-    "Let's revise chemistry together tomorrow.",
-    "I will review the assignment with the group by October 6.",
+    "Let's meet for group study tomorrow at 5 pm.",
+    "I will submit my history assignment by October 9.",
+    "I will go to the gym tomorrow at 6 pm.",
   ],
   telegram: [
-    "The physics exam timetable lists October 10.",
-    "I will finish the project draft by October 8.",
-    "We plan a group study session for maths on Friday.",
+    "The exam timetable lists the physics exam on October 11.",
+    "I will finish my project draft by October 8.",
+    "Let's schedule group study tomorrow at 3 pm.",
   ],
   calendar: [
+    "Biology assignment deadline is tomorrow.",
+    "Group study session for chemistry tomorrow at 4 pm.",
     "Gym slot: I will go to the gym tomorrow at 6 pm.",
-    "Group study session for biology is on October 7.",
-    "Exam timetable: statistics exam on October 11.",
   ],
 };

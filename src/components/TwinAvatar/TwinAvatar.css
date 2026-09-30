@@ -1,309 +1,188 @@
-/* TwinAvatar. One rig, two looks of the same drawing: neon line art at --form 0, a lit,
-   coloured portrait at --form 1. Only transform, opacity and stroke-dashoffset animate. */
-.twin-avatar {
-  --tf-a: var(--teal);
-  --tf-b: var(--violet);
-  --tf-c: var(--amber);
-  /* what hides lines behind a shape while she is still line art */
-  --occ: color-mix(in srgb, var(--bg) 90%, transparent);
-  --shade: color-mix(in srgb, var(--skin) 50%, #3a1630);
-  --ink: color-mix(in srgb, var(--hair) 55%, #0a0614);
-  position: relative;
-  height: 100%;
-  aspect-ratio: 600 / 900;
-  pointer-events: none;
-  /* the garment runs off the bottom: fade it out instead of showing a hem */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 80%, transparent 99%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 80%, transparent 99%);
+/* TwinAvatar: colour layers over the line art. `--form` runs 0 (line art) to 1 (coloured). */
+
+.twin-face.ta {
+  height: var(--face-h, 100%);
+  aspect-ratio: 900 / 1080;
+  width: auto;
+  max-width: none;
 }
 
-.twin-avatar svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+.ta .ta-flesh {
+  opacity: var(--form, 0);
 }
-
-.twin-avatar .ta-fx {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-/* Stroke colour shows the state (also the only signal under reduced motion). */
-.twin-avatar.state-listening {
-  --tf-a: var(--teal);
-  --tf-b: var(--teal);
-  --tf-c: var(--violet);
-}
-.twin-avatar.state-thinking {
-  --tf-a: var(--violet);
-  --tf-b: var(--amber);
-  --tf-c: var(--amber);
-}
-.twin-avatar.state-speaking {
-  --tf-a: var(--violet);
-  --tf-b: var(--rose);
-  --tf-c: var(--amber);
-}
-.twin-avatar.state-delighted {
-  --tf-a: var(--amber);
-  --tf-b: var(--rose);
-  --tf-c: var(--teal);
-}
-
-.tf-stop {
-  transition: stop-color 0.7s var(--ease);
-}
-.tf-stop.a {
-  stop-color: var(--tf-a);
-}
-.tf-stop.b {
-  stop-color: var(--tf-b);
-}
-.tf-stop.c {
-  stop-color: var(--tf-c);
-}
-
-/* ---------- Form: line art <-> colour ---------- */
-
-/* Lines: full strength at form 0, a soft rim light at form 1. --fade says how much to lose. */
-.ln {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: calc(var(--o, 1) * (1 - var(--form, 0) * var(--fade, 0.55)));
-}
-
-.twin-avatar[data-formed] .ln.detail {
+.ta[data-flat="true"] .ta-flesh {
   display: none;
 }
 
-/* Dark drawn features (brows, lids, lashes) fade in as she gains colour. */
-.dk {
+/* Line art stays as rim light on top of the colour; body lines give way to the garment. */
+.ta .ta-lines {
+  opacity: calc(1 - var(--form, 0) * 0.42);
+}
+.ta .ta-hatch {
+  opacity: calc(1 - var(--form, 0));
+}
+.ta .ta-bodylines {
+  opacity: calc(1 - var(--form, 0));
+}
+
+/* Eyes */
+.ta .ta-sclera {
+  fill: #f6f1f8;
+}
+.ta .ta-lidshade {
   fill: none;
-  stroke: var(--ink);
+  stroke: var(--skin-sh);
+  stroke-width: 9;
   stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: calc(var(--o, 1) * var(--form, 0));
+  opacity: 0.3;
 }
-.nose,
-.lipline {
-  stroke: var(--shade);
+.ta .ta-ink path {
+  fill: none;
+  stroke: #1a1024;
+  stroke-linecap: round;
 }
-.lipline {
-  opacity: calc(var(--form, 0) * 0.55);
+.ta .ta-ink path + path {
+  opacity: 0.6;
 }
-
-/* Fills bloom in: staggered opacity. The mask (.bloom) grows the colour from the mind point. */
-.fill {
-  stroke: none;
-  opacity: clamp(0, calc((var(--form, 0) - var(--fd, 0)) * 2.4), 1);
+.ta .ta-pupil-dark {
+  fill: #120b1f;
 }
-.fill.shade {
-  opacity: clamp(0, calc((var(--form, 0) - var(--fd, 0)) * 1.2), 0.55);
+.ta .ta-pupil-light,
+.ta .ta-glint-line {
+  opacity: calc(1 - var(--form, 0));
 }
-
-.occ {
-  fill: var(--occ);
-  stroke: none;
+.ta .ta-catch {
+  fill: #fff;
+  opacity: 0.95;
 }
-
-.bloom {
-  transform-box: view-box; /* the origin is set inline, at the mind point */
-  transform: scale(calc(var(--form, 0) * var(--form, 0) * var(--bs, 100)));
+.ta .ta-catch.soft {
+  opacity: 0.55;
 }
 
-/* Draw-on for every line (CSS dash). */
-.draw {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: tf-draw 1.3s var(--ease) both;
-}
-@keyframes tf-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-.joint,
-.head,
-.torso,
-.fig,
-.brows {
-  transform-box: view-box;
-}
-.head {
-  transform-origin: 300px 400px;
-}
-.torso {
-  transform-origin: 300px 720px;
-}
-.fig {
-  transform-origin: 300px 900px;
-}
-
-/* ---------- Hair ---------- */
-.tf-sway {
-  transform-box: view-box;
-  transform-origin: 300px 190px;
-  animation: tf-sway var(--d, 9s) ease-in-out infinite alternate;
-}
-.twin-avatar.state-speaking .tf-sway.rip {
-  animation-name: tf-ripple;
-  animation-duration: calc(var(--d, 9s) * 0.32);
-}
-.twin-avatar.state-thinking .tf-sway {
-  animation-duration: calc(var(--d, 9s) * 0.6);
-}
-
-/* ---------- Eyes ---------- */
-.tf-eye {
-  transition: transform 55ms linear;
-}
-.twin-avatar[data-blink] .tf-eye {
-  transform: scaleY(0.08);
-}
-.tf-pupil {
-  transform: translate(var(--px, 0px), var(--py, 0px));
-  transition: transform 160ms var(--ease);
-}
-.tf-pupil-dot {
-  transition: transform 0.5s var(--ease);
-}
-.twin-avatar.state-listening .tf-pupil-dot {
-  transform: scale(1.25);
-}
-.tf-pupil-fill {
-  fill: color-mix(in srgb, #0a0814 calc(var(--form, 0) * 100%), var(--text));
-}
-.tf-glint {
-  fill: color-mix(in srgb, #fff calc(var(--form, 0) * 100%), var(--bg));
+/* Brows, nose, lips */
+.ta .ta-brow {
+  fill: none;
+  stroke: color-mix(in srgb, var(--hair) 70%, #000);
+  stroke-width: 4.6;
+  stroke-linecap: round;
   opacity: 0.9;
 }
-.tf-glint.small {
-  opacity: calc(var(--form, 0) * 0.7);
+.ta.look-man .ta-brow {
+  stroke-width: 6.4;
 }
-.lidshade {
+.ta .ta-nose {
+  fill: none;
+  stroke: var(--skin-sh);
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: 0.22;
+}
+.ta .ta-mouth-dark {
+  fill: #3a1630;
+}
+.ta .ta-lipshine {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.22;
+}
+
+/* Hair */
+.ta .ta-sheen {
+  fill: none;
+  stroke: var(--hair-hi);
+  stroke-width: 10;
+  stroke-linecap: round;
+  opacity: 0.1;
+}
+.ta .ta-sheen.b {
+  stroke-width: 6;
+  opacity: 0.16;
+}
+
+/* Garment */
+.ta .ta-fold {
   fill: none;
   stroke: #000;
-  stroke-opacity: calc(var(--form, 0) * 0.18);
+  stroke-width: 9;
   stroke-linecap: round;
+  opacity: 0.16;
 }
-
-/* ---------- Mouth ---------- */
-.gap {
-  fill: color-mix(in srgb, #3a1222 calc(var(--form, 0) * 100%), var(--teal));
-  fill-opacity: calc(0.12 + var(--form, 0) * 0.83);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: calc(1 - var(--form, 0) * 0.85);
+.ta .ta-fold.soft {
+  stroke-width: 3;
+  opacity: 0.22;
 }
-
-/* ---------- Thought dots and mind point ---------- */
-.tf-thought circle {
-  fill: var(--amber);
-  opacity: 0;
-}
-.twin-avatar.state-thinking .tf-thought circle {
-  animation: tf-thought 1.3s ease-in-out infinite;
-}
-.tf-mind-halo {
-  fill: color-mix(in srgb, var(--amber) 40%, transparent);
-  animation: tf-mind-pulse 3.4s ease-in-out infinite alternate;
-}
-.tf-mind-core {
-  fill: var(--amber);
-}
-.tf-flare {
-  fill: color-mix(in srgb, var(--amber) 55%, transparent);
-  animation: tf-flare 1100ms var(--ease) both;
-}
-.tf-flare.ring {
+.ta .ta-trim {
   fill: none;
-  stroke: var(--amber);
-  stroke-width: 1.5;
-  animation-delay: 120ms;
+  stroke: var(--outfit-hi);
+  stroke-width: 4;
+  stroke-linecap: round;
+  opacity: 0.9;
 }
-.tf-flare,
-.spark {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.spark {
-  fill: var(--amber);
-  animation: spark 1.3s var(--ease) both;
-}
-@keyframes spark {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) scale(0.4) rotate(0deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--sx), var(--sy)) scale(1.4) rotate(120deg);
-  }
+.ta .ta-sleeve-fold {
+  fill: none;
+  stroke: #000;
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0.16;
 }
 
-@keyframes tf-ripple {
-  from {
-    transform: rotate(calc(var(--dir, 1) * 2.2deg * -1));
-  }
-  to {
-    transform: rotate(calc(var(--dir, 1) * 2.2deg));
-  }
+/* Hands */
+.ta .ta-thumb {
+  fill: none;
+  stroke: var(--skin);
+  stroke-width: 12;
+  stroke-linecap: round;
 }
-@keyframes tf-sway {
-  from {
-    transform: rotate(calc(var(--dir, 1) * -1.1deg));
-  }
-  to {
-    transform: rotate(calc(var(--dir, 1) * 1.1deg));
-  }
-}
-@keyframes tf-thought {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  45% {
-    opacity: 0.95;
-  }
-}
-@keyframes tf-mind-pulse {
-  from {
-    opacity: 0.35;
-    transform: scale(0.85);
-  }
-  to {
-    opacity: 0.9;
-    transform: scale(1.1);
-  }
-}
-@keyframes tf-flare {
-  0% {
-    opacity: 0.9;
-    transform: scale(0.4);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(4.2);
-  }
+.ta .ta-fingers {
+  fill: none;
+  stroke: var(--skin-sh);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  opacity: 0.55;
 }
 
-/* Reduced motion: a static portrait; the state shows in the stroke colour only. */
+/* Deterministic screenshots: hold every CSS animation. */
+.ta-still .ta * {
+  animation: none !important;
+}
+.ta-still .ta .tf-strand {
+  stroke-dashoffset: 0 !important;
+}
+.ta-still .ta .tf-halo {
+  opacity: 1 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .draw {
-    animation: none;
-    stroke-dashoffset: 0;
+  .ta .ta-flesh {
+    opacity: var(--form, 0);
   }
-  .tf-sway,
-  .tf-mind-halo,
-  .twin-avatar.state-thinking .tf-thought circle {
-    animation: none;
-  }
-  .twin-avatar.state-thinking .tf-thought circle {
-    opacity: 0.8;
-  }
+}
+
+/* Colour mode: the drawn front strands would run across the cheeks; let the fill carry the hair. */
+.ta .tf-hair.front {
+  opacity: calc(1 - var(--form, 0) * 0.9);
+}
+.ta .ta-nose {
+  stroke-width: 10;
+  opacity: 0.3;
+}
+
+.ta .ta-lidshade {
+  stroke: color-mix(in srgb, var(--skin-sh) 55%, #7a4ac8);
+  stroke-width: 13;
+  opacity: 0.32;
+}
+.ta .ta-brow {
+  stroke-width: 3.6;
+}
+
+/* Wrapper that carries the shared view-transition name between Home and Talk. */
+.twin-morph {
+  display: flow-root;
+  height: 100%;
+}
+.talk-face .twin-morph {
+  height: auto;
 }

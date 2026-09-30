@@ -15,8 +15,8 @@ export interface VariantConfig {
 }
 
 export const VARIANTS: Record<AtmosphereVariant, VariantConfig> = {
-  twin: { accent: ["var(--violet)", "var(--teal)"], rings: [0, 1, 2, 3, 4], strength: 1, dust: { kind: "svg", count: 18 }, grid: true, hud: true, marquee: true },
-  talk: { accent: ["var(--teal)", "var(--violet)"], rings: [0, 2], strength: 0.6, dust: { kind: "none", count: 0 }, grid: true, hud: false, marquee: true },
+  twin: { accent: ["var(--violet)", "var(--teal)"], rings: [], strength: 1, dust: { kind: "svg", count: 18 }, grid: false, hud: false, marquee: true },
+  talk: { accent: ["var(--teal)", "var(--violet)"], rings: [], strength: 0.8, dust: { kind: "svg", count: 18 }, grid: false, hud: false, marquee: true },
   journal: { accent: ["var(--violet)", "var(--lilac)"], rings: [0, 1, 3], strength: 0.9, dust: { kind: "canvas", count: 36 }, grid: true, hud: true, marquee: true },
   ask: { accent: ["var(--amber)", "var(--rose)"], rings: [0, 1, 2, 5], strength: 1, dust: { kind: "canvas", count: 40 }, grid: true, hud: true, marquee: true },
   sources: { accent: ["var(--teal)", "var(--violet)"], rings: [1, 3, 4], strength: 1, dust: { kind: "canvas", count: 54, flow: "inward" }, grid: true, hud: true, marquee: true },

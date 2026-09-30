@@ -1,5 +1,6 @@
 "use client";
 
+import { HAIR_COLOURS, OUTFITS, SKIN_TONES } from "./looks";
 import { useSyncExternalStore } from "react";
 import { setVoiceLook } from "@/lib/voice/speak";
 
@@ -72,27 +73,11 @@ export interface Prefs {
   outfit: string;
 }
 
-export const SKINS = [
-  { id: "#f2d3bf", name: "Light" },
-  { id: "#e0b08a", name: "Warm" },
-  { id: "#b98560", name: "Tan" },
-  { id: "#7d5038", name: "Deep" },
-];
-export const HAIRS = [
-  { id: "#1d1a33", name: "Ink" },
-  { id: "#5a3a2a", name: "Brown" },
-  { id: "#c79a55", name: "Golden" },
-  { id: "#b0492f", name: "Copper" },
-  { id: "#7a64d6", name: "Violet" },
-];
-export const OUTFITS = [
-  { id: "#2aa39a", name: "Teal" },
-  { id: "#7c5fe0", name: "Violet" },
-  { id: "#d9962b", name: "Amber" },
-  { id: "#d2566f", name: "Rose" },
-];
+export const SKINS = SKIN_TONES.map((s) => ({ id: s.id, name: s.label, color: s.base }));
+export const HAIRS = HAIR_COLOURS.map((h) => ({ id: h.id, name: h.label, color: h.light }));
+export const OUTFITS_LIST = OUTFITS.map((o) => ({ id: o.id, name: o.label, color: o.light }));
 
-const DEFAULTS: Prefs = { look: "woman", skin: SKINS[1].id, hair: HAIRS[1].id, outfit: OUTFITS[1].id };
+const DEFAULTS: Prefs = { look: "woman", skin: SKINS[1].id, hair: HAIRS[2].id, outfit: OUTFITS_LIST[1].id };
 const KEY = "paroh-twin-look-v2";
 let prefs: Prefs = DEFAULTS;
 let loaded = false;
@@ -109,7 +94,7 @@ function load() {
         look: p.look === "man" ? "man" : "woman",
         skin: SKINS.some((s) => s.id === p.skin) ? p.skin! : DEFAULTS.skin,
         hair: HAIRS.some((h) => h.id === p.hair) ? p.hair! : DEFAULTS.hair,
-        outfit: OUTFITS.some((o) => o.id === p.outfit) ? p.outfit! : DEFAULTS.outfit,
+        outfit: OUTFITS_LIST.some((o) => o.id === p.outfit) ? p.outfit! : DEFAULTS.outfit,
       };
     }
   } catch {

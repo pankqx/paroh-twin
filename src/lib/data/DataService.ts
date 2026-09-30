@@ -9,19 +9,26 @@ import type {
   JournalEntry,
   MemoryItem,
   Scenario,
+  ScenarioSpec,
   Task,
   TwinState,
-  Whisper,
 } from "../types";
-
+import type { FactConflict } from "../twin/memory";
+import type { FeedbackDelta } from "../twin/insights";
+import type { MemoryGraph } from "../twin/memoryGraph";
 export type ConnectorKind = "gmail" | "whatsapp" | "telegram" | "calendar";
 
-/** Generic CRUD surface shared by every stored entity. */
-export interface Repo<T extends { id: string }> {
-  list(): Promise<T[]>;
-  get(id: string): Promise<T | undefined>;
-  upsert(item: T): Promise<T>;
-  remove(id: string): Promise<void>;
+export interface WhatIfPlan {
+  label: string;
+  tasks: ScenarioSpec["tasks"];
+  summary?: string;
+  priority?: ScenarioSpec["priority"];
+}
+
+export interface WhatIfParseResult {
+  scenarios: WhatIfPlan[];
+  clarify?: string;
+  degraded: boolean;
 }
 
 export interface ConverseInput {
@@ -38,7 +45,13 @@ export interface ConverseResult {
   degraded?: boolean;
 }
 
-export type ProposedScenario = Scenario & { needsInfo?: string };
+/** Generic CRUD surface shared by every stored entity. */
+export interface Repo<T extends { id: string }> {
+  list(): Promise<T[]>;
+  get(id: string): Promise<T | undefined>;
+  upsert(item: T): Promise<T>;
+  remove(id: string): Promise<void>;
+}
 
 /**
  * The only way the UI reads or writes data. Never call storage or the network
@@ -61,10 +74,13 @@ export interface DataService {
 
   // twin (derived from approved facts and permitted data)
   getTwinState(): Promise<TwinState>;
-  twinInsights(): Promise<string[]>;
+  getConflicts(): Promise<FactConflict[]>;
+  getStale(): Promise<Fact[]>;
+  retrieve(question: string): Promise<Fact[]>;
+  insights(): Promise<string[]>;
   predictedNeeds(): Promise<string[]>;
-  getWhispers(): Promise<Whisper[]>;
-  staleDecisionIds(): Promise<string[]>;
+  feedbackDelta(): Promise<FeedbackDelta>;
+  getMemoryGraph(): Promise<MemoryGraph>;
   nextQuestions(): Promise<{ id: string; text: string; domain: string; quickReplies: string[] }[]>;
   saveEntry?(entry: JournalEntry): Promise<JournalEntry>;
   listFacts?(): Promise<Fact[]>;
@@ -76,12 +92,13 @@ export interface DataService {
     source: "journal" | "question";
     sourceId: string;
   }): Promise<Fact[]>;
-  proposeScenarios(prompt: string): Promise<ProposedScenario[]>;
+  parseWhatIf(text: string): Promise<WhatIfParseResult>;
+  proposeScenarios(prompt: string): Promise<Scenario[]>;
+  previewConnector(kind: ConnectorKind): Promise<Fact[]>;
+  converse(input: ConverseInput): Promise<ConverseResult>;
   explain(
     decisionId: string,
   ): Promise<{ text: string; spoken: string; usedFactIds: string[] }>;
-  converse(input: ConverseInput): Promise<ConverseResult>;
-  previewConnector(kind: ConnectorKind): Promise<Fact[]>;
   previewPayload(
     kind: "extract" | "scenarios" | "explain",
     input: unknown,

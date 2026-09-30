@@ -1,24 +1,23 @@
 .twin {
+  width: 100%;
   max-width: 1440px;
   padding-left: 2.5rem;
   padding-right: 2.5rem;
 }
 
-/* ---------- Hero: text on the left, her stage on the right ----------
-   The stage is a size container. The constellation SVG (1300 x 900) is scaled to fit it, and
-   her anchor box is sized from the same unit (--u), so stars and avatar stay in proportion.
-   The avatar itself is the persistent one from the layout; it glides to .twin-stage-face. */
+/* ---------- Hero: one stage, face + constellation fill the first screen ----------
+   The stage is a size container. The constellation SVG (1500 x 900) is scaled to fit it, and
+   the face is sized from the same unit (--u), so stars and face always stay in proportion. */
 
 .twin-hero {
-  display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: center;
   margin-top: -1rem;
+  /* full bleed: the stage uses the whole window width, not just the 1440px column */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 .twin-stage {
-  --u: min(100cqh, 69.2cqw); /* rendered height of the constellation */
+  --u: min(100cqh, 52cqw); /* rendered height of the constellation */
   position: relative;
   container-type: size;
   width: 100%;
@@ -28,14 +27,18 @@
 .twin-stage-face {
   position: absolute;
   left: 50%;
-  top: calc((100cqh - var(--u)) / 2 + var(--u) * 0.03);
-  height: calc(var(--u) * 0.94);
+  top: calc((100cqh - var(--u)) / 2 - var(--u) * 0.06);
+  height: calc(var(--u) * 1.34);
   transform: translateX(-50%);
+  --face-h: 100%;
 }
 
 .twin-hero-text {
-  position: relative;
+  position: absolute;
   z-index: 3;
+  top: 1.25rem;
+  left: max(1.5rem, 3cqw);
+  width: clamp(260px, 26cqw, 360px);
 }
 
 .twin-eyebrow {
@@ -48,15 +51,15 @@
 }
 
 .twin-title {
-  font-size: clamp(2.4rem, 3.4vw, 3.3rem);
+  font-size: clamp(2.2rem, 3.2cqw, 3rem);
   line-height: 1.04;
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
 }
 
 .twin-lede {
   max-width: 38ch;
-  font-size: 1.02rem;
-  margin-bottom: 1.4rem;
+  font-size: 1rem;
+  margin-bottom: 1.2rem;
 }
 
 .twin-actions {
@@ -344,17 +347,19 @@
     padding-right: 1.25rem;
   }
 
-  /* Text above, her stage below. */
-  .twin-hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
+  /* Text above, stage below. */
   .twin-stage {
     height: auto;
     container-type: normal;
     display: flex;
     flex-direction: column;
-    align-items: center;
+  }
+
+  .twin-hero-text {
+    position: static;
+    width: auto;
+    order: -1;
+    margin-bottom: 0.5rem;
   }
 
   .twin-stage-face {
@@ -362,7 +367,10 @@
     left: auto;
     top: auto;
     transform: none;
-    height: clamp(380px, 62vh, 620px);
+    align-self: center;
+    --face-h: clamp(340px, 62vh, 620px);
+    height: auto;
+    margin-top: calc(var(--face-h) * -0.16); /* the drawing has empty space above the crown */
   }
 
   .twin-stage .constellation {
@@ -372,6 +380,7 @@
   .twin-caption {
     position: static;
     transform: none;
+    align-self: center;
     margin-top: 0.75rem;
   }
 
@@ -411,5 +420,57 @@
 
   .twin-doodle {
     display: none;
+  }
+}
+
+/* Side cards fill the window edges when the window is wide enough to have room for them. */
+.twin-side {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  top: 52%;
+  width: clamp(230px, 14cqw, 330px);
+  padding: 1rem 1.15rem;
+  transform: translateY(-50%);
+}
+.twin-side h2 {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--violet);
+}
+.twin-side p,
+.twin-side li {
+  font-size: 0.86rem;
+  color: var(--text-soft);
+}
+.twin-side ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.twin-side li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--stroke);
+}
+.twin-side li b {
+  color: var(--amber);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.twin-side.left {
+  left: 1.5cqw;
+}
+.twin-side.right {
+  right: 3.5cqw;
+}
+@container (min-width: 2150px) {
+  .twin-side {
+    display: block;
   }
 }

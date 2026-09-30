@@ -1,17 +1,17 @@
 "use client";
 
-import { HAIRS, OUTFITS, SKINS, play, setPrefs, usePrefs } from "@/components/TwinAvatar/avatarStore";
+import { HAIRS, OUTFITS_LIST, SKINS, play, setPrefs, usePrefs } from "@/components/TwinAvatar/avatarStore";
 import "./ChooseTwin.css";
 
 /** Pick who your twin is: woman or man, a skin tone, hair and outfit. Saved in this browser. */
 export default function ChooseTwin() {
   const prefs = usePrefs();
-  const swatches = (label: string, items: Array<{ id: string; name: string }>, key: "skin" | "hair" | "outfit") => (
+  const swatches = (label: string, items: Array<{ id: string; name: string; color: string }>, key: "skin" | "hair" | "outfit") => (
     <div className="ct-row" role="group" aria-label={label}>
       <span className="ct-label">{label}</span>
       <div className="ct-dots">
         {items.map((it) => (
-          <button key={it.id} type="button" className={`ct-dot${prefs[key] === it.id ? " on" : ""}`} style={{ background: it.id }} aria-label={`${label}: ${it.name}`} aria-pressed={prefs[key] === it.id} title={it.name} onClick={() => setPrefs({ [key]: it.id })} />
+          <button key={it.id} type="button" className={`ct-dot${prefs[key] === it.id ? " on" : ""}`} style={{ background: it.color }} aria-label={`${label}: ${it.name}`} aria-pressed={prefs[key] === it.id} title={it.name} onClick={() => setPrefs({ [key]: it.id })} />
         ))}
       </div>
     </div>
@@ -30,7 +30,7 @@ export default function ChooseTwin() {
       </header>
       {swatches("Skin", SKINS, "skin")}
       {swatches("Hair", HAIRS, "hair")}
-      {swatches("Outfit", OUTFITS, "outfit")}
+      {swatches("Outfit", OUTFITS_LIST, "outfit")}
       <div className="ct-actions">
         <button type="button" className="btn-ghost btn-small" onClick={() => play("dance")}>
           Dance

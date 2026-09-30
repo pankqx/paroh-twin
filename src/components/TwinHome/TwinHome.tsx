@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { dataService } from "@/app/dataService";
 import { takeGrowth } from "@/app/bloomGrowth";
 import Doodle from "@/components/Doodle/Doodle";
 import EmptyOrbit from "@/components/EmptyOrbit/EmptyOrbit";
 import Constellation, { describeFact } from "@/components/Constellation/Constellation";
+import Aurora from "@/components/fx/Aurora";
 import BlurText from "@/components/fx/BlurText";
 import CountUp from "@/components/fx/CountUp";
 import SpotlightCard from "@/components/fx/SpotlightCard";
@@ -14,8 +15,12 @@ import Heatmap from "@/components/Heatmap/Heatmap";
 import Ring from "@/components/Ring/Ring";
 import Sparkline from "@/components/Sparkline/Sparkline";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
-import AvatarAnchor from "@/components/TwinAvatar/AvatarAnchor";
-import { mindTarget } from "@/components/TwinAvatar/mindPoint";
+import { ViewTransition } from "react";
+import HomeLife from "./HomeLife";
+import TwinAvatar, { type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
+import "@/components/TwinAvatar/TwinAvatar.css";
+import { onAction, usePrefs } from "@/components/TwinAvatar/avatarStore";
+import ChooseTwin from "@/components/TwinStage/ChooseTwin";
 import { SAMPLE_STUDENT_NAME } from "@/mock/sample";
 import { simulate } from "@/lib/twin/scenarios";
 import type { Fact, TwinState } from "@/lib/types";
@@ -151,6 +156,9 @@ export default function TwinHome() {
   const [view, setView] = useState<View | null>(null);
   const [grew, setGrew] = useState<string[]>([]);
   const [focused, setFocused] = useState<Fact | null>(null);
+  const face = useRef<TwinAvatarHandle>(null);
+  const prefs = usePrefs();
+  useEffect(() => onAction((a) => face.current?.react(a)), []);
 
   useEffect(() => {
     let live = true;
@@ -168,7 +176,7 @@ export default function TwinHome() {
   // After the draw-on, her mind point flares once for facts approved elsewhere.
   useEffect(() => {
     if (!view || grew.length === 0) return;
-    const t = window.setTimeout(() => mindTarget()?.flare(), 2000);
+    const t = window.setTimeout(() => face.current?.flare(), 2000);
     return () => window.clearTimeout(t);
   }, [view, grew]);
 
@@ -180,30 +188,75 @@ export default function TwinHome() {
 
   return (
     <main className="page twin">
-      <section className="twin-hero">
-        <div className="twin-hero-text">
-          <p className="twin-eyebrow">{name}&rsquo;s twin · sample data</p>
-          <BlurText text={`Hey ${name}, here’s your week.`} className="twin-title" />
-          <p className="twin-lede">
-            {deadlines.length > 0
-              ? `${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"} ahead and a ${load}% load. `
-              : `A ${load}% load this week. `}
-            Everything here comes from what {name} chose to share and approve.
-          </p>
-          <div className="twin-actions">
-            <Link href="/talk" className="btn-primary">
-              Talk to your twin
-            </Link>
-            <Link href="/ask" className="btn-ghost">
-              Ask a what-if
-            </Link>
-          </div>
-        </div>
+      <Aurora amplitude={0.8} speed={0.8} />
 
+      <section className="twin-hero">
         <div className="twin-stage">
+          <HomeLife
+            name={name}
+            deadline={deadlines[0] ? { title: deadlines[0].title.length > 28 ? `${deadlines[0].title.slice(0, 26)}…` : deadlines[0].title, days: Math.max(0, Math.ceil((new Date(deadlines[0].due).getTime() - Date.now()) / 86400000)) } : undefined}
+            habitPct={Math.round(twin.habitConsistency * 100)}
+            loadPct={load}
+            approvedCount={approved.length}
+          />
           <Constellation facts={approved} onFocusFact={setFocused} />
-          {/* She is drawn by the persistent avatar in the layout; this box is where she stands. */}
-          <AvatarAnchor kind="home" className="twin-stage-face" />
+          <div className="twin-stage-face">
+            <ViewTransition name="twin" share="morph" default="none">
+              <div className="twin-morph">
+                <TwinAvatar ref={face} style={prefs} state="idle" form={0} />
+              </div>
+            </ViewTransition>
+          </div>
+
+          <aside className="twin-side left glass" aria-label="Coming up">
+            <h2>Coming up</h2>
+            {deadlines.length === 0 ? (
+              <p>No deadlines close by.</p>
+            ) : (
+              <ul>
+                {deadlines.slice(0, 4).map((d) => (
+                  <li key={d.id}>
+                    <span>{d.title}</span>
+                    <b>{d.due.slice(5)}</b>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+          <aside className="twin-side right glass" aria-label="Recently learned">
+            <h2>She has learned</h2>
+            {approved.length === 0 ? (
+              <p>Nothing approved yet.</p>
+            ) : (
+              <ul>
+                {approved.slice(0, 4).map((f) => (
+                  <li key={f.id}>
+                    <span>{f.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <ChooseTwin />
+          </aside>
+
+          <div className="twin-hero-text">
+            <p className="twin-eyebrow">{name}&rsquo;s twin · sample data</p>
+            <BlurText text={`Hey ${name}, here’s your week.`} className="twin-title" />
+            <p className="twin-lede">
+              {deadlines.length > 0
+                ? `${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"} ahead and a ${load}% load. `
+                : `A ${load}% load this week. `}
+              Everything here comes from what {name} chose to share and approve.
+            </p>
+            <div className="twin-actions">
+              <Link href="/talk" className="btn-primary">
+                Talk to your twin
+              </Link>
+              <Link href="/ask" className="btn-ghost">
+                Ask a what-if
+              </Link>
+            </div>
+          </div>
 
           <p className="glass twin-caption" aria-live="polite">
             {focused
