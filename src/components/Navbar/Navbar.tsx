@@ -199,7 +199,7 @@ export default function Navbar() {
             />
             <motion.aside
               id="approvals-tray"
-              className="glass tray"
+              className="glass glass-blur tray"
               role="dialog"
               aria-label="Approvals"
               initial={{ y: "-105%", opacity: 0.6 }}
@@ -266,7 +266,7 @@ export default function Navbar() {
             />
             <motion.div
               id="more-sheet"
-              className="sheet glass"
+              className="sheet glass glass-blur"
               role="dialog"
               aria-label="More screens"
               initial={{ y: "100%" }}

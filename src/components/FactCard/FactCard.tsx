@@ -20,6 +20,15 @@ interface Props {
   onDone: () => void;
 }
 
+// Category colours are fixed across the app (design system section 4).
+const CATEGORY_COLOUR: Record<string, string> = {
+  study: "var(--teal)",
+  health: "var(--green)",
+  personal: "var(--lilac)",
+  career: "var(--amber)",
+  other: "var(--muted)",
+};
+
 const shortDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -59,7 +68,12 @@ export default function FactCard({ fact, quote, onApprove, onReject, onEdit, onA
   }
 
   return (
-    <article ref={ref} className={`glass fact-card phase-${phase}`} aria-live="polite">
+    <article
+      ref={ref}
+      className={`glass fact-card phase-${phase}`}
+      style={{ ["--glass-accent" as string]: CATEGORY_COLOUR[fact.category] ?? "var(--violet)" }}
+      aria-live="polite"
+    >
       <div className="fact-top">
         <div className="fact-main">
           <span className="kind-pill">{fact.kind}</span>

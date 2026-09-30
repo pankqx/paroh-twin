@@ -1,0 +1,35 @@
+.spark {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.spark-base {
+  stroke: var(--stroke);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.spark-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px var(--c));
+}
+
+.spark-area {
+  animation: spark-area-in 1.2s var(--ease) 0.9s both;
+}
+
+.spark-dot {
+  filter: drop-shadow(0 0 5px var(--c));
+  animation: spark-area-in 0.6s var(--ease) 1.6s both;
+}
+
+@keyframes spark-area-in {
+  from {
+    opacity: 0;
+  }
+}

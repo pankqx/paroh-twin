@@ -75,7 +75,8 @@
 }
 
 .fact-conf-num {
-  font-size: 0.95rem;
+  font-size: 1.6rem;
+  line-height: 1;
   color: var(--text);
 }
 
