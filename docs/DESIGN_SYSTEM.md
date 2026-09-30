@@ -96,7 +96,7 @@ Never hardcode new colours; derive tints with `color-mix(in srgb, var(--x) 30%, 
 
 ## 7. Screens and their signature visuals
 
-**Twin (home).** Centre: the **VoiceOrb** (see 7.1). Around it: the **knowledge constellation**
+**Twin (home).** Hero: the **TwinFace** (see 7.1), big, on the right. Around it: the **knowledge constellation**
 (approved facts as small glowing nodes grouped by kind, edges to their source, slow drift).
 Below: a glass stat row (load gauge, habit ring, goal ring, fidelity chip "7 of 10 — twin's
 guess vs your choice" with count-up), the focus **heatmap** (7x24 cells that light up in a
@@ -146,14 +146,26 @@ judges: every source ends at the same gate — you approve before the twin learn
 payload preview ("what would be sent to the language model"), the honesty notes, and
 "Delete all my data".
 
-### 7.1 VoiceOrb (the hero component)
-`<VoiceOrb state="idle|listening|thinking|speaking" level={0..1} confidence={...} load={...}
-fidelity={...} />`
-- Built from the React Bits **Orb** as a base, then customised: ring thickness from domain
-  confidence, pulse speed from load, glow from fidelity.
-- idle = slow breathing; listening = reacts to `level` (Web Audio AnalyserNode, live only,
-  nothing recorded); thinking = rings swirl faster; speaking = pulses with the sentence queue.
-- Reduced motion: static orb with a colour change per state.
+### 7.1 TwinFace (the hero component; replaces the VoiceOrb, see NIGHT_PLAN Amendment A)
+`<TwinFace state="idle|listening|thinking|speaking" level={0..1} mouth={0..3} lookAt? />`
+- A huge **line-art portrait of a young woman**, pure SVG + `motion`: no WebGL, no raster
+  images. Thin 1.5px strokes with the aurora stroke (teal -> violet -> amber): face contour,
+  8-12 separate hair strands, brows, eyes (upper lid, iris ring, pupil, lower lid), nose line,
+  upper and lower lip paths, neck and shoulders fading out. Elegant and minimal; not cartoonish,
+  not photoreal. She is the student's twin, not a real person.
+- Intro: every path draws on (`pathLength` 0 to 1, staggered, about 1.6s), then a soft glow.
+- idle: breathing (scale 1 to 1.012), slow hair sway, blink every 3-6s (randomised, 120ms),
+  pupils follow the cursor (clamped to a few px).
+- listening: leans in slightly, pupils widen, a thin ring around her pulses with `level`
+  (Web Audio level, live only, nothing recorded).
+- thinking: eyes glance up-left, three small dots animate near the temple, hair sways faster.
+- speaking: mouth cycles four shapes (0 closed, 1 slight, 2 open, 3 wide) driven by `mouth`;
+  with no viseme data it falls back to a smooth random open/close loop at about 6-9Hz.
+- **Mind point:** a small glowing point at her temple. Approved fact cards fly into it and it
+  flares. This is the "approve" destination everywhere.
+- Sized with `clamp()`: about 75vh on Talk, about 60vh on the Twin hero.
+- Reduced motion: a static drawn face; the state is shown by stroke colour only.
+- Performance: only transform, opacity and stroke-dashoffset animate.
 
 ## 8. The approved React Bits list (decision fatigue solved — do not browse for more)
 One component per role. If none of these fits, build it with `motion`. Nothing else tonight.

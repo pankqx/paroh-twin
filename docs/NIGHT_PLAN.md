@@ -124,3 +124,16 @@ Breaks: 10 minutes around 02:00 and 04:30. Tired mistakes cost more than the bre
    recommendation; accept; predicted-choice reveal; fidelity ticks up.
 5. (20s) Privacy: toggle a category off, payload preview shrinks; state the honesty notes.
 6. (10s) Close: "Not perfect prediction: an explainable, improving model of you."
+
+## Amendment A (decided 1 Oct 00:00)
+1. The **VoiceOrb hero is REPLACED by `TwinFace`**: a huge line-art portrait of a young woman,
+   drawn in SVG, who is the student's "twin". No WebGL and no raster images.
+2. The orb states become **face states**: `idle | listening | thinking | speaking`
+   (breathing and blinking; leaning in; eyes up-left with thought dots; mouth shapes).
+3. A small glowing **mind point** at her temple receives approved facts: cards fly into it and it
+   flares. This replaces "fly into the orb" everywhere (Talk, Approvals tray).
+4. A full **scroll-story landing at `/story`** with a first-visit loader is added and built
+   **LAST**, only after Twin, Talk, Journal, Ask and Sources are solid. It is not a MUST.
+5. Unchanged: ownership split, DataService-only data access, honest claims, sample data,
+   consent-first, motion rules (transform/opacity/stroke-dashoffset, reduced motion).
+
