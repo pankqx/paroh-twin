@@ -1,4 +1,4 @@
-import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState, Whisper } from "../types";
+import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Task, TwinData, TwinState, Whisper } from "../types";
 import type { ConnectorKind, ConverseInput, ConverseResult, DataService, ProposedScenario, Repo } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { connectorSamples } from "../../mock/connectorSamples";

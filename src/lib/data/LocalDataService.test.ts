@@ -76,6 +76,7 @@ describe("approved fact conflicts", () => {
   it("keeps the newer same-subject fact current and marks the old one superseded", async () => {
     const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
     const service = new LocalDataService(storage);
+    await service.resetAll();
     const now = new Date().toISOString();
     const base = { kind: "preference" as const, category: "study" as const, sourceId: "test", sourceType: "manual" as const, status: "approved" as const, confidence: 0.9, createdAt: now, updatedAt: now };
     await service.facts.upsert({ ...base, id: "old-focus", text: "I work best in the morning", data: {} });
@@ -88,6 +89,7 @@ describe("approved fact conflicts", () => {
     const context = await buildTwinContext(await service.getConsent(), service);
     expect(context.approvedFacts.map(fact => fact.id)).not.toContain("old-focus");
     expect(context.approvedFacts.map(fact => fact.id)).toContain("new-focus");
+    expect((await service.getTwinState()).confidenceByDomain.routines).toBeCloseTo(1 / 8);
   });
 });
 
