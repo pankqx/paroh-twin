@@ -157,8 +157,8 @@ const Art = memo(function Art({ uid, bagRef, look }: { uid: string; bagRef: RefO
             <Ln d={G.EYE[side].crease} order={0.5} w={1.2} o={0.55} grad={grad} fade={1} />
             <Dk d={G.EYE[side].crease} w={1} o={0.3} />
             <Ln d={G.EYE[side].flick} order={0.5} w={1.4} grad={grad} fade={1} />
-            <Ln d={G.LASHES[side]} order={0.6} w={1.25} o={0.9} grad={grad} fade={1} />
-            <Dk d={G.LASHES[side]} w={1.3} o={0.9} />
+            <Ln d={G.LASHES[side]} order={0.6} w={1.25} o={man ? 0.35 : 0.9} grad={grad} fade={1} />
+            <Dk d={G.LASHES[side]} w={1.3} o={man ? 0.3 : 0.9} />
           </g>
         </g>
       </g>
@@ -244,8 +244,8 @@ const Art = memo(function Art({ uid, bagRef, look }: { uid: string; bagRef: RefO
           <stop offset="1" stopColor="#ff7a93" stopOpacity="0" />
         </radialGradient>
         <linearGradient id={id("lip")} x1="0" y1="0" x2="0" y2="1">
-          {stop(0, "color-mix(in srgb, var(--skin) 35%, #c2415f)")}
-          {stop(1, "color-mix(in srgb, var(--skin) 25%, #d8566f)")}
+          {stop(0, man ? "color-mix(in srgb, var(--skin) 70%, #b04a5c)" : "color-mix(in srgb, var(--skin) 35%, #c2415f)")}
+          {stop(1, man ? "color-mix(in srgb, var(--skin) 62%, #b8525f)" : "color-mix(in srgb, var(--skin) 25%, #d8566f)")}
         </linearGradient>
         <radialGradient id={id("bloom")} cx="0.5" cy="0.5" r="0.5">
           <stop offset="0" stopColor="#fff" />

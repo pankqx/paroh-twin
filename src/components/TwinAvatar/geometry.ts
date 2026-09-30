@@ -378,14 +378,15 @@ export const NECK_EDGES = "M 269 290 L 268 398 C 262 414, 250 420, 236 428 M 331
 export const MAN_CONTOUR_LEFT = "M 195 290 C 188 356, 196 440, 212 492 C 224 530, 262 562, 300 568";
 export const MAN_CONTOUR_RIGHT = "M 300 568 C 338 562, 376 530, 388 492 C 404 440, 412 356, 405 290";
 export const MAN_FACE_FILL = `M 300 186 C 244 186, 195 226, 195 290 C 188 356, 196 440, 212 492 C 224 530, 262 562, 300 568 C 338 562, 376 530, 388 492 C 404 440, 412 356, 405 290 C 405 226, 356 186, 300 186 Z`;
-export const MAN_HAIR_FILL = "M 188 334 C 168 240, 222 154, 300 152 C 378 154, 432 240, 412 334 L 384 300 L 216 300 Z";
-export const MAN_HAIR_TOP = "M 202 310 C 196 240, 244 192, 300 190 C 358 192, 404 240, 398 310 C 386 272, 362 248, 330 240 C 296 232, 252 244, 228 266 C 214 278, 206 294, 202 310 Z";
-export const MAN_STRANDS: Part[] = Array.from({ length: 34 }, (_, i) => {
-  const t = i / 33;
-  const ang = (t - 0.5) * 2.7;
-  const sx = 308 + (t - 0.5) * 34;
-  const ex = 300 + Math.sin(ang) * 104;
-  const ey = 304 - Math.cos(ang) * 92 + 10 * Math.abs(ang);
-  const d = `M ${f1(sx)} 180 C ${f1(sx + (ex - sx) * 0.35)} ${f1(176 + 6 * Math.abs(ang))}, ${f1(ex + (sx - ex) * 0.05)} ${f1(ey - 46)}, ${f1(ex)} ${f1(ey)}`;
+export const MAN_HAIR_FILL = "M 184 346 C 152 224, 212 132, 300 132 C 388 132, 448 224, 416 346 L 386 308 L 214 308 Z";
+export const MAN_HAIR_TOP = "M 190 330 C 158 216, 214 138, 300 138 C 386 138, 442 216, 410 330 C 400 286, 376 250, 340 238 C 314 230, 286 230, 260 238 C 224 250, 200 286, 190 330 Z";
+export const MAN_STRANDS: Part[] = Array.from({ length: 40 }, (_, i) => {
+  const t = i / 39;
+  const a = (t - 0.5) * 2.5;
+  const sx = 300 + (t - 0.5) * 120;
+  const ex = 300 + 104 * Math.sin(a);
+  const ey = 308 - 78 * Math.cos(a) + 7 * Math.abs(a);
+  const sy = 144 + 16 * Math.pow((sx - 300) / 60, 2);
+  const d = `M ${f1(sx)} ${f1(sy)} C ${f1(sx + (ex - sx) * 0.2)} ${f1(sy + 20)}, ${f1(ex + (sx - ex) * 0.1)} ${f1(ey - 52)}, ${f1(ex)} ${f1(ey)}`;
   return { id: `mh-${i}`, d, order: 0.1 + (i % 9) * 0.04 };
 });
