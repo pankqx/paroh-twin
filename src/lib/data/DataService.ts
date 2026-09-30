@@ -38,6 +38,8 @@ export interface ConverseResult {
   degraded?: boolean;
 }
 
+export type ProposedScenario = Scenario & { needsInfo?: string };
+
 /**
  * The only way the UI reads or writes data. Never call storage or the network
  * from components. See docs/HANDOFF.md section 8.
@@ -71,7 +73,7 @@ export interface DataService {
     source: "journal" | "question";
     sourceId: string;
   }): Promise<Fact[]>;
-  proposeScenarios(prompt: string): Promise<Scenario[]>;
+  proposeScenarios(prompt: string): Promise<ProposedScenario[]>;
   explain(
     decisionId: string,
   ): Promise<{ text: string; spoken: string; usedFactIds: string[] }>;

@@ -1,5 +1,5 @@
 import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState, Whisper } from "../types";
-import type { ConnectorKind, ConverseInput, ConverseResult, DataService, Repo } from "./DataService";
+import type { ConnectorKind, ConverseInput, ConverseResult, DataService, ProposedScenario, Repo } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { connectorSamples } from "../../mock/connectorSamples";
 import { extractCanned } from "../ai/extractCanned";
@@ -151,10 +151,26 @@ export class LocalDataService implements DataService {
     for (const fact of result) await this.facts.upsert(fact);
     return result;
   }
-  async proposeScenarios(prompt: string): Promise<Scenario[]> {
+  async proposeScenarios(prompt: string): Promise<ProposedScenario[]> {
     const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: [], decisions: this.state.consent.decisions ? await this.decisions.list() : [] };
-    const specs = parseWhatIfCanned(prompt, data);
-    return specs.map(spec => simulate(spec, data));
+    let specs;
+    try {
+      const response = await fetch("/api/parse-whatif", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, tasks: data.tasks }) });
+      if (!response.ok) throw new Error("What-if parser route failed");
+      const payload: unknown = await response.json();
+      if (!payload || typeof payload !== "object" || !Array.isArray((payload as { specs?: unknown }).specs)) throw new Error("What-if parser returned invalid data");
+      specs = (payload as { specs: unknown[] }).specs;
+      if (specs.some(spec => !spec || typeof spec !== "object" || typeof (spec as { id?: unknown }).id !== "string" || !Array.isArray((spec as { tasks?: unknown }).tasks))) throw new Error("What-if parser returned invalid specs");
+    } catch {
+      specs = parseWhatIfCanned(prompt, data);
+      if (specs.every(spec => !spec.tasks.length) || /^(should i study\??|should i revise\??|what should i do\??)$/i.test(prompt.trim())) {
+        return [{ id: "clarify-whatif", label: "Need one detail", summary: "", onTimeProb: 0, peakLoad: 0, goalImpact: 0, assumptions: [], needsInfo: "What two options should I compare, and how many hours should I plan for each?" }];
+      }
+    }
+    return specs.map(value => {
+      const spec = value as ReturnType<typeof parseWhatIfCanned>[number];
+      return simulate(spec, data);
+    });
   }
   async explain(decisionId: string) {
     const decision = await this.decisions.get(decisionId);
