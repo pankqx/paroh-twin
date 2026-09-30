@@ -4,7 +4,7 @@ import { createSampleData } from "../../mock/sample";
 import { connectorSamples } from "../../mock/connectorSamples";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
-import { deriveTwinState, detectConflicts, feedbackDelta as deriveFeedbackDelta, insights as deriveInsights, predictedNeeds as derivePredictedNeeds, privacyBoundary, retrieveRelevant, staleFacts } from "../twin";
+import { buildMemoryGraph, deriveTwinState, detectConflicts, feedbackDelta as deriveFeedbackDelta, insights as deriveInsights, predictedNeeds as derivePredictedNeeds, privacyBoundary, retrieveRelevant, staleFacts } from "../twin";
 import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
 
 type State = { entries: JournalEntry[]; facts: Fact[]; tasks: Task[]; goals: Goal[]; habits: Habit[]; checkins: CheckIn[]; decisions: Decision[]; memories: MemoryItem[]; consent: ConsentSettings };
@@ -111,6 +111,13 @@ export class LocalDataService implements DataService {
   }
   async feedbackDelta() {
     return deriveFeedbackDelta(this.state.consent.decisions ? await this.decisions.list() : []);
+  }
+  async getMemoryGraph() {
+    const facts = await this.permittedApprovedFacts();
+    const tasks = this.state.consent.tasks ? await this.tasks.list() : [];
+    const goals = this.state.consent.planner ? await this.goals.list() : [];
+    const habits = this.state.consent.tasks && this.state.consent.habits ? await this.habits.list() : [];
+    return buildMemoryGraph(facts, tasks, goals, habits);
   }
   private async permittedApprovedFacts(): Promise<Fact[]> {
     return privacyBoundary(await this.facts.list(), this.state.consent).filter(fact => fact.status === "approved");

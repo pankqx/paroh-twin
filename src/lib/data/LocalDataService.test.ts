@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { TwinState } from "../types";
+import type { Task, TwinState } from "../types";
 import { LocalDataService, questionsForTwinState } from "./LocalDataService";
 
 const blankTwin = (confidenceByDomain: Record<string, number>): TwinState => ({
@@ -46,6 +46,26 @@ describe("connector sample previews", () => {
     const service = new LocalDataService(storage);
     await service.setConsent({ ...(await service.getConsent()), journal: false });
     expect(await service.previewConnector("calendar")).toEqual([]);
+  });
+});
+
+describe("memory graph service", () => {
+  it("builds the graph from approved and consented twin data only", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    await service.resetAll();
+    const now = new Date().toISOString();
+    const task: Task = { id: "task-bio", title: "Revise biology", category: "study", estHours: 2, done: false, createdAt: now, updatedAt: now };
+    await service.tasks.upsert(task);
+    await service.facts.upsert({ id: "approved", kind: "task", text: "I will revise biology", category: "study", data: {}, sourceId: "entry", sourceType: "journal", status: "approved", confidence: 0.9, createdAt: now, updatedAt: now });
+    await service.facts.upsert({ id: "pending", kind: "task", text: "I will revise chemistry", category: "study", data: {}, sourceId: "entry", sourceType: "journal", status: "pending", confidence: 0.9, createdAt: now, updatedAt: now });
+    const graph = await service.getMemoryGraph();
+    expect(graph.nodes.map(node => node.id)).toContain("fact:approved");
+    expect(graph.nodes.map(node => node.id)).not.toContain("fact:pending");
+    expect(graph.links).toContainEqual({ source: "fact:approved", target: "task:task-bio" });
+
+    await service.setConsent({ ...(await service.getConsent()), tasks: false });
+    expect((await service.getMemoryGraph()).nodes.map(node => node.id)).not.toContain("task:task-bio");
   });
 });
 

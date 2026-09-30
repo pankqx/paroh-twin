@@ -83,3 +83,4 @@ export function deriveTwinState(data: TwinData): TwinState {
 export { categories as TWIN_CATEGORIES };
 export { detectConflicts, staleFacts, retrieveRelevant, privacyBoundary } from "./memory";
 export { insights, predictedNeeds, feedbackDelta } from "./insights";
+export { buildMemoryGraph } from "./memoryGraph";

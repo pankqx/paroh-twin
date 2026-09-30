@@ -15,6 +15,7 @@ import type {
 } from "../types";
 import type { FactConflict } from "../twin/memory";
 import type { FeedbackDelta } from "../twin/insights";
+import type { MemoryGraph } from "../twin/memoryGraph";
 export type ConnectorKind = "gmail" | "whatsapp" | "telegram" | "calendar";
 
 export interface WhatIfPlan {
@@ -65,6 +66,7 @@ export interface DataService {
   insights(): Promise<string[]>;
   predictedNeeds(): Promise<string[]>;
   feedbackDelta(): Promise<FeedbackDelta>;
+  getMemoryGraph(): Promise<MemoryGraph>;
   nextQuestions(): Promise<{ id: string; text: string; domain: string; quickReplies: string[] }[]>;
   saveEntry?(entry: JournalEntry): Promise<JournalEntry>;
   listFacts?(): Promise<Fact[]>;
