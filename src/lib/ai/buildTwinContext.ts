@@ -2,6 +2,7 @@ import type { CheckIn, ConsentSettings, Fact, Habit, Task, Category } from "../t
 import { localDataService } from "../data/LocalDataService";
 import type { Repo } from "../data/DataService";
 import { estimationBias, habitConsistency } from "../twin";
+import { relevantFacts } from "./relevantFacts";
 
 export interface TwinContext {
   approvedFacts: Array<{ id: string; kind: Fact["kind"]; text: string }>;
@@ -45,13 +46,12 @@ const average = (values: number[]) => values.length
 export async function buildTwinContext(
   consent: ConsentSettings,
   source: TwinContextSource = localDataService,
+  query = "",
 ): Promise<TwinContext> {
   const facts = consent.journal || consent.voice || consent.tasks || consent.planner || consent.decisions
     ? await source.facts.list()
     : [];
-  const approvedFacts = facts
-    .filter(fact => fact.status === "approved" && typeof fact.data.supersededBy !== "string" && factIsConsented(fact, consent))
-    .slice(-12)
+  const approvedFacts = relevantFacts(query, facts.filter(fact => factIsConsented(fact, consent)), 12)
     .map(({ id, kind, text }) => ({ id, kind, text: text.slice(0, 180) }));
 
   const context: TwinContext = { approvedFacts };

@@ -242,7 +242,7 @@ export class LocalDataService implements DataService {
       }
 
       const questions = await this.nextQuestions();
-      const context = await buildTwinContext(consent, this);
+      const context = await buildTwinContext(consent, this, input.utterance);
       const response = await fetch("/api/converse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -313,7 +313,7 @@ export class LocalDataService implements DataService {
   }
 
   private async explainPayload(decision: Decision) {
-    const context = await buildTwinContext(this.state.consent, this);
+    const context = await buildTwinContext(this.state.consent, this, decision.prompt);
     return { scenarios: decision.scenarios, recommendedId: decision.recommendedId, approvedFacts: context.approvedFacts, context };
   }
   async loadSampleData() { this.state = seededState(); this.persist(); }
