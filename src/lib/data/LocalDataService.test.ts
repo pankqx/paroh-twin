@@ -26,6 +26,29 @@ describe("nextQuestions", () => {
   });
 });
 
+describe("connector sample previews", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("creates clearly labelled pending facts from sample messages", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    await service.resetAll();
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline: use canned extraction"); }));
+    const candidates = await service.previewConnector("gmail");
+    expect(candidates.length).toBeGreaterThan(0);
+    expect(candidates.every(fact => fact.status === "pending")).toBe(true);
+    expect(candidates.every(fact => fact.data.sampleLabel === "sample messages" && fact.data.sampleConnector === "gmail")).toBe(true);
+    expect(candidates.every(fact => fact.sourceId.startsWith("sample-gmail-"))).toBe(true);
+    expect(await service.facts.list()).toHaveLength(candidates.length);
+  });
+
+  it("respects journal consent and does not produce candidates when disabled", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    await service.setConsent({ ...(await service.getConsent()), journal: false });
+    expect(await service.previewConnector("calendar")).toEqual([]);
+  });
+});
+
 describe("memory quality DataService methods", () => {
   it("returns consented conflicts, stale facts, and question-relevant approved facts", async () => {
     const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;

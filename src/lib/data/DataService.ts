@@ -14,6 +14,8 @@ import type {
   TwinState,
 } from "../types";
 import type { FactConflict } from "../twin/memory";
+import type { FeedbackDelta } from "../twin/insights";
+export type ConnectorKind = "gmail" | "whatsapp" | "telegram" | "calendar";
 
 export interface WhatIfPlan {
   label: string;
@@ -60,6 +62,9 @@ export interface DataService {
   getConflicts(): Promise<FactConflict[]>;
   getStale(): Promise<Fact[]>;
   retrieve(question: string): Promise<Fact[]>;
+  insights(): Promise<string[]>;
+  predictedNeeds(): Promise<string[]>;
+  feedbackDelta(): Promise<FeedbackDelta>;
   nextQuestions(): Promise<{ id: string; text: string; domain: string; quickReplies: string[] }[]>;
   saveEntry?(entry: JournalEntry): Promise<JournalEntry>;
   listFacts?(): Promise<Fact[]>;
@@ -73,6 +78,7 @@ export interface DataService {
   }): Promise<Fact[]>;
   parseWhatIf(text: string): Promise<WhatIfParseResult>;
   proposeScenarios(prompt: string): Promise<Scenario[]>;
+  previewConnector(kind: ConnectorKind): Promise<Fact[]>;
   explain(
     decisionId: string,
   ): Promise<{ text: string; spoken: string; usedFactIds: string[] }>;

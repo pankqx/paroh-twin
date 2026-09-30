@@ -1,9 +1,10 @@
 import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState } from "../types";
-import type { DataService, Repo, WhatIfParseResult } from "./DataService";
+import type { ConnectorKind, DataService, Repo, WhatIfParseResult } from "./DataService";
 import { createSampleData } from "../../mock/sample";
+import { connectorSamples } from "../../mock/connectorSamples";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
-import { deriveTwinState, detectConflicts, privacyBoundary, retrieveRelevant, staleFacts } from "../twin";
+import { deriveTwinState, detectConflicts, feedbackDelta as deriveFeedbackDelta, insights as deriveInsights, predictedNeeds as derivePredictedNeeds, privacyBoundary, retrieveRelevant, staleFacts } from "../twin";
 import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
 
 type State = { entries: JournalEntry[]; facts: Fact[]; tasks: Task[]; goals: Goal[]; habits: Habit[]; checkins: CheckIn[]; decisions: Decision[]; memories: MemoryItem[]; consent: ConsentSettings };
@@ -101,6 +102,16 @@ export class LocalDataService implements DataService {
     const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal") };
     return deriveTwinState(data);
   }
+  async insights() {
+    const twin = await this.getTwinState();
+    return deriveInsights(twin, this.state.consent.tasks ? await this.tasks.list() : [], this.state.consent.tasks && this.state.consent.habits ? await this.habits.list() : [], this.state.consent.mood ? await this.checkins.list() : []);
+  }
+  async predictedNeeds() {
+    return derivePredictedNeeds(this.state.consent.tasks ? await this.tasks.list() : [], this.state.consent.tasks && this.state.consent.habits ? await this.habits.list() : []);
+  }
+  async feedbackDelta() {
+    return deriveFeedbackDelta(this.state.consent.decisions ? await this.decisions.list() : []);
+  }
   private async permittedApprovedFacts(): Promise<Fact[]> {
     return privacyBoundary(await this.facts.list(), this.state.consent).filter(fact => fact.status === "approved");
   }
@@ -177,6 +188,19 @@ export class LocalDataService implements DataService {
       priority: scenario.priority ?? "neutral" as const,
     }));
     return specs.map(spec => simulate(spec, data));
+  }
+  async previewConnector(kind: ConnectorKind): Promise<Fact[]> {
+    if (!this.state.consent.journal) return [];
+    const candidates: Fact[] = [];
+    for (const [index, message] of connectorSamples[kind].entries()) {
+      const extracted = await this.extractFacts({ text: message, source: "journal", sourceId: `sample-${kind}-${index + 1}` });
+      for (const fact of extracted) {
+        const candidate: Fact = { ...fact, status: "pending", data: { ...fact.data, sampleConnector: kind, sampleLabel: "sample messages" } };
+        await this.facts.upsert(candidate);
+        candidates.push(candidate);
+      }
+    }
+    return candidates;
   }
   async explain(decisionId: string) {
     const decision = await this.decisions.get(decisionId);
