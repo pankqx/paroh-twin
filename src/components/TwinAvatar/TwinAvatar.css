@@ -186,3 +186,13 @@
 .talk-face .twin-morph {
   height: auto;
 }
+
+/* Arriving already drawn (Home to Talk): no draw-on, so the morph lands on the same drawing. */
+.ta.ta-drawn .tf-strand {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+.ta.ta-drawn .tf-halo {
+  animation: none;
+  opacity: 1;
+}

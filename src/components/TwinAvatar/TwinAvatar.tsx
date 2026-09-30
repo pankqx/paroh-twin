@@ -28,6 +28,8 @@ interface Props {
   lookAt?: { x: number; y: number };
   /** 0 = line art, 1 = fully coloured. Animates between values. */
   form?: number;
+  /** Render the line art fully drawn at once (no draw-on animation). */
+  drawn?: boolean;
   style?: AvatarStyle;
   /** Play this action continuously (used by the lab page and the Dance button). */
   action?: AvatarAction;
@@ -107,6 +109,7 @@ export default function TwinAvatar({
   mouth,
   lookAt,
   form = 0,
+  drawn,
   style = DEFAULT_STYLE,
   action,
   freezeT,
@@ -114,6 +117,8 @@ export default function TwinAvatar({
   ref,
 }: Props) {
   const reduce = useReducedMotionState();
+  // Already drawn: skip the line draw-on (Talk arrives from Home, where she was drawn already).
+  const staticLines = reduce || !!drawn;
   const uid = useId().replace(/:/g, "");
   const id = (n: string) => `ta-${n}-${uid}`;
   const grad = id("line");
@@ -391,10 +396,10 @@ export default function TwinAvatar({
             <path d={G.LASHES[side].split(/(?=M )/).slice(0, 9).join(" ")} strokeWidth="1.3" />
           </g>
           <g {...figureProps} strokeWidth="1.6" className="ta-lines">
-            <Line d={G.EYE[side].upper} order={order} reduce={reduce} w={1.9} />
-            <Line d={G.EYE[side].lower} order={order} reduce={reduce} />
-            <Line d={G.EYE[side].crease} order={order + 0.05} reduce={reduce} o={0.55} w={1.2} />
-            <Line d={G.EYE[side].flick} order={order + 0.05} reduce={reduce} w={1.4} />
+            <Line d={G.EYE[side].upper} order={order} reduce={staticLines} w={1.9} />
+            <Line d={G.EYE[side].lower} order={order} reduce={staticLines} />
+            <Line d={G.EYE[side].crease} order={order + 0.05} reduce={staticLines} o={0.55} w={1.2} />
+            <Line d={G.EYE[side].flick} order={order + 0.05} reduce={staticLines} w={1.4} />
             <Strand d={G.LASHES[side]} order={order + 0.15} w={1.25} o={0.9} />
           </g>
         </g>
@@ -411,20 +416,20 @@ export default function TwinAvatar({
         <Strand d={G.TEMPLE_LINES.join(" ")} order={0.7} w={0.9} o={0.4} />
         <Strand d={G.NOSE_SHADE.join(" ")} order={0.85} w={0.9} o={0.45} />
       </g>
-      <Line d={A.CONTOUR_L} order={0.3} reduce={reduce} />
-      <Line d={A.CONTOUR_R} order={0.3} reduce={reduce} />
+      <Line d={A.CONTOUR_L} order={0.3} reduce={staticLines} />
+      <Line d={A.CONTOUR_R} order={0.3} reduce={staticLines} />
       <g transform="translate(0 22)">
-        <Line d={G.BROWS.left} order={0.5} reduce={reduce} w={2.2} />
-        <Line d={G.BROWS.right} order={0.5} reduce={reduce} w={2.2} />
+        <Line d={G.BROWS.left} order={0.5} reduce={staticLines} w={2.2} />
+        <Line d={G.BROWS.right} order={0.5} reduce={staticLines} w={2.2} />
       </g>
       <g transform={NOSE_T}>
-        <Line d={G.NOSE_BRIDGE} order={0.6} reduce={reduce} />
-        <Line d={G.NOSE_BASE} order={0.62} reduce={reduce} />
+        <Line d={G.NOSE_BRIDGE} order={0.6} reduce={staticLines} />
+        <Line d={G.NOSE_BASE} order={0.62} reduce={staticLines} />
         {G.NOSE_NOSTRILS.map((d) => (
-          <Line key={d} d={d} order={0.66} reduce={reduce} w={1.3} />
+          <Line key={d} d={d} order={0.66} reduce={staticLines} w={1.3} />
         ))}
       </g>
-      <Line d={G.CHIN_LINE} order={0.7} reduce={reduce} o={0.45} w={1.2} />
+      <Line d={G.CHIN_LINE} order={0.7} reduce={staticLines} o={0.45} w={1.2} />
     </g>
   );
 
@@ -434,13 +439,13 @@ export default function TwinAvatar({
       <Strand d={G.NECK_SHADE.join(" ")} order={0.8} w={0.9} o={0.4} />
       <Strand d={G.THROAT} order={0.85} w={1} o={0.5} />
       <Strand d={G.SHOULDER_DETAIL.join(" ")} order={0.6} w={1} o={0.45} />
-      <Line d={G.NECK_LEFT} order={0.35} reduce={reduce} />
-      <Line d={G.NECK_RIGHT} order={0.35} reduce={reduce} />
-      <Line d={G.SHOULDER_LEFT} order={0.45} reduce={reduce} />
-      <Line d={G.SHOULDER_RIGHT} order={0.45} reduce={reduce} />
-      <Line d={G.COLLAR} order={0.55} reduce={reduce} />
-      <Line d={G.COLLARBONE_LEFT} order={0.6} reduce={reduce} o={0.55} w={1.2} />
-      <Line d={G.COLLARBONE_RIGHT} order={0.6} reduce={reduce} o={0.55} w={1.2} />
+      <Line d={G.NECK_LEFT} order={0.35} reduce={staticLines} />
+      <Line d={G.NECK_RIGHT} order={0.35} reduce={staticLines} />
+      <Line d={G.SHOULDER_LEFT} order={0.45} reduce={staticLines} />
+      <Line d={G.SHOULDER_RIGHT} order={0.45} reduce={staticLines} />
+      <Line d={G.COLLAR} order={0.55} reduce={staticLines} />
+      <Line d={G.COLLARBONE_LEFT} order={0.6} reduce={staticLines} o={0.55} w={1.2} />
+      <Line d={G.COLLARBONE_RIGHT} order={0.6} reduce={staticLines} o={0.55} w={1.2} />
     </g>
   );
 
@@ -477,7 +482,7 @@ export default function TwinAvatar({
   return (
     <div
       ref={rootRef}
-      className={`twin-face ta state-${state} ${style.look === "man" ? "look-man" : "look-woman"} ${className ?? ""}`}
+      className={`twin-face ta${drawn ? " ta-drawn" : ""} state-${state} ${style.look === "man" ? "look-man" : "look-woman"} ${className ?? ""}`}
       data-flat={form < 0.002 ? "true" : "false"}
       role="img"
       aria-label={`Illustrated twin, a young ${style.look === "man" ? "man" : "woman"}. ${state === "idle" ? "Resting" : state}.`}
@@ -670,9 +675,9 @@ export default function TwinAvatar({
                   ))}
                 </g>
                 <g className="ta-lines">
-                  <Line d={closed.upper} order={0.72} reduce={reduce} pathRef={upperRef} w={1.7} />
-                  <Line d={closed.lower} order={0.72} reduce={reduce} pathRef={lowerRef} w={1.7} />
-                  <Line d={closed.gap} order={0.76} reduce={reduce} pathRef={gapRef} w={1.3} fill="var(--teal)" fillOpacity={0.12} />
+                  <Line d={closed.upper} order={0.72} reduce={staticLines} pathRef={upperRef} w={1.7} />
+                  <Line d={closed.lower} order={0.72} reduce={staticLines} pathRef={lowerRef} w={1.7} />
+                  <Line d={closed.gap} order={0.76} reduce={staticLines} pathRef={gapRef} w={1.3} fill="var(--teal)" fillOpacity={0.12} />
                 </g>
               </g>
 

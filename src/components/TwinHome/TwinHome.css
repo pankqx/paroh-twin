@@ -516,3 +516,54 @@
     animation: none;
   }
 }
+
+/* "What am I looking at?" guide */
+.read-guide-btn {
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.95rem;
+}
+.read-guide {
+  position: relative;
+  z-index: 6;
+  margin-top: 0.75rem;
+  width: min(460px, 80vw);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 1rem 1.2rem;
+  scrollbar-width: thin;
+}
+.read-guide-lede {
+  margin: 0 0 0.6rem;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+.read-guide dl {
+  margin: 0;
+}
+.read-guide dl > div {
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--stroke);
+}
+.read-guide dt {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.read-guide dt span {
+  margin-left: 0.4rem;
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+.read-guide dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+.glass.read-guide {
+  background: rgba(12, 10, 24, 0.97);
+  backdrop-filter: blur(14px);
+}

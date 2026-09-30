@@ -18,6 +18,7 @@ import Sparkline from "@/components/Sparkline/Sparkline";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
 import { ViewTransition } from "react";
 import HomeLife from "./HomeLife";
+import ReadGuide from "./ReadGuide";
 import TwinAvatar, { type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
 import "@/components/TwinAvatar/TwinAvatar.css";
 import { onAction, usePrefs } from "@/components/TwinAvatar/avatarStore";
@@ -267,6 +268,7 @@ export default function TwinHome() {
                 Ask a what-if
               </Link>
             </div>
+            <ReadGuide />
           </div>
 
           <p className="glass twin-caption" aria-live="polite">

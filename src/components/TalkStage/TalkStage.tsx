@@ -368,6 +368,7 @@ export default function TalkStage() {
                 level={level}
                 mouth={speaking ? mouth : undefined}
                 form={bloom ? 1 : 0}
+                drawn
               />
             </div>
           </ViewTransition>
