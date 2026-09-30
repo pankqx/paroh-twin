@@ -1,5 +1,5 @@
 .approvals {
-  max-width: 760px;
+  max-width: 780px;
 }
 
 .approvals > h1 {
@@ -12,48 +12,12 @@
   animation: rise 700ms var(--ease) 80ms both;
 }
 
-.approvals-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.approvals-decided {
-  margin-top: 3rem;
-  padding: 1.5rem 1.75rem;
-}
-
-.approvals-decided .ledger {
-  margin-top: 0.75rem;
-}
-
-.decided {
-  display: grid;
-  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
-  gap: 1rem;
-  align-items: baseline;
-}
-
-.decided .status-pill {
-  justify-self: start;
-}
-
-.decided-text {
-  color: var(--text-soft);
-}
-
-.decided-date {
-  font-size: 0.82rem;
-  color: var(--muted);
+.approvals-shell {
+  padding: 1.75rem;
 }
 
 @media (max-width: 520px) {
-  .decided {
-    grid-template-columns: auto 1fr;
-    gap: 0.2rem 0.75rem;
-  }
-
-  .decided-date {
-    grid-column: 1 / -1;
+  .approvals-shell {
+    padding: 1.1rem;
   }
 }

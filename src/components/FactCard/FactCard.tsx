@@ -1,47 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { flyToTwin } from "@/components/TwinFace/flyToTwin";
 import type { Fact } from "@/lib/types";
 import "./FactCard.css";
 
-/** idle -> (approve) added -> leaving ; idle -> (reject) dismissing */
-export type CardPhase = "idle" | "added" | "leaving" | "dismissing";
+/** idle -> saving -> added -> flying -> gone ; idle -> dismissing -> gone */
+type Phase = "idle" | "saving" | "added" | "flying" | "dismissing";
 
 interface Props {
   fact: Fact;
-  quote?: string; // the sentence it came from
-  phase: CardPhase;
-  onApprove: () => void;
-  onReject: () => void;
-  onEdit: (text: string) => void;
+  quote?: string; // what it came from
+  onApprove: () => Promise<void>;
+  onReject: () => Promise<void>;
+  onEdit: (text: string) => Promise<void>;
+  /** The card reached her mind point (it has flared). */
+  onArrive?: () => void;
+  /** The card has left the screen; drop it from the list. */
+  onDone: () => void;
 }
 
-const shortDate = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-});
+const shortDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export default function FactCard({ fact, quote, phase, onApprove, onReject, onEdit }: Props) {
+export default function FactCard({ fact, quote, onApprove, onReject, onEdit, onArrive, onDone }: Props) {
+  const ref = useRef<HTMLElement>(null);
+  const [phase, setPhase] = useState<Phase>("idle");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(fact.text);
+  const [saved, setSaved] = useState(fact.text);
   const locked = phase !== "idle";
+  const confidence = Math.round(fact.confidence * 100);
+
+  async function approve() {
+    setPhase("saving");
+    await onApprove();
+    setPhase("added");
+    await wait(650);
+    setPhase("flying");
+    if (ref.current) await flyToTwin(ref.current);
+    onArrive?.();
+    onDone();
+  }
+
+  async function reject() {
+    setPhase("dismissing");
+    await onReject();
+    await wait(380);
+    onDone();
+  }
+
+  async function saveEdit() {
+    const text = draft.trim();
+    if (!text) return;
+    await onEdit(text);
+    setSaved(text);
+    setEditing(false);
+  }
 
   return (
-    <article className={`card fact-card phase-${phase}`} aria-live="polite">
+    <article ref={ref} className={`glass fact-card phase-${phase}`} aria-live="polite">
       <div className="fact-top">
         <div className="fact-main">
           <span className="kind-pill">{fact.kind}</span>
           {editing ? (
-            <input
-              type="text"
-              aria-label="Edit fact"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              autoFocus
-            />
+            <input type="text" aria-label="Edit fact" value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus />
           ) : (
-            <span className="fact-text">{fact.text}</span>
+            <span className="fact-text">{saved}</span>
           )}
         </div>
         <time className="fact-date" dateTime={fact.createdAt}>
@@ -49,28 +74,28 @@ export default function FactCard({ fact, quote, phase, onApprove, onReject, onEd
         </time>
       </div>
 
-      {quote && !editing && <blockquote className="fact-quote">&ldquo;{quote}&rdquo;</blockquote>}
+      {quote && !editing && <blockquote className="fact-quote">{quote}</blockquote>}
+
+      <div className="fact-conf" title="How sure the extractor is. Not a prediction.">
+        <span className="fact-conf-label">confidence</span>
+        <span className="fact-conf-track">
+          <span className="fact-conf-fill" style={{ transform: `scaleX(${fact.confidence})` }} />
+        </span>
+        <span className="fact-conf-num num">{confidence}%</span>
+      </div>
 
       {phase === "idle" || phase === "dismissing" ? (
         <div className="fact-actions">
           {editing ? (
             <>
-              <button
-                type="button"
-                className="btn-primary btn-small"
-                disabled={!draft.trim()}
-                onClick={() => {
-                  onEdit(draft.trim());
-                  setEditing(false);
-                }}
-              >
+              <button type="button" className="btn-primary btn-small" disabled={!draft.trim()} onClick={saveEdit}>
                 Save
               </button>
               <button
                 type="button"
                 className="btn-text"
                 onClick={() => {
-                  setDraft(fact.text);
+                  setDraft(saved);
                   setEditing(false);
                 }}
               >
@@ -79,35 +104,20 @@ export default function FactCard({ fact, quote, phase, onApprove, onReject, onEd
             </>
           ) : (
             <>
-              <button
-                type="button"
-                className="btn-primary btn-small"
-                disabled={locked}
-                onClick={onApprove}
-              >
+              <button type="button" className="btn-primary btn-small" disabled={locked} onClick={approve}>
                 Approve
               </button>
-              <button
-                type="button"
-                className="btn-secondary btn-small not-me"
-                disabled={locked}
-                onClick={onReject}
-              >
+              <button type="button" className="btn-ghost btn-small not-me" disabled={locked} onClick={reject}>
                 Not me
               </button>
-              <button
-                type="button"
-                className="btn-text"
-                disabled={locked}
-                onClick={() => setEditing(true)}
-              >
+              <button type="button" className="btn-text" disabled={locked} onClick={() => setEditing(true)}>
                 Edit
               </button>
             </>
           )}
         </div>
       ) : (
-        <p className="fact-added">Added to your twin.</p>
+        <p className="fact-added">{phase === "flying" ? "On its way to her memory…" : "Added to your twin."}</p>
       )}
     </article>
   );
