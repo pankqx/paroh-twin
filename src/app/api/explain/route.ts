@@ -40,12 +40,9 @@ function spokenUnder60(text: string): string {
   return words.slice(0, 55).join(" ");
 }
 
-function hasUnverifiedNumber(text: string, scenarios: Scenario[]): boolean {
-  const supplied = new Set(scenarios.flatMap(scenario => JSON.stringify(scenario).match(/\d+(?:\.\d+)?/g) ?? []));
-  const spokenNumbers = text.match(/\d+(?:\.\d+)?/g) ?? [];
-  if (spokenNumbers.some(number => !supplied.has(number))) return true;
-  // Ask for qualitative wording; a spelled-out numerical claim has no safe provenance.
-  return /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|first|second|third|fourth|fifth|hundred|thousand|million)\b/i.test(text);
+function containsNumber(text: string): boolean {
+  // The model is asked for qualitative wording; keep every numeric claim in engine output.
+  return /\d|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|first|second|third|fourth|fifth|hundred|thousand|million)\b/i.test(text);
 }
 
 function cannedExplanation(scenarios: Scenario[], recommendedId: string, usedFactIds: string[]) {
@@ -75,12 +72,12 @@ export async function POST(request: Request) {
   const content = await openRouterJson([...messages], value => {
     const proposedText = typeof value.text === "string" ? value.text.trim() : "";
     const proposedSpoken = typeof value.spoken === "string" ? value.spoken.trim() : proposedText;
-    return Boolean(proposedText && proposedSpoken && !hasUnverifiedNumber(`${proposedText} ${proposedSpoken}`, scenarios));
+    return Boolean(proposedText && proposedSpoken && !containsNumber(`${proposedText} ${proposedSpoken}`));
   });
   const parsed = content ? parseJsonObject(content) : undefined;
   const text = typeof parsed?.text === "string" ? parsed.text.trim() : "";
   const proposedSpoken = typeof parsed?.spoken === "string" ? parsed.spoken.trim() : text;
   const combined = `${text} ${proposedSpoken}`;
-  if (!text || !proposedSpoken || hasUnverifiedNumber(combined, scenarios)) return Response.json(cannedExplanation(scenarios, recommendedId, usedFactIds));
+  if (!text || !proposedSpoken || containsNumber(combined)) return Response.json(cannedExplanation(scenarios, recommendedId, usedFactIds));
   return Response.json({ text, spoken: spokenUnder60(proposedSpoken), usedFactIds, degraded: false });
 }
