@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TwinState } from "../types";
 import { LocalDataService, questionsForTwinState } from "./LocalDataService";
 import { connectorSamples } from "../../mock/connectorSamples";
+import { buildTwinContext } from "../ai/buildTwinContext";
 
 const blankTwin = (confidenceByDomain: Record<string, number>): TwinState => ({
   confidenceByDomain, loadPct: 0, habitConsistency: 0, goalAlignment: 0,
@@ -68,6 +69,25 @@ describe("connector previews", () => {
       expect(candidates.every(fact => fact.sourceId === `sample-${kind}`)).toBe(true);
       expect(candidates.every(fact => fact.sourceType === "journal")).toBe(true);
     }
+  });
+});
+
+describe("approved fact conflicts", () => {
+  it("keeps the newer same-subject fact current and marks the old one superseded", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    const now = new Date().toISOString();
+    const base = { kind: "preference" as const, category: "study" as const, sourceId: "test", sourceType: "manual" as const, status: "approved" as const, confidence: 0.9, createdAt: now, updatedAt: now };
+    await service.facts.upsert({ ...base, id: "old-focus", text: "I work best in the morning", data: {} });
+    await service.facts.upsert({ ...base, id: "new-focus", text: "I work best in the evening", data: {}, status: "pending" });
+
+    const current = await service.setFactStatus("new-focus", "approve");
+    const older = await service.facts.get("old-focus");
+    expect(current.data.changedFrom).toBe("I work best in the morning");
+    expect(older?.data.supersededBy).toBe("new-focus");
+    const context = await buildTwinContext(await service.getConsent(), service);
+    expect(context.approvedFacts.map(fact => fact.id)).not.toContain("old-focus");
+    expect(context.approvedFacts.map(fact => fact.id)).toContain("new-focus");
   });
 });
 

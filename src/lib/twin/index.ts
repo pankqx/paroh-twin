@@ -52,7 +52,7 @@ export function goalAlignment(tasks: Task[], now = new Date()): number {
 }
 
 export function confidenceByDomain(data: TwinData): Record<string, number> {
-  const approved = data.facts?.filter(f => f.status === "approved") ?? [];
+  const approved = data.facts?.filter(f => f.status === "approved" && typeof f.data.supersededBy !== "string") ?? [];
   const countKind = (...kinds: string[]) => approved.filter(f => kinds.includes(f.kind)).length;
   const habitDays = new Set(data.habits.flatMap(h => Object.keys(h.log))).size;
   return {

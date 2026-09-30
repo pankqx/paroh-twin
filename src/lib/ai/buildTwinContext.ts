@@ -50,7 +50,7 @@ export async function buildTwinContext(
     ? await source.facts.list()
     : [];
   const approvedFacts = facts
-    .filter(fact => fact.status === "approved" && factIsConsented(fact, consent))
+    .filter(fact => fact.status === "approved" && typeof fact.data.supersededBy !== "string" && factIsConsented(fact, consent))
     .slice(-12)
     .map(({ id, kind, text }) => ({ id, kind, text: text.slice(0, 180) }));
 

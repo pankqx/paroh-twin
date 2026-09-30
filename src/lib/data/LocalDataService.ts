@@ -15,6 +15,13 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const stamp = () => new Date().toISOString();
 const shortSpeech = (text: string) => text.trim().split(/\s+/).slice(0, 44).join(" ");
 const stableId = (text: string) => { let hash = 2166136261; for (const char of text) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619); return (hash >>> 0).toString(36); };
+const factSubject = (fact: Fact) => {
+  const text = String(fact.data.subject ?? fact.data.title ?? fact.text).toLowerCase();
+  if (/\b(work|focus) best\b/.test(text)) return "focus time";
+  return text.replace(/\b(i|my|we|our|usually|often|prefer|like|in|at|the)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ").trim();
+};
+const isCurrentFact = (fact: Fact) => typeof fact.data.supersededBy !== "string";
 const routedIntent = (text: string): ConverseResult["intent"] => {
   if (/\bwhat if\b|\bshould i\b/i.test(text)) return "whatif";
   if (/\bhow is my week\b|\bhow's my week\b|\bhow am i\b|\bhow busy\b|\bmy load\b|\bstatus\b|\b(load|deadlines?|week's plan|planned capacity)\b/i.test(text)) return "status";
@@ -84,7 +91,16 @@ export class LocalDataService implements DataService {
     const current = await this.facts.get(id);
     if (!current) throw new Error(`Fact ${id} was not found`);
     const now = stamp();
-    const fact: Fact = { ...current, ...edits, status: status === "approve" ? "approved" : status === "reject" ? "rejected" : current.status, updatedAt: now };
+    let fact: Fact = { ...current, ...edits, status: status === "approve" ? "approved" : status === "reject" ? "rejected" : current.status, updatedAt: now };
+    if (status === "approve") {
+      const subject = factSubject(fact);
+      const older = (await this.facts.list()).filter(candidate => candidate.id !== fact.id && candidate.status === "approved" && isCurrentFact(candidate) && candidate.kind === fact.kind && factSubject(candidate) === subject);
+      if (older.length) {
+        const previous = older.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+        fact = { ...fact, data: { ...fact.data, changedFrom: previous.text } };
+        for (const candidate of older) await this.facts.upsert({ ...candidate, data: { ...candidate.data, supersededBy: fact.id }, updatedAt: now });
+      }
+    }
     await this.facts.upsert(fact);
     if (status === "approve") {
       const data = fact.data;
@@ -109,7 +125,7 @@ export class LocalDataService implements DataService {
   async setConsent(consent: ConsentSettings) { this.state.consent = { ...consent }; this.persist(); }
   async getTwinState() {
     const visibleFacts = await this.facts.list();
-    const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal") };
+    const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: (this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal")).filter(isCurrentFact) };
     return deriveTwinState(data);
   }
   async getWhispers(): Promise<Whisper[]> {
