@@ -2,7 +2,13 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { approveFact, editFact, rejectFact } from "@/app/factActions";
 import { dataService } from "@/app/dataService";
 import Doodle from "@/components/Doodle/Doodle";
@@ -10,6 +16,8 @@ import FactCard from "@/components/FactCard/FactCard";
 import { notifyFactsChanged } from "@/components/shell/events";
 import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
 import TwinFace, { type FaceState } from "@/components/TwinFace/TwinFace";
+import Waveform from "@/components/Waveform/Waveform";
+import Karaoke from "./Karaoke";
 import * as listen from "@/lib/voice/listen";
 import * as speech from "@/lib/voice/speak";
 import type { Fact } from "@/lib/types";
@@ -25,8 +33,18 @@ interface Question {
 // Used only if the engine returns no questions (nothing to ask, or it is unavailable).
 // TODO: drop once nextQuestions() is always populated.
 const FALLBACK: Question[] = [
-  { id: "twin-question-routines", text: "When do you usually focus best?", domain: "routines", quickReplies: ["Morning", "Afternoon", "Evening"] },
-  { id: "twin-question-goals", text: "Which goal matters most to you this week?", domain: "goals", quickReplies: ["Exam preparation", "Project", "Steady routine"] },
+  {
+    id: "twin-question-routines",
+    text: "When do you usually focus best?",
+    domain: "routines",
+    quickReplies: ["Morning", "Afternoon", "Evening"],
+  },
+  {
+    id: "twin-question-goals",
+    text: "Which goal matters most to you this week?",
+    domain: "goals",
+    quickReplies: ["Exam preparation", "Project", "Steady routine"],
+  },
 ];
 
 // A tapped reply becomes a first-person sentence, so the extractor can read it like a
@@ -40,7 +58,11 @@ const STATEMENT: Record<string, (a: string) => string> = {
   planner: (a) => `I can study for ${a.toLowerCase()} tomorrow.`,
 };
 
-const CONFIRMATIONS = ["Got it. I'll remember that.", "Noted. Thank you.", "That helps. Thank you."];
+const CONFIRMATIONS = [
+  "Got it. I'll remember that.",
+  "Noted. Thank you.",
+  "That helps. Thank you.",
+];
 
 type Step = "start" | "ask" | "listening" | "thinking" | "review" | "done";
 
@@ -53,6 +75,8 @@ export default function TalkStage() {
   const [line, setLine] = useState(""); // what she is saying (also the caption)
   const [sentence, setSentence] = useState(""); // the sentence being spoken right now
   const [speaking, setSpeaking] = useState(false);
+  const [mouth, setMouth] = useState<0 | 1 | 2 | 3>(0);
+  const [learned, setLearned] = useState<string[]>([]); // facts approved today
   const [heard, setHeard] = useState(""); // live transcript while listening
   const [typed, setTyped] = useState("");
   const [level, setLevel] = useState(0);
@@ -60,8 +84,16 @@ export default function TalkStage() {
   const [notice, setNotice] = useState("");
   const [voiceOn] = useVoicePref();
 
-  const canDictate = useSyncExternalStore(noopSubscribe, listen.isSupported, () => false);
-  const canSpeak = useSyncExternalStore(noopSubscribe, speech.isSupported, () => false);
+  const canDictate = useSyncExternalStore(
+    noopSubscribe,
+    listen.isSupported,
+    () => false,
+  );
+  const canSpeak = useSyncExternalStore(
+    noopSubscribe,
+    speech.isSupported,
+    () => false,
+  );
 
   const approved = useRef(0); // approvals in this round
   const confirmIdx = useRef(0);
@@ -80,11 +112,35 @@ export default function TalkStage() {
     };
   }, []);
 
+  // "Learned today": facts approved today, newest first.
+  const refreshLearned = useCallback(() => {
+    const today = new Date().toDateString();
+    dataService.facts
+      .list()
+      .then((list) =>
+        setLearned(
+          list
+            .filter(
+              (f) =>
+                f.status === "approved" &&
+                new Date(f.updatedAt).toDateString() === today,
+            )
+            .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+            .map((f) => f.text),
+        ),
+      )
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    refreshLearned();
+  }, [refreshLearned]);
+
   // Speech synthesis state, and the live microphone result and level.
   useEffect(() => {
     const offSpeak = speech.subscribe((s) => {
       setSpeaking(s.isSpeaking);
       setSentence(s.currentSentence);
+      setMouth(s.mouth);
     });
     const offResult = listen.onResult(({ transcript, isFinal }) => {
       setHeard(transcript);
@@ -155,7 +211,9 @@ export default function TalkStage() {
     const consent = await dataService.getConsent();
     if (!consent.journal) {
       setStep("ask");
-      say("Journal is switched off, so I can't keep answers. You can change that in Sources.");
+      say(
+        "Journal is switched off, so I can't keep answers. You can change that in Sources.",
+      );
       return;
     }
 
@@ -169,8 +227,12 @@ export default function TalkStage() {
 
     if (facts.length === 0) {
       setStep("ask");
-      setNotice("I couldn't turn that into a fact. A full sentence works best, like “I work best in the morning.”");
-      say("I couldn't turn that into something to remember. Try a full sentence.");
+      setNotice(
+        "I couldn't turn that into a fact. A full sentence works best, like “I work best in the morning.”",
+      );
+      say(
+        "I couldn't turn that into something to remember. Try a full sentence.",
+      );
       return;
     }
     approved.current = 0;
@@ -202,6 +264,7 @@ export default function TalkStage() {
 
   function arrived() {
     approved.current += 1;
+    refreshLearned();
     speech.speak(CONFIRMATIONS[confirmIdx.current++ % CONFIRMATIONS.length]);
   }
 
@@ -231,144 +294,275 @@ export default function TalkStage() {
     if (step === "listening" || step === "thinking") setStep("ask");
   }
 
-  const faceState: FaceState = step === "listening" ? "listening" : step === "thinking" ? "thinking" : speaking ? "speaking" : "idle";
+  const faceState: FaceState =
+    step === "listening"
+      ? "listening"
+      : step === "thinking"
+        ? "thinking"
+        : speaking
+          ? "speaking"
+          : "idle";
   const q = questions?.[qi];
 
-  // Highlight the sentence she is saying right now inside the caption.
-  const caption = (() => {
-    if (!line) return null;
-    const at = sentence ? line.indexOf(sentence) : -1;
-    if (at < 0) return line;
-    return (
-      <>
-        {line.slice(0, at)}
-        <mark>{sentence}</mark>
-        {line.slice(at + sentence.length)}
-      </>
-    );
-  })();
+  const listening = step === "listening";
+  const asking = step === "ask" || listening;
 
   return (
     <main className="talk">
-      <div className="talk-face">
-        <TwinFace state={faceState} level={level} />
-      </div>
+      <div className="talk-stage">
+        <div className="talk-face">
+          <TwinFace
+            fill
+            state={faceState}
+            level={level}
+            mouth={speaking ? mouth : undefined}
+          />
+        </div>
 
-      <AnimatePresence>
-        {step === "review" && cards.length > 0 && (
-          <motion.aside
-            className="talk-cards"
-            aria-label="Facts to approve"
-            initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
-          >
-            {cards.map(({ fact, said }) => (
-              <FactCard
-                key={fact.id}
-                fact={fact}
-                quote={said}
-                onApprove={() => approveFact(fact)}
-                onReject={() => rejectFact(fact)}
-                onEdit={(text) => editFact(fact, text)}
-                onArrive={arrived}
-                onDone={() => dismissCard(fact.id)}
-              />
-            ))}
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      <section className="glass talk-dock" aria-live="polite">
-        {step === "start" ? (
-          <div className="talk-start">
-            <h1>Talk to your twin</h1>
-            <p>
-              She asks a few short questions. Answer by voice, a tap, or typing. Nothing joins her
-              memory until you approve it.
-            </p>
-            <div className="talk-start-row">
-              <button type="button" className="btn-primary" onClick={start} disabled={!questions}>
-                Start talking
-              </button>
-              <Doodle text="tap to talk" arrow="up-left" tone="teal" className="talk-doodle" />
+        {/* Left: her question, big, with the word being spoken lit. */}
+        <section className="talk-left" aria-live="polite">
+          {step === "start" ? (
+            <div className="talk-start">
+              <p className="talk-eyebrow">Voice check-in</p>
+              <h1>Talk to your twin</h1>
+              <p>
+                She asks a few short questions. Answer by voice, a tap, or
+                typing. Nothing joins her memory until you approve it.
+              </p>
+              <div className="talk-start-row">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={start}
+                  disabled={!questions}
+                >
+                  Start talking
+                </button>
+                <Doodle
+                  text="tap to talk"
+                  arrow="up-left"
+                  tone="teal"
+                  className="talk-doodle"
+                />
+              </div>
+              <p className="talk-fine">
+                {canSpeak
+                  ? "She speaks aloud once you start. "
+                  : "This browser can't speak aloud, so you get captions only. "}
+                Voice input uses your browser&rsquo;s speech service; Paroh
+                never records or stores audio.
+              </p>
             </div>
-            <p className="talk-fine">
-              {canSpeak ? "She speaks aloud once you start. " : "This browser can't speak aloud, so you get captions only. "}
-              Voice input uses your browser&rsquo;s speech service; Paroh never records or stores audio.
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className="talk-caption">{caption}</p>
+          ) : (
+            <>
+              <div
+                className="talk-steps"
+                role="img"
+                aria-label={
+                  questions
+                    ? `Question ${Math.min(qi + 1, questions.length)} of ${questions.length}`
+                    : "Questions"
+                }
+              >
+                {(questions ?? []).map((_, i) => (
+                  <span
+                    key={i}
+                    className={
+                      i < qi || (i === qi && step === "done")
+                        ? "done"
+                        : i === qi
+                          ? "now"
+                          : ""
+                    }
+                  />
+                ))}
+                <span className="talk-steps-num num">
+                  {questions
+                    ? `${Math.min(qi + 1, questions.length)} / ${questions.length}`
+                    : ""}
+                </span>
+              </div>
 
-            {step === "listening" && (
-              <p className="talk-heard">{heard || "Go ahead, I'm listening…"}</p>
+              <p className="talk-eyebrow">{q ? q.domain : "Check-in"}</p>
+              <p className="talk-caption">
+                <Karaoke line={line} sentence={sentence} speaking={speaking} />
+              </p>
+
+              {listening && (
+                <p className="talk-heard">
+                  {heard || "Go ahead, I'm listening…"}
+                </p>
+              )}
+              {step === "thinking" && (
+                <p className="talk-heard">Reading “{heard}”…</p>
+              )}
+              {notice && <p className="talk-notice">{notice}</p>}
+
+              {step === "done" && (
+                <div className="talk-done">
+                  <Link href="/" className="btn-primary">
+                    See your twin
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => questions && ask(0, questions)}
+                  >
+                    Talk again
+                  </button>
+                </div>
+              )}
+
+              <div className="talk-foot">
+                <button type="button" className="talk-stop" onClick={stopAll}>
+                  <span aria-hidden="true" /> Stop
+                </button>
+                <span className="talk-voice">
+                  {voiceOn ? "voice on" : "voice off, captions only"}
+                </span>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* Right: candidate facts to approve, and what she learned today. */}
+        <aside className="talk-right">
+          <AnimatePresence>
+            {step === "review" && cards.length > 0 && (
+              <motion.div
+                className="talk-cards"
+                aria-label="Facts to approve"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
+              >
+                {cards.map(({ fact, said }) => (
+                  <FactCard
+                    key={fact.id}
+                    fact={fact}
+                    quote={said}
+                    onApprove={() => approveFact(fact)}
+                    onReject={() => rejectFact(fact)}
+                    onEdit={(text) => editFact(fact, text)}
+                    onArrive={arrived}
+                    onDone={() => dismissCard(fact.id)}
+                  />
+                ))}
+              </motion.div>
             )}
-            {step === "thinking" && <p className="talk-heard">Reading “{heard}”…</p>}
-            {notice && <p className="talk-notice">{notice}</p>}
+          </AnimatePresence>
 
-            {(step === "ask" || step === "listening") && q && (
-              <>
-                <div className="talk-chips" role="group" aria-label="Quick replies">
+          <section
+            className="glass talk-learned"
+            aria-label="Learned today"
+            style={{ ["--glass-accent" as string]: "var(--green)" }}
+          >
+            <header>
+              <h2>Learned today</h2>
+              <span className="talk-learned-count num">{learned.length}</span>
+            </header>
+            {learned.length === 0 ? (
+              <p className="talk-learned-empty">
+                Nothing yet. Approve a card and it lands here.
+              </p>
+            ) : (
+              <ul>
+                {learned.slice(0, 5).map((t, i) => (
+                  <li key={`${i}-${t}`}>{t}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </aside>
+
+        {/* Bottom centre: quick replies, dictate, live waveform, typing. */}
+        <div className="talk-dock-wrap">
+          <AnimatePresence>
+            {asking && q && (
+              <motion.section
+                className="glass glass-blur talk-dock"
+                aria-label="Your answer"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.4, ease: [0.2, 0.7, 0.2, 1] }}
+              >
+                <div
+                  className="talk-chips"
+                  role="group"
+                  aria-label="Quick replies"
+                >
                   {q.quickReplies.map((r) => (
-                    <button key={r} type="button" className="chip" onClick={() => submit(r, true)} disabled={step === "listening"}>
+                    <button
+                      key={r}
+                      type="button"
+                      className="chip"
+                      onClick={() => submit(r, true)}
+                      disabled={listening}
+                    >
                       {r}
                     </button>
                   ))}
                 </div>
-                <form
-                  className="talk-type"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    submit(typed, false);
-                    setTyped("");
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={typed}
-                    onChange={(e) => setTyped(e.target.value)}
-                    placeholder="or type a sentence…"
-                    aria-label="Type your answer"
-                    disabled={step === "listening"}
-                  />
-                  <button type="submit" className="btn-ghost btn-small" disabled={!typed.trim() || step === "listening"}>
-                    Send
-                  </button>
+                <div className={`talk-input-row${canDictate ? "" : " no-mic"}`}>
                   {canDictate && (
-                    <button type="button" className={`btn-ghost btn-small talk-dictate ${step === "listening" ? "on" : ""}`} onClick={dictate}>
-                      {step === "listening" ? "Stop dictating" : "Dictate"}
+                    <button
+                      type="button"
+                      className={`talk-mic${listening ? " on" : ""}`}
+                      onClick={dictate}
+                      aria-pressed={listening}
+                      aria-label={
+                        listening ? "Stop dictating" : "Dictate your answer"
+                      }
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="22"
+                        height="22"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <rect x="9" y="3" width="6" height="11" rx="3" />
+                        <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
+                      </svg>
                     </button>
                   )}
-                </form>
-              </>
+                  <Waveform level={level} live={listening} />
+                  <form
+                    className="talk-type"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      submit(typed, false);
+                      setTyped("");
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={typed}
+                      onChange={(e) => setTyped(e.target.value)}
+                      placeholder="or type a sentence…"
+                      aria-label="Type your answer"
+                      disabled={listening}
+                    />
+                    <button
+                      type="submit"
+                      className="btn-ghost btn-small"
+                      disabled={!typed.trim() || listening}
+                    >
+                      Send
+                    </button>
+                  </form>
+                </div>
+              </motion.section>
             )}
-
-            {step === "done" && (
-              <div className="talk-done">
-                <Link href="/" className="btn-primary">
-                  See your twin
-                </Link>
-                <button type="button" className="btn-ghost" onClick={() => questions && ask(0, questions)}>
-                  Talk again
-                </button>
-              </div>
-            )}
-
-            <div className="talk-foot">
-              <button type="button" className="talk-stop" onClick={stopAll}>
-                <span aria-hidden="true" /> Stop
-              </button>
-              <span className="talk-voice">{voiceOn ? "voice on" : "voice off, captions only"}</span>
-              <span className="talk-progress num">
-                {questions ? `${Math.min(qi + 1, questions.length)} / ${questions.length}` : ""}
-              </span>
-            </div>
-          </>
-        )}
-      </section>
+          </AnimatePresence>
+        </div>
+      </div>
     </main>
   );
 }

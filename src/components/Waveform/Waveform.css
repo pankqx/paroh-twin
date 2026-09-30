@@ -1,0 +1,40 @@
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 44px;
+  min-width: 0;
+}
+
+.wave span {
+  flex: 1;
+  min-width: 2px;
+  max-width: 5px;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(to top, var(--teal), var(--violet));
+  opacity: 0.45;
+  transform: scaleY(0.1);
+  transform-origin: center;
+  animation: wave-bar 1.4s ease-in-out infinite alternate;
+}
+
+.wave.live span {
+  opacity: 0.95;
+}
+
+@keyframes wave-bar {
+  from {
+    transform: scaleY(calc(0.08 + var(--amp, 0.1) * var(--k, 0.5) * 0.35));
+  }
+  to {
+    transform: scaleY(calc(0.1 + var(--amp, 0.1) * var(--k, 0.5)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave span {
+    animation: none;
+    transform: scaleY(calc(0.1 + var(--amp, 0.1) * var(--k, 0.5) * 0.6));
+  }
+}
