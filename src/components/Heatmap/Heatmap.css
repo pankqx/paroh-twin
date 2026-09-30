@@ -1,63 +1,78 @@
 .heatmap-grid {
   display: grid;
   grid-template-columns: 2.25rem repeat(18, minmax(0, 1fr));
-  gap: 1px;
+  gap: 3px;
   align-items: center;
 }
 
 .heatmap-hour,
 .heatmap-day {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--muted);
   line-height: 1;
 }
 
 .heatmap-hour {
-  padding-bottom: 0.35rem;
+  padding-bottom: 0.4rem;
 }
 
 .heatmap-cell {
   aspect-ratio: 1;
-  background: var(--paper-raised);
-  border: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+  animation: cell-in 600ms var(--ease) both;
 }
 
-.heatmap-cell.level-0 {
-  background: color-mix(in srgb, var(--forest) 6%, var(--paper-raised));
-}
 .heatmap-cell.level-1 {
-  background: color-mix(in srgb, var(--forest) 24%, var(--paper-raised));
+  background: color-mix(in srgb, var(--violet) 24%, transparent);
 }
 .heatmap-cell.level-2 {
-  background: color-mix(in srgb, var(--forest) 44%, var(--paper-raised));
+  background: color-mix(in srgb, var(--violet) 50%, transparent);
+  box-shadow: 0 0 6px -2px color-mix(in srgb, var(--violet) 60%, transparent);
 }
 .heatmap-cell.level-3 {
-  background: color-mix(in srgb, var(--forest) 66%, var(--paper-raised));
+  background: color-mix(in srgb, var(--teal) 65%, var(--violet));
+  box-shadow: 0 0 10px -2px color-mix(in srgb, var(--teal) 55%, transparent);
 }
 .heatmap-cell.level-4 {
-  background: color-mix(in srgb, var(--forest) 88%, var(--paper-raised));
+  background: var(--teal);
+  box-shadow: 0 0 14px -1px color-mix(in srgb, var(--teal) 75%, transparent);
 }
 
 .heatmap-cell:hover {
-  outline: 1px solid var(--ink);
-  outline-offset: -1px;
+  transform: scale(1.18);
+  outline: 1px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 0;
 }
 
 .heatmap-cell:focus-visible {
-  outline: 2px solid var(--forest);
+  outline: 2px solid var(--teal);
   outline-offset: 1px;
   position: relative;
 }
 
 .heatmap-caption {
-  margin: 0.9rem 0 0;
+  margin: 1rem 0 0;
   min-height: 1.5em;
   font-size: 0.85rem;
   color: var(--muted);
 }
 
+@keyframes cell-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 520px) {
   .heatmap-grid {
     grid-template-columns: 1.9rem repeat(18, minmax(0, 1fr));
+    gap: 2px;
   }
 }

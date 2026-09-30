@@ -1,10 +1,15 @@
 .approvals {
-  max-width: 720px;
+  max-width: 760px;
+}
+
+.approvals > h1 {
+  animation: rise 700ms var(--ease) both;
 }
 
 .approvals-sub {
-  margin-bottom: 1.75rem;
+  margin-bottom: 2rem;
   color: var(--muted);
+  animation: rise 700ms var(--ease) 80ms both;
 }
 
 .approvals-list {
@@ -14,16 +19,17 @@
 }
 
 .approvals-decided {
-  margin-top: 3.5rem;
+  margin-top: 3rem;
+  padding: 1.5rem 1.75rem;
 }
 
 .approvals-decided .ledger {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .decided {
   display: grid;
-  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: baseline;
 }
@@ -33,7 +39,7 @@
 }
 
 .decided-text {
-  color: var(--ink-soft);
+  color: var(--text-soft);
 }
 
 .decided-date {

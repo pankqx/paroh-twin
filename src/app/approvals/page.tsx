@@ -71,7 +71,7 @@ export default function ApprovalsPage() {
     const before = (await dataService.getTwinState()).confidenceByDomain;
     await dataService.setFactStatus(fact.id, "approve");
     const after = (await dataService.getTwinState()).confidenceByDomain;
-    // Hand the change to the Twin Bloom on /, which plays it once on arrival.
+    // Hand the change to the Living Core on /, which plays it once on arrival.
     recordGrowth(before, after);
     later(SHOW_ADDED_MS, () => setPhase(fact.id, "leaving"));
     later(SHOW_ADDED_MS + LEAVE_MS, refresh);
@@ -128,7 +128,7 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      <section className="approvals-decided">
+      <section className="panel approvals-decided rise" style={{ ["--i" as string]: 2 }}>
         <h2>Recently decided</h2>
         <LedgerList
           items={decided}

@@ -1,10 +1,15 @@
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 2rem;
-  padding: 1rem 2rem;
-  background: var(--paper-raised);
-  border-bottom: 1px solid var(--line);
+  padding: 0.9rem 2rem;
+  background: rgba(11, 13, 23, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
 }
 
 .navbar-brand {
@@ -12,9 +17,9 @@
   align-items: center;
   gap: 0.5rem;
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .navbar-brand:hover {
@@ -23,27 +28,34 @@
 
 .navbar-links {
   display: flex;
-  gap: 1.5rem;
+  gap: 0.35rem;
   flex: 1;
 }
 
 .navbar-links a {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--muted);
-  border-bottom: 2px solid transparent;
-  padding: 0.15rem 0;
-  transition: color 0.15s, border-color 0.15s;
+  padding: 0.4rem 0.9rem;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  transition:
+    color 0.2s var(--ease),
+    background 0.2s var(--ease),
+    border-color 0.2s var(--ease);
 }
 
 .navbar-links a:hover {
-  color: var(--ink);
+  color: var(--text);
   text-decoration: none;
+  background: var(--surface);
 }
 
 .navbar-links a.active {
-  color: var(--forest);
-  border-bottom-color: var(--forest);
+  color: var(--text);
+  background: var(--violet-tint);
+  border-color: rgba(139, 124, 255, 0.4);
+  box-shadow: 0 0 18px -6px rgba(139, 124, 255, 0.7);
 }
 
 .navbar-right {
@@ -54,18 +66,19 @@
 
 .navbar-pill {
   font-size: 0.72rem;
-  color: var(--muted);
-  background: var(--paper);
-  border: 1px solid var(--line);
+  font-weight: 500;
+  color: var(--amber);
+  background: var(--amber-tint);
+  border: 1px solid rgba(246, 179, 92, 0.3);
   border-radius: 100px;
-  padding: 0.15rem 0.65rem;
+  padding: 0.18rem 0.7rem;
 }
 
 @media (max-width: 720px) {
   .navbar {
     flex-wrap: wrap;
-    gap: 0.75rem 1rem;
-    padding: 0.85rem 1.25rem;
+    gap: 0.6rem 1rem;
+    padding: 0.8rem 1.25rem;
   }
 
   .navbar-brand {
@@ -81,6 +94,6 @@
     order: 3;
     flex-basis: 100%;
     flex-wrap: wrap;
-    gap: 1.25rem;
+    margin-left: -0.9rem;
   }
 }

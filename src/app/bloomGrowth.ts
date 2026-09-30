@@ -1,4 +1,4 @@
-// Hands "a domain just grew" from /approvals to the Twin Bloom on /, via
+// Hands "a domain just grew" from /approvals to the Living Core on /, via
 // localStorage so it also survives a full page load. Read once, then cleared.
 const KEY = "paroh-bloom-grew";
 
