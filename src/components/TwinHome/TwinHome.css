@@ -11,10 +11,13 @@
 
 .twin-hero {
   margin-top: -1rem;
+  /* full bleed: the stage uses the whole window width, not just the 1440px column */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 .twin-stage {
-  --u: min(100cqh, 60cqw); /* rendered height of the constellation */
+  --u: min(100cqh, 52cqw); /* rendered height of the constellation */
   position: relative;
   container-type: size;
   width: 100%;
@@ -24,8 +27,8 @@
 .twin-stage-face {
   position: absolute;
   left: 50%;
-  top: calc((100cqh - var(--u)) / 2 - var(--u) * 0.04);
-  height: calc(var(--u) * 1.22);
+  top: calc((100cqh - var(--u)) / 2 - var(--u) * 0.06);
+  height: calc(var(--u) * 1.34);
   transform: translateX(-50%);
   --face-h: 100%;
 }
@@ -34,7 +37,7 @@
   position: absolute;
   z-index: 3;
   top: 1.25rem;
-  left: 0.5rem;
+  left: max(1.5rem, 3cqw);
   width: clamp(260px, 26cqw, 360px);
 }
 
@@ -417,5 +420,57 @@
 
   .twin-doodle {
     display: none;
+  }
+}
+
+/* Side cards fill the window edges when the window is wide enough to have room for them. */
+.twin-side {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  top: 52%;
+  width: clamp(230px, 14cqw, 330px);
+  padding: 1rem 1.15rem;
+  transform: translateY(-50%);
+}
+.twin-side h2 {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--violet);
+}
+.twin-side p,
+.twin-side li {
+  font-size: 0.86rem;
+  color: var(--text-soft);
+}
+.twin-side ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.twin-side li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--stroke);
+}
+.twin-side li b {
+  color: var(--amber);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.twin-side.left {
+  left: 1.5cqw;
+}
+.twin-side.right {
+  right: 3.5cqw;
+}
+@container (min-width: 2150px) {
+  .twin-side {
+    display: block;
   }
 }

@@ -181,3 +181,12 @@
 .ta .ta-brow {
   stroke-width: 3.6;
 }
+
+/* Wrapper that carries the shared view-transition name between Home and Talk. */
+.twin-morph {
+  display: flow-root;
+  height: 100%;
+}
+.talk-face .twin-morph {
+  height: auto;
+}

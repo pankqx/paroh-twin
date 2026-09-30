@@ -351,16 +351,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  max-height: 34vh;
+  max-height: 48vh;
   overflow-y: auto;
   scrollbar-width: thin;
   mask-image: linear-gradient(to bottom, transparent 0, #000 18%);
 }
 .talk-history li {
   max-width: 92%;
-  padding: 0.5rem 0.8rem;
-  border-radius: 14px;
-  font-size: 0.88rem;
+  padding: 0.7rem 1rem;
+  border-radius: 16px;
+  font-size: 1.08rem;
   line-height: 1.4;
   color: var(--text-soft);
   background: rgba(255, 255, 255, 0.05);
@@ -368,8 +368,8 @@
 }
 .talk-history li span {
   display: block;
-  margin-bottom: 0.15rem;
-  font-size: 0.66rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -393,7 +393,7 @@
 
   .talk-stage {
     max-width: none;
-    grid-template-columns: minmax(340px, 27%) minmax(0, 1fr) minmax(300px, 26%);
+    grid-template-columns: minmax(400px, 30%) minmax(0, 1fr) minmax(300px, 24%);
     grid-template-rows: 1fr auto;
     grid-template-areas:
       "left face right"
@@ -406,13 +406,15 @@
   }
 
   .talk-face {
-    align-self: end;
-    align-items: flex-end;
+    align-self: stretch;
+    align-items: flex-start;
     min-height: 0;
     overflow: hidden;
   }
+  /* Bigger than the window is tall: hair and shoulders fill the middle, hands fall off the bottom. */
   .talk-face .twin-face.ta {
-    --face-h: min(calc(100vh - var(--bar-h)), calc((100vw * 0.46) * 1.2));
+    --face-h: calc((100vh - var(--bar-h)) * 1.26);
+    margin-top: calc(var(--face-h) * -0.095);
   }
 
   .talk-left {
@@ -422,8 +424,8 @@
   }
 
   .talk-caption {
-    max-width: 20ch;
-    font-size: clamp(1.5rem, 2.1vw, 2.2rem);
+    max-width: 22ch;
+    font-size: clamp(1.7rem, 2.3vw, 2.5rem);
   }
 
   .talk-dock-wrap {

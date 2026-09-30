@@ -75,3 +75,18 @@ custom SVG + motion, no libraries, using DataService.getMemoryGraph(). Nodes glo
 (fact, domain, task, goal, habit), drag to move, hover highlights neighbours, click a fact to open a
 side panel with its text, source, confidence and an Edit/Reject action. Simple spring simulation in a
 requestAnimationFrame loop, stop it when settled, reduced motion = static layout.
+
+## Codex, extra: use an OpenAI key instead of OpenRouter
+
+**I. Provider switch.** In the shared LLM helper used by /api/extract, /api/explain (and the new
+routes) read `LLM_BASE_URL` (default `https://openrouter.ai/api/v1`), `LLM_API_KEY` (falls back to
+`OPENROUTER_API_KEY`), `LLM_MODEL` and `LLM_FALLBACK_MODEL` (fall back to the OPENROUTER_* names).
+Keep the OpenAI-compatible `/chat/completions` call, the 12 s timeout and the canned fallback. Update
+`.env.example` and `check:ai`. For OpenAI: LLM_BASE_URL=https://api.openai.com/v1, LLM_MODEL=gpt-4o-mini,
+LLM_FALLBACK_MODEL=gpt-4.1-mini. Server code only; never log the key. README/Sources wording must say
+"hosted model (OpenAI)" when that provider is used.
+
+## Done by Claude on branch `avatar` (1 Oct ~04:30)
+Talk: chat history large on the left with the input under it, quick-reply chips removed, her bigger in
+the middle, details on the right. Home: full-width stage, bigger half-body twin, side cards on wide
+screens. Home to Talk uses a shared view-transition (the twin morphs), then blooms into colour.

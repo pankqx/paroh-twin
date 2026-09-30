@@ -15,6 +15,7 @@ import Doodle from "@/components/Doodle/Doodle";
 import FactCard from "@/components/FactCard/FactCard";
 import { notifyFactsChanged } from "@/components/shell/events";
 import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
+import { ViewTransition } from "react";
 import TwinAvatar, { type AvatarState } from "@/components/TwinAvatar/TwinAvatar";
 import "@/components/TwinAvatar/TwinAvatar.css";
 import Waveform from "@/components/Waveform/Waveform";
@@ -311,7 +312,7 @@ export default function TalkStage() {
 
   const [bloom, setBloom] = useState(false);
   useEffect(() => {
-    const id = window.setTimeout(() => setBloom(true), 450);
+    const id = window.setTimeout(() => setBloom(true), 750);
     return () => window.clearTimeout(id);
   }, []);
 
@@ -328,12 +329,16 @@ export default function TalkStage() {
     <main className="talk">
       <div className="talk-stage">
         <div className="talk-face">
-          <TwinAvatar
-            state={faceState}
-            level={level}
-            mouth={speaking ? mouth : undefined}
-            form={bloom ? 1 : 0}
-          />
+          <ViewTransition name="twin" share="morph" default="none">
+            <div className="twin-morph">
+              <TwinAvatar
+                state={faceState}
+                level={level}
+                mouth={speaking ? mouth : undefined}
+                form={bloom ? 1 : 0}
+              />
+            </div>
+          </ViewTransition>
         </div>
 
         {/* Left: her question, big, with the word being spoken lit. */}
@@ -515,23 +520,6 @@ export default function TalkStage() {
                 exit={{ opacity: 0, y: 8 }}
                 transition={{ duration: 0.4, ease: [0.2, 0.7, 0.2, 1] }}
               >
-                <div
-                  className="talk-chips"
-                  role="group"
-                  aria-label="Quick replies"
-                >
-                  {q.quickReplies.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      className="chip"
-                      onClick={() => submit(r, true)}
-                      disabled={listening}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
                 <div className={`talk-input-row${canDictate ? "" : " no-mic"}`}>
                   {canDictate && (
                     <button

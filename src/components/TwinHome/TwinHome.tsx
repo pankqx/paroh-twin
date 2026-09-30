@@ -15,6 +15,7 @@ import Heatmap from "@/components/Heatmap/Heatmap";
 import Ring from "@/components/Ring/Ring";
 import Sparkline from "@/components/Sparkline/Sparkline";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
+import { ViewTransition } from "react";
 import HomeLife from "./HomeLife";
 import TwinAvatar, { type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
 import "@/components/TwinAvatar/TwinAvatar.css";
@@ -196,8 +197,42 @@ export default function TwinHome() {
           />
           <Constellation facts={approved} onFocusFact={setFocused} />
           <div className="twin-stage-face">
-            <TwinAvatar ref={face} state="idle" form={0} />
+            <ViewTransition name="twin" share="morph" default="none">
+              <div className="twin-morph">
+                <TwinAvatar ref={face} state="idle" form={0} />
+              </div>
+            </ViewTransition>
           </div>
+
+          <aside className="twin-side left glass" aria-label="Coming up">
+            <h2>Coming up</h2>
+            {deadlines.length === 0 ? (
+              <p>No deadlines close by.</p>
+            ) : (
+              <ul>
+                {deadlines.slice(0, 4).map((d) => (
+                  <li key={d.id}>
+                    <span>{d.title}</span>
+                    <b>{d.due.slice(5)}</b>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+          <aside className="twin-side right glass" aria-label="Recently learned">
+            <h2>She has learned</h2>
+            {approved.length === 0 ? (
+              <p>Nothing approved yet.</p>
+            ) : (
+              <ul>
+                {approved.slice(0, 4).map((f) => (
+                  <li key={f.id}>
+                    <span>{f.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
 
           <div className="twin-hero-text">
             <p className="twin-eyebrow">{name}&rsquo;s twin · sample data</p>
