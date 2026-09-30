@@ -1,0 +1,72 @@
+import type { CheckIn, ConsentSettings, Fact, Habit, Task, Category } from "../types";
+import { localDataService } from "../data/LocalDataService";
+import type { Repo } from "../data/DataService";
+import { estimationBias, habitConsistency } from "../twin";
+
+export interface TwinContext {
+  approvedFacts: Array<{ id: string; kind: Fact["kind"]; text: string }>;
+  habitConsistency?: number;
+  estimationBias?: Partial<Record<Category, number>>;
+  averages?: { energy: number; mood: number; checkIns: number };
+}
+
+export interface TwinContextSource {
+  facts: Repo<Fact>;
+  tasks: Repo<Task>;
+  habits: Repo<Habit>;
+  checkins: Repo<CheckIn>;
+}
+
+const topicConsent: Partial<Record<Fact["kind"], keyof ConsentSettings>> = {
+  task: "tasks",
+  deadline: "tasks",
+  habit: "tasks", // Habits are covered by the tasks consent category in Night Plan.
+  routine: "tasks",
+  goal: "planner",
+  decision: "decisions",
+};
+
+function factIsConsented(fact: Fact, consent: ConsentSettings): boolean {
+  const sourceAllowed = fact.sourceType === "journal"
+    ? consent.journal
+    : fact.sourceType === "question"
+      ? consent.voice
+      : true;
+  const topic = topicConsent[fact.kind];
+  return sourceAllowed && (!topic || consent[topic]);
+}
+
+const average = (values: number[]) => values.length
+  ? Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10
+  : undefined;
+
+/** Build a compact prompt context using only facts and statistics allowed by consent. */
+export async function buildTwinContext(
+  consent: ConsentSettings,
+  source: TwinContextSource = localDataService,
+): Promise<TwinContext> {
+  const facts = consent.journal || consent.voice || consent.tasks || consent.planner || consent.decisions
+    ? await source.facts.list()
+    : [];
+  const approvedFacts = facts
+    .filter(fact => fact.status === "approved" && factIsConsented(fact, consent))
+    .slice(-12)
+    .map(({ id, kind, text }) => ({ id, kind, text: text.slice(0, 180) }));
+
+  const context: TwinContext = { approvedFacts };
+  if (consent.tasks) {
+    const [tasks, habits] = await Promise.all([source.tasks.list(), source.habits.list()]);
+    context.habitConsistency = Math.round(habitConsistency(habits) * 100) / 100;
+    const bias = estimationBias(tasks);
+    context.estimationBias = Object.fromEntries(Object.entries(bias).map(([category, ratio]) => [category, Math.round(ratio * 100) / 100])) as Partial<Record<Category, number>>;
+  }
+  if (consent.mood) {
+    const checkins = await source.checkins.list();
+    const energy = average(checkins.map(checkin => checkin.energy));
+    const mood = average(checkins.map(checkin => checkin.mood));
+    if (energy !== undefined && mood !== undefined) context.averages = { energy, mood, checkIns: checkins.length };
+  }
+  return context;
+}
+
+export default buildTwinContext;
