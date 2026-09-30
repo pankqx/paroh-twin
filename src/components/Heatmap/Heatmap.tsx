@@ -34,7 +34,7 @@ export default function Heatmap({ data }: { data: number[][] }) {
         ))}
 
         {DAYS.map((day, d) => (
-          <Row key={day} day={day} values={data[d] ?? []} onPick={setCaption} />
+          <Row key={day} day={day} row={d} values={data[d] ?? []} onPick={setCaption} />
         ))}
       </div>
       <p className="heatmap-caption" aria-live="polite">
@@ -46,10 +46,12 @@ export default function Heatmap({ data }: { data: number[][] }) {
 
 function Row({
   day,
+  row,
   values,
   onPick,
 }: {
   day: string;
+  row: number;
   values: number[];
   onPick: (caption: string) => void;
 }) {
@@ -64,6 +66,8 @@ function Row({
           <span
             key={h}
             className={`heatmap-cell level-${level}`}
+            // diagonal light-up wave
+            style={{ ["--d" as string]: `${(h - FIRST_HOUR + row) * 28}ms` }}
             tabIndex={0}
             aria-label={text}
             onMouseEnter={() => onPick(text)}

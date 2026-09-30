@@ -1,0 +1,89 @@
+.voice-orb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.voice-orb > * {
+  grid-area: 1 / 1;
+}
+
+.voice-orb-ring {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.voice-orb-ring-spin {
+  transform-origin: 110px 110px;
+  animation: voice-orb-spin var(--ring-spin) linear infinite;
+}
+
+.voice-orb-seg {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.voice-orb-seg.sparse {
+  stroke-dasharray: 2 5;
+}
+
+/* A segment whose domain just grew pulses once. Opacity only. */
+.voice-orb-seg.flare {
+  animation: voice-orb-flare 1600ms var(--ease) 1200ms 2;
+}
+
+.voice-orb-label {
+  font-family: var(--font-body);
+  font-size: 7.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  fill: var(--muted);
+}
+
+.voice-orb-core {
+  width: 74%;
+}
+
+.voice-orb-pct {
+  display: block;
+  font-size: clamp(1.4rem, 4.2vw, 2.4rem);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
+}
+
+.voice-orb-caption {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+@keyframes voice-orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes voice-orb-flare {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-orb-ring-spin,
+  .voice-orb-seg.flare {
+    animation: none;
+  }
+}

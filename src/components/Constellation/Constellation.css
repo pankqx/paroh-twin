@@ -1,0 +1,84 @@
+.constellation {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Each kind drifts slowly on its own clock. Transform only. */
+.const-group {
+  animation: const-drift var(--drift) ease-in-out infinite alternate;
+}
+
+.const-spoke {
+  stroke: color-mix(in srgb, var(--violet) 30%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+
+.const-spoke.empty {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.const-edge {
+  stroke-width: 1;
+  stroke-opacity: 0.45;
+}
+
+.const-link {
+  fill: none;
+  stroke: color-mix(in srgb, var(--violet) 22%, transparent);
+  stroke-width: 1;
+}
+
+.const-hub {
+  fill: color-mix(in srgb, var(--c) 18%, var(--bg));
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 6px var(--c));
+}
+
+.const-hub.empty {
+  fill: transparent;
+  stroke-dasharray: 2 3;
+  stroke-opacity: 0.55;
+  filter: none;
+}
+
+.const-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--muted);
+}
+
+.const-count {
+  fill: var(--text-soft);
+  font-family: var(--font-display);
+}
+
+.const-star {
+  cursor: pointer;
+  filter: drop-shadow(0 0 5px var(--c));
+  outline: none;
+}
+
+.const-star:focus-visible {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+@keyframes const-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--dx), 5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .const-group {
+    animation: none;
+  }
+}

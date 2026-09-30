@@ -1,189 +1,266 @@
-.twin-home {
-  max-width: 1120px;
+.twin {
+  max-width: 1200px;
 }
 
-/* 12-column dashboard of glass panels */
-.dash {
+/* ---------- Hero: text + orbit stage ---------- */
+
+.twin-hero {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 2rem;
+  align-items: center;
+  min-height: min(640px, calc(100vh - 120px));
 }
 
-.dash > .panel {
-  padding: 1.75rem;
+.twin-eyebrow {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--violet);
+}
+
+.twin-title {
+  font-size: 3rem;
+  line-height: 1.05;
+  max-width: 12ch;
+  margin-bottom: 1.1rem;
+}
+
+.twin-lede {
+  max-width: 40ch;
+  font-size: 1.05rem;
+  margin-bottom: 1.9rem;
+}
+
+.twin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.twin-caption {
+  margin: 2rem 0 0;
+  min-height: 3em;
+  max-width: 44ch;
+  padding-left: 0.9rem;
+  border-left: 1.5px solid var(--stroke-glow);
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.twin-stage {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+
+.twin-stage-orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 52%;
+  transform: translate(-50%, -50%);
+}
+
+.twin-doodle {
+  position: absolute;
+  top: 1%;
+  right: 2%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.twin-doodle svg path {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* ---------- Stat row ---------- */
+
+.twin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.stat {
+  padding: 1.35rem 1.4rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.stat-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.stat-ring > * {
+  grid-area: 1 / 1;
+}
+
+.stat-ring .stat-num {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.stat-num {
+  margin-top: -0.4rem;
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.stat-num-big {
+  margin-top: 0.9rem;
+  font-size: 2.6rem;
+}
+
+.stat-of {
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
+.stat-label {
+  margin: 0.35rem 0 0.1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.stat-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.fidelity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--violet);
+  background: color-mix(in srgb, var(--violet) 14%, transparent);
+  border: 1px solid var(--stroke-glow);
+}
+
+.fidelity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--violet);
+  box-shadow: 0 0 8px var(--violet);
+}
+
+/* ---------- Lower grid ---------- */
+
+.twin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.twin-panel {
+  padding: 1.6rem 1.7rem;
   min-width: 0;
 }
 
-.span-12 {
-  grid-column: span 12;
-}
-.span-7 {
-  grid-column: span 7;
-}
-.span-5 {
-  grid-column: span 5;
+.twin-panel h2 {
+  margin-bottom: 0.25rem;
 }
 
-.dash > .panel.stat-panel {
+.twin-panel-note {
+  margin: 0 0 1.25rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.risk-list {
+  list-style: none;
+  margin: 0;
   padding: 0;
 }
 
-.dash h2 {
-  margin-bottom: 1rem;
-}
-
-.panel-note {
-  margin: -0.5rem 0 1.25rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-/* ---------- Hero ---------- */
-
-.hero {
-  grid-column: span 12;
+.risk-list li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  gap: 2rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.9rem;
   align-items: center;
-  overflow: hidden;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--stroke);
 }
 
-.dash > .hero {
-  padding: 2.5rem 2.5rem 2rem 3rem;
+.risk-list li:last-child {
+  border-bottom: 0;
 }
 
-.eyebrow {
-  display: inline-block;
-  margin: 0 0 0.9rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.hero-title {
-  font-size: 3.1rem;
-  line-height: 1.05;
-  max-width: 13ch;
-  margin-bottom: 1rem;
-}
-
-.hero-lede {
-  max-width: 40ch;
-  margin-bottom: 2rem;
-  font-size: 1.05rem;
-  color: var(--text-soft);
-}
-
-.btn-primary.big {
-  padding: 1rem 2rem;
-  font-size: 1.02rem;
-}
-
-.hero-key {
-  margin: 2rem 0 0;
-  max-width: 44ch;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.hero-visual {
-  min-width: 0;
-}
-
-/* ---------- Lists ---------- */
-
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.row-main {
+.risk-main {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.row-title {
+.risk-title {
   color: var(--text);
   font-weight: 500;
 }
 
-.row-meta {
-  font-size: 0.82rem;
+.risk-meta {
+  font-size: 0.8rem;
   color: var(--muted);
-}
-
-.goal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.25rem;
-  padding-top: 0.5rem;
-}
-
-.signal {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: baseline;
-}
-
-.signal-text {
-  color: var(--text-soft);
-  font-size: 0.92rem;
-}
-
-.signal-date {
-  font-size: 0.78rem;
-  color: var(--muted);
-  white-space: nowrap;
 }
 
 /* ---------- Responsive ---------- */
 
-@media (max-width: 960px) {
-  .span-7,
-  .span-5 {
-    grid-column: span 12;
-  }
-
-  .hero {
+@media (max-width: 1000px) {
+  .twin-hero {
     grid-template-columns: 1fr;
+    min-height: 0;
   }
 
-  .dash > .hero {
-    padding: 2rem 1.75rem;
+  .twin-stage {
+    max-width: 520px;
   }
 
-  .hero-visual {
-    order: -1;
-    max-width: 420px;
-    width: 100%;
-    margin: 0 auto;
+  .twin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .twin-grid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 520px) {
-  .dash > .panel {
-    padding: 1.35rem;
-  }
-
-  .hero-title {
+  .twin-title {
     font-size: 2.3rem;
   }
 
-  .goal-grid {
-    gap: 0.75rem;
+  .twin-stats {
+    grid-template-columns: 1fr;
   }
 
-  .signal {
-    grid-template-columns: auto 1fr;
+  .twin-panel {
+    padding: 1.25rem;
   }
 
-  .signal-date {
-    grid-column: 2;
+  .twin-doodle {
+    display: none;
   }
 }

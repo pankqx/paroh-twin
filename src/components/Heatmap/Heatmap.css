@@ -13,45 +13,42 @@
 }
 
 .heatmap-hour {
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.45rem;
 }
 
+/* Cells light up in a diagonal wave (opacity + scale only). */
 .heatmap-cell {
+  position: relative;
   aspect-ratio: 1;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.04);
-  transition:
-    transform 0.2s var(--ease),
-    box-shadow 0.2s var(--ease);
-  animation: cell-in 600ms var(--ease) both;
+  background: rgba(255, 255, 255, 0.035);
+  animation: heat-in 700ms var(--ease) both;
+  animation-delay: var(--d, 0ms);
 }
 
 .heatmap-cell.level-1 {
-  background: color-mix(in srgb, var(--violet) 24%, transparent);
+  background: color-mix(in srgb, var(--violet) 22%, transparent);
 }
 .heatmap-cell.level-2 {
-  background: color-mix(in srgb, var(--violet) 50%, transparent);
-  box-shadow: 0 0 6px -2px color-mix(in srgb, var(--violet) 60%, transparent);
+  background: color-mix(in srgb, var(--violet) 45%, transparent);
 }
 .heatmap-cell.level-3 {
-  background: color-mix(in srgb, var(--teal) 65%, var(--violet));
-  box-shadow: 0 0 10px -2px color-mix(in srgb, var(--teal) 55%, transparent);
+  background: color-mix(in srgb, var(--teal) 60%, var(--violet));
+  box-shadow: 0 0 10px -3px color-mix(in srgb, var(--teal) 70%, transparent);
 }
 .heatmap-cell.level-4 {
   background: var(--teal);
-  box-shadow: 0 0 14px -1px color-mix(in srgb, var(--teal) 75%, transparent);
+  box-shadow: 0 0 14px -2px color-mix(in srgb, var(--teal) 85%, transparent);
 }
 
 .heatmap-cell:hover {
-  transform: scale(1.18);
-  outline: 1px solid rgba(255, 255, 255, 0.6);
-  outline-offset: 0;
+  outline: 1px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 1px;
 }
 
 .heatmap-cell:focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 1px;
-  position: relative;
 }
 
 .heatmap-caption {
@@ -61,12 +58,14 @@
   color: var(--muted);
 }
 
-@keyframes cell-in {
+@keyframes heat-in {
   from {
     opacity: 0;
+    transform: scale(0.4);
   }
   to {
     opacity: 1;
+    transform: none;
   }
 }
 
