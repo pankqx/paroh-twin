@@ -5,33 +5,6 @@ export const VIEW_W = 600;
 export const VIEW_H = 800;
 export const CX = 300;
 
-export type AvatarLook = "woman" | "man" | "spirit";
-export interface AvatarSpec {
-  jawWidth: number;
-  browShape: "soft" | "straight";
-  eyeSize: number;
-  lipFullness: number;
-  hairStyle: "long" | "short" | "none";
-  palette: { skinLight: string; skin: string; hair: string; hairLight: string; iris: string; rim: string };
-}
-
-/** The same SVG rig is parameterized per appearance; expression and state stay shared. */
-export const AVATAR_SPECS: Record<AvatarLook, AvatarSpec> = {
-  woman: { jawWidth: 0.96, browShape: "soft", eyeSize: 1.08, lipFullness: 1.12, hairStyle: "long", palette: { skinLight: "color-mix(in srgb, var(--amber) 30%, var(--text))", skin: "color-mix(in srgb, var(--rose) 28%, var(--amber))", hair: "color-mix(in srgb, var(--violet) 18%, var(--bg-2))", hairLight: "color-mix(in srgb, var(--violet) 48%, var(--muted))", iris: "color-mix(in srgb, var(--teal) 28%, var(--violet))", rim: "var(--violet)" } },
-  man: { jawWidth: 1.09, browShape: "straight", eyeSize: 0.98, lipFullness: 0.88, hairStyle: "short", palette: { skinLight: "color-mix(in srgb, var(--amber) 24%, var(--text))", skin: "color-mix(in srgb, var(--amber) 24%, var(--rose))", hair: "color-mix(in srgb, var(--violet) 12%, var(--bg-2))", hairLight: "color-mix(in srgb, var(--violet) 34%, var(--muted))", iris: "color-mix(in srgb, var(--teal) 34%, var(--muted))", rim: "var(--teal)" } },
-  spirit: { jawWidth: 1, browShape: "soft", eyeSize: 1, lipFullness: 1, hairStyle: "none", palette: { skinLight: "color-mix(in srgb, var(--violet) 38%, var(--text))", skin: "color-mix(in srgb, var(--violet) 56%, var(--bg-2))", hair: "var(--teal)", hairLight: "var(--violet)", iris: "var(--teal)", rim: "var(--violet)" } },
-};
-
-export const FACE_FORM = "M 197 286 C 210 235, 248 206, 300 204 C 352 206, 390 235, 403 286 C 417 354, 407 427, 374 486 C 350 531, 326 558, 300 570 C 274 558, 250 531, 226 486 C 193 427, 183 354, 197 286 Z";
-export const NECK_FORM = "M 258 548 C 268 603, 258 639, 226 676 L 374 676 C 342 639, 332 603, 342 548 Z";
-export const SHOULDER_FORM = "M 228 660 C 174 675, 104 710, 34 774 L 566 774 C 496 710, 426 675, 372 660 C 340 690, 260 690, 228 660 Z";
-export const LONG_HAIR_FORM = "M 300 150 C 211 148, 157 211, 154 310 C 151 399, 140 507, 114 596 C 93 670, 75 737, 54 796 L 546 796 C 525 737, 507 670, 486 596 C 460 507, 449 399, 446 310 C 443 211, 389 148, 300 150 Z";
-export const SHORT_HAIR_FORM = "M 188 318 C 158 260, 177 195, 227 165 C 269 139, 340 139, 380 165 C 428 195, 444 258, 412 321 L 390 294 C 384 258, 355 227, 326 219 C 292 210, 257 221, 231 249 C 213 269, 208 294, 210 321 Z";
-export const BROW_SHAPES = {
-  soft: { left: "M 216 324 C 232 308, 262 304, 284 314", right: "M 384 324 C 368 308, 338 304, 316 314" },
-  straight: { left: "M 216 322 C 236 313, 262 312, 284 318", right: "M 384 322 C 364 313, 338 312, 316 318" },
-};
-
 /** Mirror an absolute path ("M x y C x y x y x y ...") across the face's centre line. */
 export function mirror(d: string): string {
   return d.replace(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g, (_, x, y) => `${VIEW_W - Number(x)} ${y}`);
@@ -289,20 +262,19 @@ const n = (v: number) => Math.round(v * 100) / 100;
  *   lower: outer bottom edge of the lower lip
  *   gap:   the dark opening (degenerates to the closed mouth line)
  */
-export function mouthPaths(h: number, fullness = 1, smile = 0.45) {
+export function mouthPaths(h: number) {
   const cy = 482;
-  const lx = 300 - 36 * fullness;
-  const rx = 300 + 36 * fullness;
-  const cornerY = cy + smile * 2.2;
+  const lx = 264;
+  const rx = 336;
   const lift = h * 0.22;
-  const up = cy - 9 - lift * fullness; // soft cupid's bow
+  const up = cy - 11 - lift; // bow centre
   const gapTop = cy - 1.5 - lift * 0.6;
   const gapBottom = cy + 1.5 + h * 0.78;
-  const lowerBottom = cy + 13 * fullness + h * 0.9;
+  const lowerBottom = cy + 17 + h * 0.9;
   const pinch = h * 0.04; // corners draw in slightly as the mouth opens
 
-  const upper = `M ${n(lx + pinch)} ${n(cornerY)} C ${n(278)} ${n(cy - 3 - lift)}, ${n(290)} ${n(up - 1)}, 300 ${n(up)} C ${n(310)} ${n(up - 1)}, ${n(322)} ${n(cy - 3 - lift)}, ${n(rx - pinch)} ${n(cornerY)}`;
-  const lower = `M ${n(lx + pinch)} ${n(cornerY)} C ${n(282)} ${n(lowerBottom)}, ${n(318)} ${n(lowerBottom)}, ${n(rx - pinch)} ${n(cornerY)}`;
-  const gap = `M ${n(lx + pinch)} ${n(cornerY)} C ${n(282)} ${n(gapTop)}, ${n(318)} ${n(gapTop)}, ${n(rx - pinch)} ${n(cornerY)} C ${n(318)} ${n(gapBottom)}, ${n(282)} ${n(gapBottom)}, ${n(lx + pinch)} ${n(cornerY)}`;
+  const upper = `M ${n(lx + pinch)} ${cy} C ${n(278)} ${n(cy - 6 - lift)}, ${n(290)} ${n(up - 1)}, 300 ${n(up)} C ${n(310)} ${n(up - 1)}, ${n(322)} ${n(cy - 6 - lift)}, ${n(rx - pinch)} ${cy}`;
+  const lower = `M ${n(lx + pinch)} ${cy} C ${n(282)} ${n(lowerBottom)}, ${n(318)} ${n(lowerBottom)}, ${n(rx - pinch)} ${cy}`;
+  const gap = `M ${n(lx + pinch)} ${cy} C ${n(282)} ${n(gapTop)}, ${n(318)} ${n(gapTop)}, ${n(rx - pinch)} ${cy} C ${n(318)} ${n(gapBottom)}, ${n(282)} ${n(gapBottom)}, ${n(lx + pinch)} ${cy}`;
   return { upper, lower, gap };
 }

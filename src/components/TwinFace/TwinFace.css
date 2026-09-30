@@ -8,14 +8,6 @@
   aspect-ratio: 600 / 800;
   width: auto;
   max-width: 100%;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.twin-face:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 4px;
-  border-radius: 46%;
 }
 
 .twin-face svg {
@@ -43,7 +35,7 @@
 }
 
 .tf-stop {
-  transition: none;
+  transition: stop-color 0.7s var(--ease);
 }
 .tf-stop.a {
   stop-color: var(--tf-a);
@@ -76,7 +68,10 @@
 /* Hair: each strand draws on with a CSS dash (stroke-dashoffset), then sways on its own
    clock around the crown. Speaking adds a ripple that grows with --amp. */
 .tf-strand {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
   opacity: var(--o, 1);
+  animation: tf-draw 1.3s var(--ease) both;
 }
 
 .tf-sway {
@@ -88,10 +83,6 @@
 .twin-face.state-speaking .tf-sway.rip {
   animation-name: tf-ripple;
   animation-duration: calc(var(--d, 9s) * 0.32);
-}
-.twin-face.state-listening .tf-sway.rip {
-  animation-name: tf-ripple;
-  animation-duration: 2.2s;
 }
 
 .twin-face.state-thinking .tf-sway {
@@ -144,140 +135,11 @@
 }
 
 .tf-pupil-fill {
-  fill: var(--bg-2);
+  fill: var(--text);
 }
 .tf-glint {
-  fill: var(--text);
-  opacity: 0.96;
-}
-.tf-glint.small {
-  opacity: 0.7;
-}
-.tf-eye-white {
-  fill: color-mix(in srgb, var(--text) 88%, var(--amber));
-  stroke: color-mix(in srgb, var(--skin-tone) 58%, white);
-  stroke-width: 1;
-}
-.tf-iris {
-  fill: var(--iris-tone);
-  stroke: color-mix(in srgb, var(--iris-tone) 68%, white);
-  stroke-width: 1.1;
-}
-.tf-face-rig {
-  transform-box: view-box;
-  transform-origin: 300px 400px;
-}
-.tf-volume .tf-skin {
-  stroke: var(--rim-tone);
-  stroke-width: 2.4;
-  filter: drop-shadow(0 8px 17px color-mix(in srgb, var(--rim-tone) 14%, transparent));
-}
-.tf-volume .tf-blush {
-  opacity: 0.82;
-}
-.tf-hair-backfill {
-  stroke: none;
-}
-.tf-hair-fringe {
-  stroke: none;
-}
-.tf-stubble {
-  opacity: 0.14;
-}
-.tf-brows {
-  transform-box: view-box;
-  transform-origin: 300px 320px;
-  transition: transform 180ms ease;
-}
-.expression-listening .tf-brows {
-  transform: translateY(-5px);
-}
-.expression-thinking .tf-brows {
-  transform: translateY(3px) scaleX(0.98);
-}
-.tf-head-track {
-  transform: translate(var(--head-x, 0px), var(--head-y, 0px)) rotate(var(--head-rot, 0deg));
-  transform-box: view-box;
-  transform-origin: 300px 410px;
-  transition: transform 180ms ease-out;
-}
-.tf-hair.front,
-.tf-hair.back {
-  transform: translateX(var(--hair-x, 0px));
-  transition: transform 220ms ease-out;
-}
-.tf-mouth-gap {
-  fill: color-mix(in srgb, var(--rose) 24%, var(--bg-2));
-  stroke: color-mix(in srgb, var(--rose) 65%, var(--skin-tone));
-  stroke-width: 1;
-  opacity: 0;
-  transform: scaleY(var(--mouth-open, 0.04));
-  transform-box: view-box;
-  transform-origin: 300px 482px;
-}
-.tf-lip {
-  fill: none;
-  stroke: color-mix(in srgb, var(--rose) 66%, var(--skin-tone));
-  stroke-width: 3.2;
-  stroke-linecap: round;
-}
-.tf-lip.lower {
-  stroke-width: 2.1;
-  opacity: 0.72;
-}
-.tf-sparkles {
-  fill: var(--amber);
-  opacity: 0;
-  transform-box: view-box;
-  transform-origin: 300px 410px;
-}
-.expression-delighted .tf-sparkles,
-.reacting .tf-sparkles {
-  animation: tf-sparkle 640ms ease-out both;
-}
-.expression-thinking .tf-eye {
-  transform: translateY(-1px);
-}
-.expression-listening .tf-lean,
-.state-listening .tf-lean {
-  transform: translateY(-6px) scale(1.025);
-}
-.expression-thinking .tf-thought circle,
-.state-thinking .tf-thought circle {
-  animation: tf-thought 1.3s ease-in-out infinite;
-}
-.expression-thinking .tf-thought circle {
-  opacity: 0;
-}
-
-.tf-spirit-glow {
-  opacity: 0.75;
-}
-.tf-spirit {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: tf-breathe 4.6s ease-in-out infinite alternate;
-}
-.tf-spirit-ripple {
-  fill: none;
-  stroke: var(--rim-tone);
-  stroke-width: 1.4;
-  opacity: 0.48;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: tf-spirit-ripple 3.2s ease-in-out infinite alternate;
-}
-.tf-spirit-core {
-  fill: color-mix(in srgb, var(--violet) 16%, transparent);
-  stroke: var(--rim-tone);
-  stroke-width: 1.5;
-  opacity: 0.75;
-}
-.tf-spirit-mark {
-  fill: none;
-  stroke: var(--teal);
-  stroke-width: 1.6;
-  opacity: 0.75;
+  fill: var(--bg);
+  opacity: 0.85;
 }
 
 /* Listening ring */
@@ -336,17 +198,6 @@
   to {
     stroke-dashoffset: 0;
   }
-}
-
-@keyframes tf-sparkle {
-  0% { opacity: 0; transform: scale(0.5) rotate(-12deg); }
-  35% { opacity: 1; transform: scale(1) rotate(0deg); }
-  100% { opacity: 0; transform: scale(1.15) rotate(8deg); }
-}
-
-@keyframes tf-spirit-ripple {
-  from { opacity: 0.2; transform: scale(0.94); }
-  to { opacity: 0.62; transform: scale(1.06); }
 }
 
 @keyframes tf-ripple {
@@ -426,7 +277,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tf-strand { animation: none; }
+  .tf-strand {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
 
   .twin-face.state-speaking .tf-vring {
     animation: none;
@@ -434,7 +288,6 @@
   }
 
   .tf-breathe,
-  .tf-spirit,
   .tf-sway,
   .twin-face.state-speaking .tf-sway.rip,
   .tf-mind-halo,
@@ -456,15 +309,4 @@
   .twin-face.state-listening .tf-lean {
     transform: none;
   }
-
-  .tf-head-track,
-  .tf-hair.front,
-  .tf-hair.back,
-  .tf-brows,
-  .tf-spirit-ripple {
-    transition: none;
-    animation: none;
-  }
-
-  .tf-sparkles { animation: none; opacity: 0.4; }
 }
