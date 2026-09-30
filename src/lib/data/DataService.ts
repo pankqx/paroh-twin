@@ -13,6 +13,7 @@ import type {
   Task,
   TwinState,
 } from "../types";
+import type { FactConflict } from "../twin/memory";
 
 export interface WhatIfPlan {
   label: string;
@@ -56,6 +57,9 @@ export interface DataService {
 
   // twin (derived from approved facts and permitted data)
   getTwinState(): Promise<TwinState>;
+  getConflicts(): Promise<FactConflict[]>;
+  getStale(): Promise<Fact[]>;
+  retrieve(question: string): Promise<Fact[]>;
   nextQuestions(): Promise<{ id: string; text: string; domain: string; quickReplies: string[] }[]>;
   saveEntry?(entry: JournalEntry): Promise<JournalEntry>;
   listFacts?(): Promise<Fact[]>;

@@ -26,6 +26,26 @@ describe("nextQuestions", () => {
   });
 });
 
+describe("memory quality DataService methods", () => {
+  it("returns consented conflicts, stale facts, and question-relevant approved facts", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    await service.resetAll();
+    const base = { kind: "preference" as const, category: "personal" as const, data: {}, sourceId: "test", sourceType: "journal" as const, status: "approved" as const, confidence: 0.9, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" };
+    await service.facts.upsert({ ...base, id: "morning", text: "I work best in the morning" });
+    await service.facts.upsert({ ...base, id: "evening", text: "I work best in the evening", createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" });
+
+    expect(await service.getConflicts()).toHaveLength(1);
+    expect((await service.getStale()).map(fact => fact.id)).toEqual(["morning", "evening"]);
+    expect((await service.retrieve("When do I work best in the evening?")).slice(0, 1).map(fact => fact.id)).toEqual(["evening"]);
+
+    await service.setConsent({ ...(await service.getConsent()), journal: false });
+    expect(await service.getConflicts()).toEqual([]);
+    expect(await service.getStale()).toEqual([]);
+    expect(await service.retrieve("work best evening")).toEqual([]);
+  });
+});
+
 describe("parseWhatIf DataService contract", () => {
   afterEach(() => vi.unstubAllGlobals());
   it("feeds parsed scenario plans through the TypeScript simulation", async () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CheckIn, ConsentSettings, Fact, Habit, Task } from "../types";
 import type { Repo } from "../data/DataService";
 import { buildTwinContext, type TwinContextSource } from "./buildTwinContext";
@@ -45,5 +45,14 @@ describe("buildTwinContext", () => {
     const context = await buildTwinContext(consent, source);
     expect(context.habitConsistency).toBeUndefined();
     expect(context.approvedFacts.some(item => item.kind === "habit")).toBe(false);
+  });
+
+  it("uses the DataService retrieval method with the current question", async () => {
+    const relevant = fact("retrieved", "preference", "journal");
+    relevant.text = "I revise biology best in the morning";
+    const retrieve = vi.fn(async () => [relevant]);
+    const context = await buildTwinContext(allConsent, { ...source, retrieve }, "When should I revise biology?");
+    expect(retrieve).toHaveBeenCalledWith("When should I revise biology?");
+    expect(context.approvedFacts.map(item => item.id)).toEqual(["retrieved"]);
   });
 });

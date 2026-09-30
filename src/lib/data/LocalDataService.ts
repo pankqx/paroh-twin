@@ -3,7 +3,7 @@ import type { DataService, Repo, WhatIfParseResult } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
-import { deriveTwinState } from "../twin";
+import { deriveTwinState, detectConflicts, privacyBoundary, retrieveRelevant, staleFacts } from "../twin";
 import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
 
 type State = { entries: JournalEntry[]; facts: Fact[]; tasks: Task[]; goals: Goal[]; habits: Habit[]; checkins: CheckIn[]; decisions: Decision[]; memories: MemoryItem[]; consent: ConsentSettings };
@@ -101,6 +101,12 @@ export class LocalDataService implements DataService {
     const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal") };
     return deriveTwinState(data);
   }
+  private async permittedApprovedFacts(): Promise<Fact[]> {
+    return privacyBoundary(await this.facts.list(), this.state.consent).filter(fact => fact.status === "approved");
+  }
+  async getConflicts() { return detectConflicts(await this.permittedApprovedFacts()); }
+  async getStale() { return staleFacts(await this.permittedApprovedFacts(), new Date()); }
+  async retrieve(question: string) { return retrieveRelevant(await this.permittedApprovedFacts(), question); }
   async nextQuestions() {
     return questionsForTwinState(await this.getTwinState());
   }
@@ -108,7 +114,7 @@ export class LocalDataService implements DataService {
     if (!this.state.consent.journal) return [];
     let result: Fact[];
     try {
-      const context = await buildTwinContext(this.state.consent, this);
+      const context = await buildTwinContext(this.state.consent, this, input.text);
       const response = await fetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,7 +144,7 @@ export class LocalDataService implements DataService {
   }
   async parseWhatIf(text: string): Promise<WhatIfParseResult> {
     const tasks = this.state.consent.tasks ? await this.tasks.list() : [];
-    const context = await buildTwinContext(this.state.consent, this);
+    const context = await buildTwinContext(this.state.consent, this, text);
     try {
       const response = await fetch("/api/parse-whatif", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -177,7 +183,7 @@ export class LocalDataService implements DataService {
     if (!decision) return { text: "I do not have enough saved scenario data to explain this yet.", spoken: "I need more saved data to explain this choice.", usedFactIds: [] };
     let usedFactIds: string[] = [];
     try {
-      const context = await buildTwinContext(this.state.consent, this);
+      const context = await buildTwinContext(this.state.consent, this, decision.prompt);
       usedFactIds = context.approvedFacts.map(fact => fact.id);
       const response = await fetch("/api/explain", {
         method: "POST",

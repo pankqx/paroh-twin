@@ -1,7 +1,7 @@
 import type { CheckIn, ConsentSettings, Fact, Habit, Task, Category } from "../types";
 import { localDataService } from "../data/LocalDataService";
 import type { Repo } from "../data/DataService";
-import { estimationBias, habitConsistency } from "../twin";
+import { estimationBias, habitConsistency, privacyBoundary, retrieveRelevant } from "../twin";
 
 export interface TwinContext {
   approvedFacts: Array<{ id: string; kind: Fact["kind"]; text: string }>;
@@ -15,26 +15,7 @@ export interface TwinContextSource {
   tasks: Repo<Task>;
   habits: Repo<Habit>;
   checkins: Repo<CheckIn>;
-}
-
-const topicConsent: Partial<Record<Fact["kind"], Array<keyof ConsentSettings>>> = {
-  task: ["tasks"],
-  deadline: ["tasks"],
-  habit: ["tasks", "habits"], // Respect both current toggles; Night Plan groups habits under tasks.
-  routine: ["tasks"],
-  preference: ["journal"],
-  goal: ["planner"],
-  decision: ["decisions"],
-};
-
-function factIsConsented(fact: Fact, consent: ConsentSettings): boolean {
-  const sourceAllowed = fact.sourceType === "journal"
-      ? consent.journal
-      : fact.sourceType === "question"
-        ? consent.voice
-        : true; // Manual facts are additionally gated by their topic category below.
-  const topics = topicConsent[fact.kind] ?? [];
-  return sourceAllowed && topics.every(topic => consent[topic]);
+  retrieve?(question: string): Promise<Fact[]>;
 }
 
 const average = (values: number[]) => values.length
@@ -45,13 +26,14 @@ const average = (values: number[]) => values.length
 export async function buildTwinContext(
   consent: ConsentSettings,
   source: TwinContextSource = localDataService,
+  question = "",
 ): Promise<TwinContext> {
   const facts = consent.journal || consent.voice || consent.tasks || consent.planner || consent.decisions
     ? await source.facts.list()
     : [];
-  const approvedFacts = facts
-    .filter(fact => fact.status === "approved" && factIsConsented(fact, consent))
-    .slice(-12)
+  const permitted = privacyBoundary(facts, consent).filter(fact => fact.status === "approved");
+  const retrieved = source.retrieve ? await source.retrieve(question) : retrieveRelevant(permitted, question, 12);
+  const approvedFacts = privacyBoundary(retrieved, consent).filter(fact => fact.status === "approved")
     .map(({ id, kind, text }) => ({ id, kind, text: text.slice(0, 180) }));
 
   const context: TwinContext = { approvedFacts };
