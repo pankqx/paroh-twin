@@ -29,6 +29,17 @@ const routedIntent = (text: string): ConverseResult["intent"] => {
   if (/\b(journal|remember this|write this down)\b/i.test(text)) return "journal";
   return "chat";
 };
+const neededConsent = (text: string): ConsentCategory[] => {
+  const lower = text.toLowerCase();
+  const required = new Set<ConsentCategory>();
+  if (/\b(habit|streak|routine)\b/.test(lower)) { required.add("habits"); required.add("tasks"); }
+  if (/\b(energy|mood|tired|focus level)\b/.test(lower)) required.add("mood");
+  if (/\b(goal|year plan|planner)\b/.test(lower)) required.add("planner");
+  if (/\b(decision|choice|what did i choose)\b/.test(lower)) required.add("decisions");
+  if (/\b(task|deadline|due|load|week|study|exam|project|assignment|revise|revision)\b/.test(lower)) required.add("tasks");
+  if (/\b(journal|note|memory|remember|what do you know)\b/.test(lower)) required.add("journal");
+  return [...required];
+};
 
 const questionOrder = ["tasks", "habits", "routines", "energy", "goals", "planner"] as const;
 const questionTemplates: Record<(typeof questionOrder)[number], { text: string; quickReplies: string[] }> = {
@@ -239,6 +250,10 @@ export class LocalDataService implements DataService {
       const consent = { ...this.state.consent };
       const sourceId = `voice-${stableId(input.utterance)}`;
       const candidateFacts = consent.voice ? extractCanned(input.utterance, sourceId, "question") : [];
+      if (neededConsent(input.utterance).some(category => !consent[category])) {
+        const reply = "That's outside what you've allowed me to use.";
+        return { reply, spoken: reply, candidateFacts, intent, ...(intent === "whatif" ? { whatIfPrompt: input.utterance } : {}) };
+      }
       if (intent === "status") {
         if (!consent.tasks) {
           const reply = "I need task sharing turned on to summarize your week.";

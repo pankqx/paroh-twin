@@ -129,4 +129,14 @@ describe("converse", () => {
       intent: "whatif", degraded: true, whatIfPrompt: "Should I revise tonight?", candidateFacts: [],
     });
   });
+
+  it("answers locally and makes no route call when a required category is off", async () => {
+    const service = makeService();
+    await service.setConsent({ ...(await service.getConsent()), tasks: false });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await service.converse({ utterance: "How is my study load this week?", history: [] });
+    expect(result.reply).toBe("That's outside what you've allowed me to use.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
