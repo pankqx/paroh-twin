@@ -1,5 +1,5 @@
 import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState, Whisper } from "../types";
-import type { DataService, Repo } from "./DataService";
+import type { ConverseInput, ConverseResult, DataService, Repo } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
@@ -12,6 +12,15 @@ const KEY = "paroh-local-data-v1";
 const defaultConsent: ConsentSettings = { journal: true, tasks: true, habits: true, mood: true, planner: true, voice: false, decisions: true };
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const stamp = () => new Date().toISOString();
+const shortSpeech = (text: string) => text.trim().split(/\s+/).slice(0, 44).join(" ");
+const stableId = (text: string) => { let hash = 2166136261; for (const char of text) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619); return (hash >>> 0).toString(36); };
+const routedIntent = (text: string): ConverseResult["intent"] => {
+  if (/\bwhat if\b|\bshould i\b/i.test(text)) return "whatif";
+  if (/\bhow is my week\b|\bhow's my week\b|\bhow am i\b|\bhow busy\b|\bmy load\b|\bstatus\b|\b(load|deadlines?|week's plan|planned capacity)\b/i.test(text)) return "status";
+  if (/\b(help|what can you do|how do i)\b/i.test(text)) return "help";
+  if (/\b(journal|remember this|write this down)\b/i.test(text)) return "journal";
+  return "chat";
+};
 
 const questionOrder = ["tasks", "habits", "routines", "energy", "goals", "planner"] as const;
 const questionTemplates: Record<(typeof questionOrder)[number], { text: string; quickReplies: string[] }> = {
@@ -168,6 +177,70 @@ export class LocalDataService implements DataService {
       const best = recommend(decision.scenarios);
       const text = best ? `${best.label} fits the current comparison. ${best.summary}` : "I do not have enough scenario data to compare these options.";
       return { text, spoken: text.split(/\s+/).slice(0, 55).join(" "), usedFactIds };
+    }
+  }
+  async converse(input: ConverseInput): Promise<ConverseResult> {
+    try {
+      const intent = routedIntent(input.utterance);
+      const consent = { ...this.state.consent };
+      const sourceId = `voice-${stableId(input.utterance)}`;
+      const candidateFacts = consent.voice ? extractCanned(input.utterance, sourceId, "question") : [];
+      if (intent === "status") {
+        if (!consent.tasks) {
+          const reply = "I need task sharing turned on to summarize your week.";
+          return { reply, spoken: reply, candidateFacts, intent, degraded: true };
+        }
+        const twin = await this.getTwinState();
+        const now = Date.now();
+        const dueSoon = (await this.tasks.list()).filter(task => !task.done && task.dueAt && new Date(task.dueAt).getTime() >= now && new Date(task.dueAt).getTime() <= now + 7 * 86400000).length;
+        const studyBias = twin.estimationBias.study;
+        const deadlineLabel = dueSoon === 1 ? "open deadline" : "open deadlines";
+        const reply = `Your planned load is ${Math.round(twin.loadPct)}% of this week's capacity, with ${dueSoon} ${deadlineLabel} in the next seven days. Study tasks average about ${studyBias.toFixed(1)} times their estimate.`;
+        return { reply, spoken: shortSpeech(reply), candidateFacts, intent };
+      }
+
+      const questions = await this.nextQuestions();
+      const context = await buildTwinContext(consent, this);
+      const response = await fetch("/api/converse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          utterance: input.utterance,
+          history: input.history.slice(-8),
+          intent,
+          sourceId,
+          allowCandidateFacts: consent.voice,
+          context,
+          followUp: questions[0],
+          quickReplies: questions[0]?.quickReplies ?? [],
+        }),
+      });
+      if (!response.ok) throw new Error("Converse route failed");
+      const value: unknown = await response.json();
+      if (!value || typeof value !== "object" || typeof (value as { reply?: unknown }).reply !== "string" || typeof (value as { spoken?: unknown }).spoken !== "string") throw new Error("Converse route returned invalid data");
+      const result = value as Partial<ConverseResult>;
+      const followUp = result.followUp && typeof result.followUp.text === "string"
+        ? { text: result.followUp.text, ...(typeof result.followUp.domain === "string" ? { domain: result.followUp.domain } : {}), quickReplies: Array.isArray(result.followUp.quickReplies) ? result.followUp.quickReplies.filter((item): item is string => typeof item === "string").slice(0, 3) : [] }
+        : undefined;
+      return {
+        reply: result.reply!, spoken: shortSpeech(result.spoken!), followUp, candidateFacts,
+        intent, ...(intent === "whatif" ? { whatIfPrompt: input.utterance } : {}), degraded: Boolean(result.degraded),
+      };
+    } catch {
+      try {
+        const intent = routedIntent(input.utterance);
+        const consent = this.state.consent;
+        const candidateFacts = consent.voice ? extractCanned(input.utterance, `voice-${stableId(input.utterance)}`, "question") : [];
+        const questions = await this.nextQuestions();
+        const followUp = questions[0] ? { text: questions[0].text, domain: questions[0].domain, quickReplies: questions[0].quickReplies } : undefined;
+        const base = intent === "whatif" ? "I can compare those options using your saved tasks and deadlines." : intent === "help" ? "I can help with planning, task estimates, deadlines, and what-if choices." : intent === "journal" ? "I can turn clear plans from this note into candidate facts for your review." : "I can help you plan the next step.";
+        const reply = followUp ? `${base} ${followUp.text}` : base;
+        return { reply, spoken: shortSpeech(reply), followUp, candidateFacts, intent, ...(intent === "whatif" ? { whatIfPrompt: input.utterance } : {}), degraded: true };
+      } catch {
+        const reply = "I can help with tasks and planning. What would you like to work on next?";
+        const intent = routedIntent(input.utterance);
+        return { reply, spoken: reply, candidateFacts: [], intent, ...(intent === "whatif" ? { whatIfPrompt: input.utterance } : {}), degraded: true };
+      }
     }
   }
   async previewPayload(kind: "extract" | "scenarios" | "explain", input: unknown) {

@@ -53,3 +53,32 @@ describe("route payload previews", () => {
     expect(JSON.parse(preview.text)).toEqual(JSON.parse(bodies[1]));
   });
 });
+
+describe("converse", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const makeService = () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    return new LocalDataService(storage);
+  };
+
+  it("builds status numbers from the current twin state", async () => {
+    const service = makeService();
+    await service.resetAll();
+    const now = new Date();
+    const dueAt = new Date(now.getTime() + 86400000).toISOString();
+    await service.tasks.upsert({ id: "upcoming", title: "Biology revision", category: "study", estHours: 2, dueAt, done: false, createdAt: now.toISOString(), updatedAt: now.toISOString() });
+    const twin = await service.getTwinState();
+    const answer = await service.converse({ utterance: "How is my week and load?", history: [] });
+    expect(answer.intent).toBe("status");
+    expect(answer.spoken).toContain(`${Math.round(twin.loadPct)}%`);
+    expect(answer.spoken).toContain("1 open deadline");
+  });
+
+  it("returns a canned answer instead of throwing when the route fails", async () => {
+    const service = makeService();
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
+    await expect(service.converse({ utterance: "Should I revise tonight?", history: [] })).resolves.toMatchObject({
+      intent: "whatif", degraded: true, whatIfPrompt: "Should I revise tonight?", candidateFacts: [],
+    });
+  });
+});

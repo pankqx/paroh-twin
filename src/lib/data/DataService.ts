@@ -22,6 +22,20 @@ export interface Repo<T extends { id: string }> {
   remove(id: string): Promise<void>;
 }
 
+export interface ConverseInput {
+  utterance: string;
+  history: Array<{ role: "twin" | "user"; text: string }>;
+}
+export interface ConverseResult {
+  reply: string;
+  spoken: string;
+  followUp?: { text: string; domain?: string; quickReplies: string[] };
+  candidateFacts: Fact[];
+  intent: "chat" | "whatif" | "journal" | "status" | "help";
+  whatIfPrompt?: string;
+  degraded?: boolean;
+}
+
 /**
  * The only way the UI reads or writes data. Never call storage or the network
  * from components. See docs/HANDOFF.md section 8.
@@ -59,6 +73,7 @@ export interface DataService {
   explain(
     decisionId: string,
   ): Promise<{ text: string; spoken: string; usedFactIds: string[] }>;
+  converse(input: ConverseInput): Promise<ConverseResult>;
   previewPayload(
     kind: "extract" | "scenarios" | "explain",
     input: unknown,

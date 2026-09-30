@@ -7,6 +7,7 @@ export interface ChatMessage {
 export async function openRouterJson(
   messages: ChatMessage[],
   accept: (value: Record<string, unknown>) => boolean = () => true,
+  timeoutMs = 12_000,
 ): Promise<string | undefined> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return undefined;
@@ -14,7 +15,7 @@ export async function openRouterJson(
   const models = [...new Set([process.env.OPENROUTER_MODEL, process.env.OPENROUTER_FALLBACK_MODEL].filter((model): model is string => Boolean(model?.trim())))];
   for (const model of models) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12_000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
