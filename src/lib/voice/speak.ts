@@ -114,6 +114,9 @@ export function stop(): void {
   emit(idleState);
 }
 
+/** Immediately cancel current synthesis and discard queued speech, for example when dictation starts. */
+export function cancel(): void { stop(); }
+
 export function setEnabled(enabled: boolean): void {
   enabledCache = enabled;
   try { if (typeof localStorage !== "undefined") localStorage.setItem(ENABLED_KEY, String(enabled)); } catch { /* storage can be disabled */ }
