@@ -67,6 +67,12 @@
   font-size: 19px;
   fill: var(--text-soft);
   pointer-events: none;
+  opacity: 0; /* shown on hover so labels never sit on the twin */
+  transition: opacity 0.25s var(--ease);
+}
+g:hover > .const-node-label,
+g:focus-within > .const-node-label {
+  opacity: 1;
 }
 
 .const-ghost {

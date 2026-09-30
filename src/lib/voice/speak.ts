@@ -37,18 +37,32 @@ function sentences(text: string): string[] {
     .filter(Boolean);
 }
 
+const FEMALE = /\b(?:female|woman|girl)\b|samantha|zira|aria|jenny|heera|neerja|veena|kalpana|swara|karen|moira|tessa|fiona|susan|hazel|libby|sonia|natasha|serena|victoria|allison|ava|google us english|google uk english female/i;
+const MALE = /\b(?:male|man|boy)\b|daniel|david|guy|ravi|prabhat|george|ryan|thomas|alex|fred|google uk english male/i;
+
+/** True when the chosen voice is known to match the look (otherwise we shift pitch a little). */
+let voiceMatchesLook = false;
+
 function preferredVoice(): SpeechSynthesisVoice | undefined {
   if (typeof window === "undefined" || !window.speechSynthesis) return undefined;
   const voices = window.speechSynthesis.getVoices();
   const normalized = (voice: SpeechSynthesisVoice) => voice.lang.toLowerCase().replace("_", "-");
   const languages = ["en-in", "en-gb", "en-us"];
-  const genderPattern = voiceLook === "woman" ? /\b(?:female|woman|girl)\b|samantha|zira|aria|jenny/i : /\b(?:male|man|boy)\b|daniel|david|guy/i;
+  const want = voiceLook === "woman" ? FEMALE : MALE;
+  const avoid = voiceLook === "woman" ? MALE : FEMALE;
+  const fits = (v: SpeechSynthesisVoice) => want.test(v.name) && !(voiceLook === "woman" && /google uk english male/i.test(v.name));
   for (const language of languages) {
-    const matchingLanguage = voices.filter(voice => normalized(voice) === language);
-    const preferredGender = matchingLanguage.find(voice => genderPattern.test(voice.name));
-    if (preferredGender) return preferredGender;
+    const match = voices.find((v) => normalized(v) === language && fits(v));
+    if (match) { voiceMatchesLook = true; return match; }
   }
-  return voices.find(voice => languages.includes(normalized(voice))) ?? voices.find(voice => genderPattern.test(voice.name));
+  const anyEnglish = voices.find((v) => normalized(v).startsWith("en") && fits(v));
+  if (anyEnglish) { voiceMatchesLook = true; return anyEnglish; }
+  voiceMatchesLook = false;
+  // No voice of the right kind: pick an English one that is at least not the other kind.
+  return (
+    voices.find((v) => languages.includes(normalized(v)) && !avoid.test(v.name)) ??
+    voices.find((v) => languages.includes(normalized(v)))
+  );
 }
 
 function playNext(run: number) {
@@ -64,6 +78,9 @@ function playNext(run: number) {
   const voice = preferredVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 0.95;
+  // Without a matching voice, shift pitch so a woman's look does not speak in a deep voice.
+  if (!voiceMatchesLook) utterance.pitch = voiceLook === "woman" ? 1.35 : 0.85;
+  else if (voiceLook === "woman") utterance.pitch = 1.08;
   let receivedWordBoundary = false;
   let fallbackMouth: 0 | 1 | 2 | 3 = 0;
   const publishMouth = (mouth: 0 | 1 | 2 | 3) => emit({ isSpeaking: true, currentSentence: sentence, speaking: true, sentence, mouth });

@@ -22,7 +22,6 @@ import ReadGuide from "./ReadGuide";
 import TwinAvatar, { type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
 import "@/components/TwinAvatar/TwinAvatar.css";
 import { onAction, usePrefs } from "@/components/TwinAvatar/avatarStore";
-import ChooseTwin from "@/components/TwinStage/ChooseTwin";
 import { SAMPLE_STUDENT_NAME } from "@/mock/sample";
 import { simulate } from "@/lib/twin/scenarios";
 import type { Fact, TwinState } from "@/lib/types";
@@ -260,7 +259,6 @@ export default function TwinHome() {
                 ))}
               </ul>
             )}
-            <ChooseTwin />
           </aside>
 
           <div className="twin-hero-text">

@@ -60,3 +60,9 @@
   .hl-spin, .hl-chip, .hl-bubble { animation: none; }
   .hl-bubble { opacity: 1; }
 }
+
+/* When the side cards show, the right-hand chips move above them. */
+@container (min-width: 2150px) {
+  .hl-chip.c1 { top: 14%; }
+  .hl-chip.c3 { top: 21%; }
+}

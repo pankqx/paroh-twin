@@ -1,5 +1,6 @@
 "use client";
 
+import ChooseTwin from "@/components/TwinStage/ChooseTwin";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -450,6 +451,11 @@ export default function Sources() {
             Delete all my data
           </button>
         )}
+      </section>
+      <section className="src-appearance" aria-label="Twin appearance">
+        <h2>Twin appearance</h2>
+        <p>How your twin looks and sounds. A woman&rsquo;s look uses a female voice when your browser has one.</p>
+        <ChooseTwin />
       </section>
     </main>
   );

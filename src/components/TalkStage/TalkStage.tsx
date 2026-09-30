@@ -18,7 +18,6 @@ import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
 import { ViewTransition } from "react";
 import TwinAvatar, { type AvatarState, type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
 import { onAction, usePrefs } from "@/components/TwinAvatar/avatarStore";
-import ChooseTwin from "@/components/TwinStage/ChooseTwin";
 import Gauges from "@/components/TwinStage/Gauges";
 import "@/components/TwinAvatar/TwinAvatar.css";
 import Waveform from "@/components/Waveform/Waveform";
@@ -115,6 +114,8 @@ export default function TalkStage() {
   const confirmIdx = useRef(0);
   const lastLevel = useRef(0);
   const submitRef = useRef<(raw: string, tapped: boolean) => void>(() => {});
+  const interimRef = useRef(""); // live transcript, used if recognition ends on a pause
+  const handledRef = useRef(false); // this listening turn is already submitted or stopped
 
   // Questions come from the engine, lowest-confidence domain first.
   useEffect(() => {
@@ -160,7 +161,10 @@ export default function TalkStage() {
     });
     const offResult = listen.onResult(({ transcript, isFinal }) => {
       setHeard(transcript);
+      interimRef.current = transcript;
       if (isFinal) {
+        interimRef.current = "";
+        handledRef.current = true;
         listen.stop();
         setLevel(0);
         submitRef.current(transcript, false);
@@ -168,6 +172,18 @@ export default function TalkStage() {
     });
     const offEnd = listen.onEnd(() => {
       setLevel(0);
+      // The browser often ends on a pause before marking the text final: use what it heard.
+      const pending = interimRef.current.trim();
+      interimRef.current = "";
+      if (!handledRef.current && pending) {
+        handledRef.current = true;
+        submitRef.current(pending, false);
+        return;
+      }
+      setStep((s) => (s === "listening" ? "ask" : s));
+    });
+    const offError = listen.onError((_code, message) => {
+      setNotice(`${message} You can type your answer below.`);
       setStep((s) => (s === "listening" ? "ask" : s));
     });
     const offLevel = listen.onLevel((l) => {
@@ -181,6 +197,7 @@ export default function TalkStage() {
       offSpeak();
       offResult();
       offEnd();
+      offError();
       offLevel();
       listen.stop();
       speech.stop();
@@ -212,12 +229,15 @@ export default function TalkStage() {
     // A click is the gesture that lets her speak. Captions always show either way.
     setVoiceEnabled(true);
     ask(0, questions);
+    faceRef.current?.react("wave", 2400); // hello
   }
 
   async function submit(raw: string, tapped: boolean) {
     if (!questions) return;
     const answer = raw.trim();
     if (!answer) return;
+    handledRef.current = true;
+    interimRef.current = "";
     const q = questions[qi];
     speech.stop();
     listen.stop();
@@ -269,6 +289,7 @@ export default function TalkStage() {
     } else {
       setStep("done");
       say("That is enough for now. Thank you.");
+      faceRef.current?.react("dance", 3200);
     }
   }
 
@@ -293,6 +314,8 @@ export default function TalkStage() {
 
   function dictate() {
     if (step === "listening") {
+      handledRef.current = true;
+      interimRef.current = "";
       listen.stop();
       setLevel(0);
       setStep("ask");
@@ -301,6 +324,8 @@ export default function TalkStage() {
     speech.stop();
     setHeard("");
     setNotice("");
+    handledRef.current = false;
+    interimRef.current = "";
     if (listen.start({ measureLevel: true })) {
       setStep("listening");
       setLine("I'm listening.");
@@ -310,6 +335,8 @@ export default function TalkStage() {
   }
 
   function stopAll() {
+    handledRef.current = true;
+    interimRef.current = "";
     speech.stop();
     listen.stop();
     setLevel(0);
@@ -330,6 +357,14 @@ export default function TalkStage() {
   const prefs = usePrefs();
   const faceRef = useRef<TwinAvatarHandle>(null);
   useEffect(() => onAction((a) => faceRef.current?.react(a)), []);
+  useEffect(() => {
+    if (step !== "start" && step !== "ask" && step !== "done") return;
+    const id = window.setInterval(() => {
+      if (typeof window !== "undefined" && window.speechSynthesis?.speaking) return;
+      faceRef.current?.react(step === "ask" ? "nod" : "wave", step === "ask" ? 900 : 2000);
+    }, step === "ask" ? 9000 : 7000);
+    return () => window.clearInterval(id);
+  }, [step]);
 
   // Everything waits for the Home to Talk morph: the colour bloom starts when it ends, then
   // the panels fade in 300 ms later, 80 ms apart.
@@ -540,7 +575,6 @@ export default function TalkStage() {
               </ul>
             )}
           </section>
-          <ChooseTwin />
           <Gauges />
         </aside>
 

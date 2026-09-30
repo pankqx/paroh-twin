@@ -567,3 +567,10 @@
   background: rgba(12, 10, 24, 0.97);
   backdrop-filter: blur(14px);
 }
+
+/* Side cards are solid so nothing shows through them. */
+.glass.twin-side {
+  background: rgba(12, 10, 24, 0.97);
+  backdrop-filter: blur(14px);
+  z-index: 4;
+}
