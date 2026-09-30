@@ -80,7 +80,7 @@ function playNext(run: number) {
   // Some speech engines omit boundary events; cycle gently while a sentence is active.
   fallbackTimer = setInterval(() => {
     if (receivedWordBoundary || run !== generation) return;
-    fallbackMouth = ((fallbackMouth % 3) + 1) as 1 | 2 | 3;
+    fallbackMouth = ((fallbackMouth + 1) % 4) as 0 | 1 | 2 | 3;
     publishMouth(fallbackMouth);
   }, 170);
   window.speechSynthesis.speak(utterance);
