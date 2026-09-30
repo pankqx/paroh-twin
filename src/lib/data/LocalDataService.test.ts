@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TwinState } from "../types";
 import { LocalDataService, questionsForTwinState } from "./LocalDataService";
 
@@ -23,5 +23,31 @@ describe("nextQuestions", () => {
     const questions = await service.nextQuestions();
     expect(questions).toHaveLength(3);
     expect(await service.nextQuestions()).toEqual(questions);
+  });
+});
+
+describe("parseWhatIf DataService contract", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("feeds parsed scenario plans through the TypeScript simulation", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const result = await (await import("../../app/api/parse-whatif/route")).POST(new Request("http://localhost/api/parse-whatif", init));
+      return result;
+    }));
+    const parsed = await service.parseWhatIf("What if I finish the project tonight instead of revising for tomorrow's exam?");
+    expect(parsed.scenarios).toHaveLength(2);
+    expect(parsed.degraded).toBe(true);
+    const simulated = await service.proposeScenarios("What if I finish the project tonight instead of revising for tomorrow's exam?");
+    expect(simulated).toHaveLength(2);
+    expect(simulated.every(scenario => scenario.assumptions.some(note => note.includes("500 seeded trials")))).toBe(true);
+  });
+
+  it("returns clarification instead of scenario plans for vague text", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => (await import("../../app/api/parse-whatif/route")).POST(new Request("http://localhost/api/parse-whatif", init))));
+    await expect(service.parseWhatIf("Should I study?")).resolves.toMatchObject({ scenarios: [], clarify: expect.stringContaining("two options"), degraded: true });
+    await expect(service.proposeScenarios("Should I study?")).resolves.toEqual([]);
   });
 });

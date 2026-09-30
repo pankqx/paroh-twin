@@ -1,5 +1,5 @@
 import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState } from "../types";
-import type { DataService, Repo } from "./DataService";
+import type { DataService, Repo, WhatIfParseResult } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
@@ -136,9 +136,40 @@ export class LocalDataService implements DataService {
     for (const fact of result) await this.facts.upsert(fact);
     return result;
   }
+  async parseWhatIf(text: string): Promise<WhatIfParseResult> {
+    const tasks = this.state.consent.tasks ? await this.tasks.list() : [];
+    const context = await buildTwinContext(this.state.consent, this);
+    try {
+      const response = await fetch("/api/parse-whatif", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, context, tasks }),
+      });
+      if (!response.ok) throw new Error("What-if parser route failed");
+      const payload: unknown = await response.json();
+      if (!payload || typeof payload !== "object" || !Array.isArray((payload as { scenarios?: unknown }).scenarios)) throw new Error("Invalid what-if response");
+      const result = payload as { scenarios: unknown[]; clarify?: unknown; degraded?: unknown };
+      if (result.scenarios.length && result.scenarios.some(item => !item || typeof item !== "object" || typeof (item as { label?: unknown }).label !== "string" || !Array.isArray((item as { tasks?: unknown }).tasks))) throw new Error("Invalid what-if scenario");
+      if (result.clarify !== undefined && typeof result.clarify !== "string") throw new Error("Invalid clarification");
+      return { scenarios: result.scenarios as WhatIfParseResult["scenarios"], ...(typeof result.clarify === "string" ? { clarify: result.clarify } : {}), degraded: Boolean(result.degraded) };
+    } catch {
+      const data: TwinData = { tasks, goals: [], habits: [], checkins: [], decisions: [] };
+      const specs = parseWhatIfCanned(text, data);
+      const clarify = specs.find(spec => spec.needsInfo)?.needsInfo;
+      if (clarify || specs.every(spec => spec.tasks.length === 0)) return { scenarios: [], clarify: clarify ?? "Which two options should I compare, and how many hours for each?", degraded: true };
+      return { scenarios: specs.map(spec => ({ label: spec.label, summary: spec.summary, priority: spec.priority, tasks: spec.tasks })), degraded: true };
+    }
+  }
   async proposeScenarios(prompt: string): Promise<Scenario[]> {
+    const parsed = await this.parseWhatIf(prompt);
+    if (parsed.clarify || !parsed.scenarios.length) return [];
     const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: [], decisions: this.state.consent.decisions ? await this.decisions.list() : [] };
-    const specs = parseWhatIfCanned(prompt, data);
+    const specs = parsed.scenarios.map((scenario, index) => ({
+      id: `scenario-${index + 1}`,
+      label: scenario.label,
+      summary: scenario.summary ?? scenario.label,
+      tasks: scenario.tasks,
+      priority: scenario.priority ?? "neutral" as const,
+    }));
     return specs.map(spec => simulate(spec, data));
   }
   async explain(decisionId: string) {

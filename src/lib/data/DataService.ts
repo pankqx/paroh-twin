@@ -9,9 +9,23 @@ import type {
   JournalEntry,
   MemoryItem,
   Scenario,
+  ScenarioSpec,
   Task,
   TwinState,
 } from "../types";
+
+export interface WhatIfPlan {
+  label: string;
+  tasks: ScenarioSpec["tasks"];
+  summary?: string;
+  priority?: ScenarioSpec["priority"];
+}
+
+export interface WhatIfParseResult {
+  scenarios: WhatIfPlan[];
+  clarify?: string;
+  degraded: boolean;
+}
 
 /** Generic CRUD surface shared by every stored entity. */
 export interface Repo<T extends { id: string }> {
@@ -53,6 +67,7 @@ export interface DataService {
     source: "journal" | "question";
     sourceId: string;
   }): Promise<Fact[]>;
+  parseWhatIf(text: string): Promise<WhatIfParseResult>;
   proposeScenarios(prompt: string): Promise<Scenario[]>;
   explain(
     decisionId: string,
