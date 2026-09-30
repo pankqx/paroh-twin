@@ -14,6 +14,8 @@ import type {
   Whisper,
 } from "../types";
 
+export type ConnectorKind = "gmail" | "whatsapp" | "telegram" | "calendar";
+
 /** Generic CRUD surface shared by every stored entity. */
 export interface Repo<T extends { id: string }> {
   list(): Promise<T[]>;
@@ -74,6 +76,7 @@ export interface DataService {
     decisionId: string,
   ): Promise<{ text: string; spoken: string; usedFactIds: string[] }>;
   converse(input: ConverseInput): Promise<ConverseResult>;
+  previewConnector(kind: ConnectorKind): Promise<Fact[]>;
   previewPayload(
     kind: "extract" | "scenarios" | "explain",
     input: unknown,

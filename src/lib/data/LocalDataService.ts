@@ -1,6 +1,7 @@
 import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState, Whisper } from "../types";
-import type { ConverseInput, ConverseResult, DataService, Repo } from "./DataService";
+import type { ConnectorKind, ConverseInput, ConverseResult, DataService, Repo } from "./DataService";
 import { createSampleData } from "../../mock/sample";
+import { connectorSamples } from "../../mock/connectorSamples";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
 import { deriveTwinState } from "../twin";
@@ -260,6 +261,11 @@ export class LocalDataService implements DataService {
       payload = {};
     }
     return { categories: allowed, text: JSON.stringify(payload) };
+  }
+
+  async previewConnector(kind: ConnectorKind): Promise<Fact[]> {
+    const sourceId = `sample-${kind}`;
+    return connectorSamples[kind].flatMap(message => extractCanned(message, sourceId));
   }
 
   private async extractPayload(input: { text: string; source: "journal" | "question"; sourceId: string }) {

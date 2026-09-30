@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TwinState } from "../types";
 import { LocalDataService, questionsForTwinState } from "./LocalDataService";
+import { connectorSamples } from "../../mock/connectorSamples";
 
 const blankTwin = (confidenceByDomain: Record<string, number>): TwinState => ({
   confidenceByDomain, loadPct: 0, habitConsistency: 0, goalAlignment: 0,
@@ -51,6 +52,22 @@ describe("route payload previews", () => {
     const preview = await service.previewPayload("explain", "decision-preview");
     await service.explain("decision-preview");
     expect(JSON.parse(preview.text)).toEqual(JSON.parse(bodies[1]));
+  });
+});
+
+describe("connector previews", () => {
+  it("extracts pending candidates from three sample messages per connector", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+
+    for (const kind of ["gmail", "whatsapp", "telegram", "calendar"] as const) {
+      expect(connectorSamples[kind]).toHaveLength(3);
+      const candidates = await service.previewConnector(kind);
+      expect(candidates.length).toBeGreaterThan(0);
+      expect(candidates.every(fact => fact.status === "pending")).toBe(true);
+      expect(candidates.every(fact => fact.sourceId === `sample-${kind}`)).toBe(true);
+      expect(candidates.every(fact => fact.sourceType === "journal")).toBe(true);
+    }
   });
 });
 
