@@ -33,6 +33,7 @@ export function variantForPath(pathname: string): AtmosphereVariant {
     case "welcome":
       return "talk";
     case "journal":
+    case "memory":
     case "approvals":
       return "journal";
     case "ask":

@@ -19,6 +19,7 @@ const LINKS = [
   { href: "/plan", label: "Plan" },
   { href: "/pulse", label: "Pulse" },
   { href: "/ask", label: "Ask" },
+  { href: "/memory", label: "Memory" },
   { href: "/sources", label: "Sources" },
 ];
 
