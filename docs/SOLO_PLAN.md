@@ -1,3 +1,7 @@
+> **SUPERSEDED by `docs/NIGHT_PLAN.md`.** Do not follow this file. Its scope cuts (planners,
+> habits/tasks screens, Twin Questions), its "plain CSS / no animation libraries" stance and its
+> timeline are replaced. Kept only as history.
+
 # Paroh — Solo Plan (one builder, deadline 08:00 on 1 Oct)
 
 This REPLACES `TEAM_PLAN.md`. HANDOFF.md and DESIGN_SYSTEM.md still apply, except where this

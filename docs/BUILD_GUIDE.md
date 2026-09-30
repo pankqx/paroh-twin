@@ -1,3 +1,8 @@
+> **SUPERSEDED for design and scope.** Follow `docs/NIGHT_PLAN.md` and `docs/DESIGN_SYSTEM.md`.
+> The scaffold in Part A is already done (do NOT re-run create-next-app). Ignore `--no-tailwind`
+> as a design rule, "plain CSS only", and the old scope. The worktree/agent workflow in A4 and
+> Part B habits are still good advice.
+
 # Paroh — Solo Build Guide (Claude Code + Codex)
 
 Follow in order. Every step has: who does it, the exact prompt, and how to check it worked.

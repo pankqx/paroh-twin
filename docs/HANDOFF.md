@@ -1,5 +1,15 @@
 # Paroh — Full Project Handoff
 
+> **STATUS (30 Sep, late night): partly SUPERSEDED.** `docs/NIGHT_PLAN.md` and
+> `docs/DESIGN_SYSTEM.md` (Night Garden / Orbit) are now the source of truth. Still valid here:
+> sections 1-3 (context, product, guardrails), 7-11 (data model, data layer, twin logic, LLM
+> contracts, seed data). SUPERSEDED: section 4 scope, 5 screens, 6 design direction, 6b voice
+> priority (voice is now the CORE), 12 build order, 13 demo script. Ignore any mention of
+> TEAM_PLAN, the paper-ledger look, "plain CSS only", "no gradients", "no dark mode", or
+> Framer Motion being obsolete. Consent categories follow `src/lib/types.ts` (journal, tasks,
+> mood, planner), not the longer list below.
+
+
 Everything a fresh Claude (Claude Code in VS Code, or Cowork for docs/pitch work) needs to
 continue this project. Read fully before coding.
 
@@ -19,7 +29,7 @@ continue this project. Read fully before coding.
 - **Who builds:** Pank (design system + screens) and Frank Ndagula (full-stack; twin logic,
   API routes, OpenRouter, deployment) work IN PARALLEL from the start in this one repo.
   Other teammates: Merel Riha D souza (ideation), Siddharth Bhat (front end), K S Pankaj
-  (researcher) — currently busy. See `docs/TEAM_PLAN.md` for the split and timeline.
+  (researcher) — currently busy. Pank is now building solo with two AI agents; see `docs/NIGHT_PLAN.md`.
 - **Rule:** no existing repo or implementation may be used. The idea may be inspired by the
   author's earlier "Paroh" concept, but every line here is new.
 - **Round 1 document (already submitted, cannot be edited)** promised: a privacy-focused
@@ -103,14 +113,10 @@ read aloud, Accept/Change/Reject, Fidelity update) -> **Plan** (month, year is P
 
 ## 6. Design direction
 
-Follow `docs/DESIGN_SYSTEM.md` EXACTLY: a quiet paper-ledger look (Fraunces + Inter, warm
-paper background, forest green accent, 1px hairlines, plain CSS, no gradients, no dark mode,
-no icon libraries, no UI kits). The signature visual is the **Twin Bloom** (flat SVG leaves
-whose length shows how well the twin knows each domain). Earlier notes about a dark twilight
-theme, glowing orb, Tailwind, shadcn and Framer Motion are OBSOLETE.
-
-Reference images from earlier concepts (planners, journal editor) are for information layout
-only; never reproduce them, never commit them, and drop any mental-health elements.
+**Replaced.** Follow `docs/DESIGN_SYSTEM.md` ("Night Garden / Orbit"): dark cinematic, glass
+panels, aurora gradient accent, Framer Motion (`motion`) plus five approved React Bits
+components, custom SVG visuals, the VoiceOrb as the hero. The earlier paper-ledger look, its
+"no gradients / no dark mode / plain CSS only" rules and its "Twin Bloom" hero are retired.
 
 ## 6b. Voice (input and speak-back)
 

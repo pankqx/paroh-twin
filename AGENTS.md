@@ -1,3 +1,10 @@
+# Paroh project rules (read first)
+
+Read `docs/CLAUDE.md` (hard rules), `docs/NIGHT_PLAN.md` (the plan; decisions are locked) and
+`docs/DESIGN_SYSTEM.md` (the only visual reference: "Night Garden / Orbit", `motion` + five
+approved React Bits) before coding. Older docs are superseded where they disagree. Do not
+rewrite or delete the engine in `src/lib/`; the UI talks only to `DataService`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
