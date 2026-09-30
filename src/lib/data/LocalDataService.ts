@@ -1,6 +1,6 @@
 import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState } from "../types";
 import type { DataService, Repo } from "./DataService";
-import { sampleData } from "../../mock/sample";
+import { createSampleData } from "../../mock/sample";
 import { extractCanned } from "../ai/extractCanned";
 import { demoFacts, demoEntry } from "../../mock/demoEntry";
 import { deriveTwinState } from "../twin";
@@ -32,6 +32,7 @@ export function questionsForTwinState(state: TwinState) {
 }
 
 function seededState(): State {
+  const sampleData = createSampleData(new Date());
   return { entries: clone(sampleData.entries), facts: clone(sampleData.facts), tasks: clone(sampleData.tasks), goals: clone(sampleData.goals), habits: clone(sampleData.habits), checkins: clone(sampleData.checkins), decisions: clone(sampleData.decisions), memories: [], consent: { ...defaultConsent } };
 }
 
