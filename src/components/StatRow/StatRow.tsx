@@ -1,7 +1,8 @@
+import type { ReactNode } from "react";
 import "./StatRow.css";
 
 export interface Stat {
-  value: string;
+  value: ReactNode;
   label: string;
 }
 

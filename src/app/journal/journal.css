@@ -1,0 +1,78 @@
+.journal {
+  max-width: 560px;
+}
+
+.journal-sub {
+  margin-bottom: 1.75rem;
+  color: var(--muted);
+}
+
+.journal-form {
+  padding: 2rem;
+}
+
+.field-block {
+  margin-bottom: 1.35rem;
+}
+
+.label-like {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
+.journal-body {
+  min-height: 12rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.journal-aids {
+  margin-bottom: 1.25rem;
+}
+
+.journal-tools {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.journal-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.journal-result {
+  margin: 1.1rem 0 0;
+  color: var(--forest-dark);
+  animation: journal-in 400ms var(--ease) both;
+}
+
+.journal-result.error-text {
+  color: var(--rust);
+}
+
+@keyframes journal-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .journal-form {
+    padding: 1.5rem 1.25rem;
+  }
+}

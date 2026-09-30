@@ -10,6 +10,8 @@ interface Props {
   domains: BloomDomain[]; // drawn clockwise from the top
   load: number; // weekly workload, percent (0-100+)
   fidelity: number; // 0-1
+  /** domain key -> confidence before it grew; those leaves extend once, after the entrance */
+  grew?: Record<string, number>;
 }
 
 const SIZE = 380;
@@ -40,7 +42,7 @@ function leafPath(length: number) {
   ].join(" ");
 }
 
-export default function TwinBloom({ domains, load, fidelity }: Props) {
+export default function TwinBloom({ domains, load, fidelity, grew = {} }: Props) {
   const step = 360 / domains.length;
   const circumference = 2 * Math.PI * RING_R;
   const arc = (Math.min(Math.max(load, 0), 100) / 100) * circumference;
@@ -77,13 +79,23 @@ export default function TwinBloom({ domains, load, fidelity }: Props) {
           const conf = Math.min(Math.max(d.confidence, 0), 1);
           const length = MIN_LEAF + conf * (MAX_LEAF - MIN_LEAF);
           const sparse = conf < DASHED_BELOW;
+          const was = grew[d.key];
+          const extend =
+            was !== undefined && was < conf
+              ? (MIN_LEAF + Math.max(was, 0) * (MAX_LEAF - MIN_LEAF)) / length
+              : undefined;
           return (
             <g key={d.key} transform={`rotate(${i * step})`}>
               <g className="bloom-leaf" style={{ animationDelay: `${i * 80}ms` }}>
-                <path
-                  d={leafPath(length)}
-                  className={sparse ? "leaf leaf-sparse" : "leaf"}
-                />
+                <g
+                  className={extend !== undefined ? "leaf-extend" : undefined}
+                  style={extend !== undefined ? { ["--from" as string]: extend } : undefined}
+                >
+                  <path
+                    d={leafPath(length)}
+                    className={sparse ? "leaf leaf-sparse" : "leaf"}
+                  />
+                </g>
               </g>
             </g>
           );
