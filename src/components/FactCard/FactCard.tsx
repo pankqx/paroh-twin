@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { flyToTwin } from "@/components/TwinFace/flyToTwin";
+import { flyToTwin } from "@/components/TwinAvatar/flyToTwin";
 import type { Fact } from "@/lib/types";
 import "./FactCard.css";
 

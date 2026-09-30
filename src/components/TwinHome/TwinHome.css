@@ -4,16 +4,21 @@
   padding-right: 2.5rem;
 }
 
-/* ---------- Hero: one stage, face + constellation fill the first screen ----------
-   The stage is a size container. The constellation SVG (1500 x 900) is scaled to fit it, and
-   the face is sized from the same unit (--u), so stars and face always stay in proportion. */
+/* ---------- Hero: text on the left, her stage on the right ----------
+   The stage is a size container. The constellation SVG (1300 x 900) is scaled to fit it, and
+   her anchor box is sized from the same unit (--u), so stars and avatar stay in proportion.
+   The avatar itself is the persistent one from the layout; it glides to .twin-stage-face. */
 
 .twin-hero {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
   margin-top: -1rem;
 }
 
 .twin-stage {
-  --u: min(100cqh, 60cqw); /* rendered height of the constellation */
+  --u: min(100cqh, 69.2cqw); /* rendered height of the constellation */
   position: relative;
   container-type: size;
   width: 100%;
@@ -23,18 +28,14 @@
 .twin-stage-face {
   position: absolute;
   left: 50%;
-  top: calc((100cqh - var(--u)) / 2 + var(--u) * 0.02);
-  height: calc(var(--u) * 0.96);
+  top: calc((100cqh - var(--u)) / 2 + var(--u) * 0.03);
+  height: calc(var(--u) * 0.94);
   transform: translateX(-50%);
-  --face-h: 100%;
 }
 
 .twin-hero-text {
-  position: absolute;
+  position: relative;
   z-index: 3;
-  top: 1.25rem;
-  left: 0.5rem;
-  width: min(360px, 26cqw);
 }
 
 .twin-eyebrow {
@@ -47,15 +48,15 @@
 }
 
 .twin-title {
-  font-size: clamp(2.2rem, 3.2cqw, 3rem);
+  font-size: clamp(2.4rem, 3.4vw, 3.3rem);
   line-height: 1.04;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1rem;
 }
 
 .twin-lede {
   max-width: 38ch;
-  font-size: 1rem;
-  margin-bottom: 1.2rem;
+  font-size: 1.02rem;
+  margin-bottom: 1.4rem;
 }
 
 .twin-actions {
@@ -343,19 +344,17 @@
     padding-right: 1.25rem;
   }
 
-  /* Text above, stage below. */
+  /* Text above, her stage below. */
+  .twin-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .twin-stage {
     height: auto;
     container-type: normal;
     display: flex;
     flex-direction: column;
-  }
-
-  .twin-hero-text {
-    position: static;
-    width: auto;
-    order: -1;
-    margin-bottom: 0.5rem;
+    align-items: center;
   }
 
   .twin-stage-face {
@@ -363,10 +362,7 @@
     left: auto;
     top: auto;
     transform: none;
-    align-self: center;
-    --face-h: clamp(340px, 62vh, 620px);
-    height: auto;
-    margin-top: calc(var(--face-h) * -0.16); /* the drawing has empty space above the crown */
+    height: clamp(380px, 62vh, 620px);
   }
 
   .twin-stage .constellation {
@@ -376,7 +372,6 @@
   .twin-caption {
     position: static;
     transform: none;
-    align-self: center;
     margin-top: 0.75rem;
   }
 

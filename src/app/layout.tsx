@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import AtmosphereShell from "@/components/Atmosphere/AtmosphereShell";
 import Navbar from "@/components/Navbar/Navbar";
+import AvatarHost from "@/components/TwinAvatar/AvatarHost";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
@@ -21,8 +22,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <AtmosphereShell />
+        {/* One persistent avatar, behind the page, that glides between routes */}
+        <AvatarHost />
         <Navbar />
-        {children}
+        <div className="app-content">{children}</div>
       </body>
     </html>
   );

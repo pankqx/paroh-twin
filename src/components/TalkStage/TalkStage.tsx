@@ -7,7 +7,11 @@ import { approveFact, editFact, rejectFact } from "@/app/factActions";
 import { dataService } from "@/app/dataService";
 import FactCard from "@/components/FactCard/FactCard";
 import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
-import TwinFace, { type FaceState } from "@/components/TwinFace/TwinFace";
+import AvatarAnchor from "@/components/TwinAvatar/AvatarAnchor";
+import { play, setLive, type AvatarState } from "@/components/TwinAvatar/avatarStore";
+import ChooseTwin from "@/components/TwinStage/ChooseTwin";
+import Gauges from "@/components/TwinStage/Gauges";
+import MemoryStream from "@/components/TwinStage/MemoryStream";
 import Waveform from "@/components/Waveform/Waveform";
 import * as listen from "@/lib/voice/listen";
 import * as speech from "@/lib/voice/speak";
@@ -379,6 +383,7 @@ export default function TalkStage() {
 
   function arrived() {
     refreshLearned();
+    play("delighted");
     speech.speak(CONFIRMATIONS[confirmIdx.current++ % CONFIRMATIONS.length]);
   }
 
@@ -408,16 +413,22 @@ export default function TalkStage() {
     }
   }
 
-  const faceState: FaceState = listening ? "listening" : pending ? "thinking" : speaking ? "speaking" : "idle";
+  const faceState: AvatarState = listening ? "listening" : pending ? "thinking" : speaking ? "speaking" : "idle";
   const micState = listening ? "listening" : pending ? "thinking" : speaking ? "speaking" : "idle";
   const micLabel = { idle: "Tap to talk", listening: "Listening… tap to stop", thinking: "Thinking… tap to cancel", speaking: "Tap to interrupt" }[micState];
   const lastTwin = [...turns].reverse().find((t) => t.who === "twin");
+
+  // The one persistent avatar (mounted in the layout) mirrors what this screen is doing.
+  useEffect(() => {
+    setLive({ state: faceState, mouth: speaking ? mouth : undefined, level });
+  }, [faceState, speaking, mouth, level]);
+  useEffect(() => () => setLive({ state: "idle", mouth: undefined, level: 0 }), []);
 
   return (
     <main className="talk">
       <div className="talk-stage">
         <div className="talk-face">
-          <TwinFace fill state={faceState} level={level} mouth={speaking ? mouth : undefined} />
+          <AvatarAnchor kind="talk" />
         </div>
 
         {/* Left: the conversation. */}
@@ -495,10 +506,13 @@ export default function TalkStage() {
             </AnimatePresence>
           </ol>
           <p className="talk-keys">Space to talk · Esc to stop</p>
+          <MemoryStream />
         </section>
 
         {/* Right: candidate facts to approve, and what she learned today. */}
         <aside className="talk-right">
+          <ChooseTwin />
+          <Gauges />
           <div className="talk-cards" aria-label="Facts to approve">
             <AnimatePresence>
               {cards.map(({ fact, said }) => (

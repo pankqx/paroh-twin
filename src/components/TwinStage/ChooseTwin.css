@@ -1,0 +1,85 @@
+.ct {
+  padding: 0.9rem 1.1rem 1rem;
+}
+
+.ct header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.ct h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.ct-seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+}
+
+.ct-seg button {
+  padding: 0.2rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  color: var(--muted);
+}
+
+.ct-seg button.on {
+  color: var(--text);
+  background: color-mix(in srgb, var(--violet) 28%, transparent);
+}
+
+.ct-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.ct-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ct-dots {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.ct-dot {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.ct-dot:hover {
+  transform: scale(1.12);
+}
+
+.ct-dot.on {
+  border-color: var(--text);
+  box-shadow: 0 0 10px -1px var(--violet);
+}
+
+.ct-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.ct-actions .btn-small {
+  padding: 0.3rem 0.8rem;
+  flex: 1;
+}

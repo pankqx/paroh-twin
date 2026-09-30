@@ -28,7 +28,12 @@
   grid-area: face;
   display: flex;
   justify-content: center;
-  animation: rise 900ms var(--ease) both;
+}
+
+/* Where the persistent avatar stands on this page. */
+.talk-face .avatar-anchor {
+  --face-h: min(92vh, calc(100vh - var(--bar-h) - 1rem), calc((100vw - var(--fill-side, 0px)) * 1.5));
+  height: var(--face-h);
 }
 
 .talk-left {
@@ -123,6 +128,7 @@
   max-height: 52vh;
   overflow-y: auto;
   scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--violet) 40%, transparent) transparent;
 }
 
 .turn {
@@ -502,6 +508,7 @@
     padding-right: 2rem;
     overflow-y: auto;
     scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--violet) 40%, transparent) transparent;
   }
 
   /* Bottom centre, in front of the faded shoulders. Never over her head. */
@@ -510,7 +517,7 @@
     left: 50%;
     bottom: 0.5rem;
     transform: translateX(-50%);
-    width: min(660px, calc(100% - 4rem));
+    width: min(560px, calc(100% - 4rem));
     margin: 0;
   }
 }
@@ -522,8 +529,8 @@
     --fill-side: 0px;
   }
 
-  .talk-stage .twin-face.fill {
-    --face-h: clamp(260px, 38vh, 480px);
+  .talk-face .avatar-anchor {
+    --face-h: clamp(300px, 46vh, 540px);
   }
 
   .talk-log {

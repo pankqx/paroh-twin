@@ -1,0 +1,101 @@
+.memory {
+  position: relative;
+}
+
+.memory header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.memory h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.memory-count {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--green);
+}
+
+.memory-empty {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.memory ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mem {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "kind status" "text text";
+  gap: 0.1rem 0.6rem;
+  padding: 0.5rem 0.8rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--k) 55%, transparent);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 50%),
+    rgba(18, 15, 34, 0.82);
+  box-shadow: 0 0 18px -8px var(--k);
+}
+
+.mem.pending {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.mem-kind {
+  grid-area: kind;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k);
+}
+
+.mem-status {
+  grid-area: status;
+  font-size: 0.66rem;
+  color: var(--muted);
+}
+
+.mem-text {
+  grid-area: text;
+  font-size: 0.84rem;
+  line-height: 1.3;
+  color: var(--text-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The connectors to her mind point. Fixed so they can run across the whole screen. */
+.memory-lines {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.memory-lines path {
+  fill: none;
+  stroke-width: 1.2;
+}
+
+.memory-lines path.pending {
+  stroke-dasharray: 3 5;
+}

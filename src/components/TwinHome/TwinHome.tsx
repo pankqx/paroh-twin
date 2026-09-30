@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { dataService } from "@/app/dataService";
 import { takeGrowth } from "@/app/bloomGrowth";
 import Doodle from "@/components/Doodle/Doodle";
 import EmptyOrbit from "@/components/EmptyOrbit/EmptyOrbit";
 import Constellation, { describeFact } from "@/components/Constellation/Constellation";
-import Aurora from "@/components/fx/Aurora";
 import BlurText from "@/components/fx/BlurText";
 import CountUp from "@/components/fx/CountUp";
 import SpotlightCard from "@/components/fx/SpotlightCard";
@@ -15,7 +14,8 @@ import Heatmap from "@/components/Heatmap/Heatmap";
 import Ring from "@/components/Ring/Ring";
 import Sparkline from "@/components/Sparkline/Sparkline";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
-import TwinFace, { type TwinFaceHandle } from "@/components/TwinFace/TwinFace";
+import AvatarAnchor from "@/components/TwinAvatar/AvatarAnchor";
+import { mindTarget } from "@/components/TwinAvatar/mindPoint";
 import { SAMPLE_STUDENT_NAME } from "@/mock/sample";
 import { simulate } from "@/lib/twin/scenarios";
 import type { Fact, TwinState } from "@/lib/types";
@@ -151,7 +151,6 @@ export default function TwinHome() {
   const [view, setView] = useState<View | null>(null);
   const [grew, setGrew] = useState<string[]>([]);
   const [focused, setFocused] = useState<Fact | null>(null);
-  const face = useRef<TwinFaceHandle>(null);
 
   useEffect(() => {
     let live = true;
@@ -169,7 +168,7 @@ export default function TwinHome() {
   // After the draw-on, her mind point flares once for facts approved elsewhere.
   useEffect(() => {
     if (!view || grew.length === 0) return;
-    const t = window.setTimeout(() => face.current?.flare(), 2000);
+    const t = window.setTimeout(() => mindTarget()?.flare(), 2000);
     return () => window.clearTimeout(t);
   }, [view, grew]);
 
@@ -181,33 +180,30 @@ export default function TwinHome() {
 
   return (
     <main className="page twin">
-      <Aurora amplitude={0.8} speed={0.8} />
-
       <section className="twin-hero">
+        <div className="twin-hero-text">
+          <p className="twin-eyebrow">{name}&rsquo;s twin · sample data</p>
+          <BlurText text={`Hey ${name}, here’s your week.`} className="twin-title" />
+          <p className="twin-lede">
+            {deadlines.length > 0
+              ? `${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"} ahead and a ${load}% load. `
+              : `A ${load}% load this week. `}
+            Everything here comes from what {name} chose to share and approve.
+          </p>
+          <div className="twin-actions">
+            <Link href="/talk" className="btn-primary">
+              Talk to your twin
+            </Link>
+            <Link href="/ask" className="btn-ghost">
+              Ask a what-if
+            </Link>
+          </div>
+        </div>
+
         <div className="twin-stage">
           <Constellation facts={approved} onFocusFact={setFocused} />
-          <div className="twin-stage-face">
-            <TwinFace ref={face} state="idle" />
-          </div>
-
-          <div className="twin-hero-text">
-            <p className="twin-eyebrow">{name}&rsquo;s twin · sample data</p>
-            <BlurText text={`Hey ${name}, here’s your week.`} className="twin-title" />
-            <p className="twin-lede">
-              {deadlines.length > 0
-                ? `${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"} ahead and a ${load}% load. `
-                : `A ${load}% load this week. `}
-              Everything here comes from what {name} chose to share and approve.
-            </p>
-            <div className="twin-actions">
-              <Link href="/talk" className="btn-primary">
-                Talk to your twin
-              </Link>
-              <Link href="/ask" className="btn-ghost">
-                Ask a what-if
-              </Link>
-            </div>
-          </div>
+          {/* She is drawn by the persistent avatar in the layout; this box is where she stands. */}
+          <AvatarAnchor kind="home" className="twin-stage-face" />
 
           <p className="glass twin-caption" aria-live="polite">
             {focused

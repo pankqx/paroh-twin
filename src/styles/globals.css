@@ -484,6 +484,12 @@ label {
   transform: rotate(-3deg);
 }
 
+/* Page content sits above the persistent avatar layer (z-index 0). */
+.app-content {
+  position: relative;
+  z-index: 1;
+}
+
 /* ---------- Page shell ---------- */
 
 .page {

@@ -1,0 +1,221 @@
+/* Stage FX: everything here is decoration, behind her, and only moves with transform/opacity. */
+.stage-fx {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.4s var(--ease) 0.2s;
+}
+.stage-fx.on {
+  opacity: 1;
+}
+
+.sf-ribbons {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sf-ribbons path {
+  fill: none;
+  stroke-width: 70;
+  stroke-linecap: round;
+  opacity: 0.16;
+}
+.sf-rib {
+  transform-box: view-box;
+  transform-origin: 720px 450px;
+  transform: scaleY(calc(1 + var(--lvl, 0) * 0.7));
+  transition: transform 90ms linear;
+}
+.sf-rib path {
+  animation: sf-drift 14s ease-in-out infinite alternate;
+  transform-box: view-box;
+}
+.sf-rib.b path {
+  animation-duration: 18s;
+  animation-direction: alternate-reverse;
+}
+.sf-rib.c path {
+  animation-duration: 22s;
+}
+.st-speaking .sf-ribbons path,
+.st-listening .sf-ribbons path {
+  opacity: 0.26;
+}
+@keyframes sf-drift {
+  from {
+    transform: translate(-30px, -14px);
+  }
+  to {
+    transform: translate(30px, 16px);
+  }
+}
+
+/* HUD ring around her head */
+.sf-hud {
+  position: absolute;
+  left: var(--cx, 50%);
+  top: calc(var(--top, 0px) + var(--h, 800px) * 0.17);
+  width: calc(var(--h, 800px) * 0.66);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  opacity: 0.55;
+}
+.sf-hud svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.sf-ring {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  fill: none;
+  stroke: color-mix(in srgb, var(--violet) 60%, transparent);
+  stroke-width: 0.6;
+}
+.sf-ring.slow {
+  animation: sf-turn 120s linear infinite;
+}
+.sf-ring.fast {
+  animation: sf-turn 70s linear infinite reverse;
+}
+.sf-ring .ticks {
+  stroke: color-mix(in srgb, var(--teal) 70%, transparent);
+  stroke-width: 5;
+  stroke-dasharray: 0.6 4.4;
+}
+.sf-ring .dash {
+  stroke: color-mix(in srgb, var(--amber) 55%, transparent);
+  stroke-dasharray: 18 40 4 40;
+}
+@keyframes sf-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Sound arcs: radiate from her head while she speaks. */
+.sf-arcs {
+  position: absolute;
+  left: var(--cx, 50%);
+  top: calc(var(--top, 0px) + var(--h, 800px) * 0.17);
+  width: 0;
+  height: 0;
+}
+.sf-arc {
+  position: absolute;
+  left: calc(var(--h, 800px) * -0.15);
+  top: calc(var(--h, 800px) * -0.15);
+  width: calc(var(--h, 800px) * 0.3);
+  height: calc(var(--h, 800px) * 0.3);
+  border: 2px solid transparent;
+  border-left-color: var(--teal);
+  border-right-color: var(--violet);
+  border-radius: 50%;
+  opacity: 0;
+}
+.st-speaking .sf-arc {
+  animation: sf-arc 1.9s ease-out infinite;
+}
+.st-listening .sf-arc {
+  animation: sf-arc 2.6s ease-out infinite reverse;
+  border-left-color: var(--teal);
+  border-right-color: var(--teal);
+}
+@keyframes sf-arc {
+  0% {
+    opacity: calc(0.35 + var(--lvl, 0) * 0.5);
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(calc(1.9 + var(--lvl, 0) * 0.5));
+  }
+}
+
+/* Stat chips drifting on an ellipse around her chest (real values). */
+.sf-orbit {
+  position: absolute;
+  left: var(--cx, 50%);
+  top: calc(var(--top, 0px) + var(--h, 800px) * 0.27);
+  width: 0;
+  height: 0;
+}
+.sf-chip-x {
+  position: absolute;
+  animation: sf-x 30s ease-in-out infinite alternate;
+  --rx: calc(var(--h, 800px) * 0.3);
+  --ry: calc(var(--h, 800px) * 0.13);
+}
+.sf-chip-y {
+  animation: sf-y 30s ease-in-out infinite alternate;
+}
+@keyframes sf-x {
+  from {
+    transform: translateX(calc(var(--rx) * -1));
+  }
+  to {
+    transform: translateX(var(--rx));
+  }
+}
+@keyframes sf-y {
+  from {
+    transform: translateY(calc(var(--ry) * -1));
+  }
+  to {
+    transform: translateY(var(--ry));
+  }
+}
+.sf-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  transform: translate(-50%, -50%);
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  white-space: nowrap;
+  color: var(--text-soft);
+  background: rgba(18, 15, 34, 0.72);
+  border: 1px solid color-mix(in srgb, var(--c) 50%, transparent);
+  box-shadow: 0 0 16px -6px var(--c);
+}
+.sf-chip em {
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sf-chip b {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.sf-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 1099px) {
+  .sf-orbit,
+  .sf-arcs {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-rib path,
+  .sf-ring,
+  .sf-chip-x,
+  .sf-chip-y,
+  .st-speaking .sf-arc,
+  .st-listening .sf-arc {
+    animation: none;
+  }
+  .sf-particles {
+    display: none;
+  }
+}

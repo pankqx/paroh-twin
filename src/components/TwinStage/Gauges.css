@@ -1,0 +1,65 @@
+.gauges {
+  padding: 1rem 1.2rem 1.1rem;
+}
+
+.gauges h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.gauge-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem 0.4rem;
+}
+
+.gauge-grid li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.gauge-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.gauge-ring > * {
+  grid-area: 1 / 1;
+}
+
+.gauge-ring .num {
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.gauge-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.gauge-row {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--stroke);
+}
+
+.gauge-row > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gauge-big {
+  font-size: 2.3rem;
+  line-height: 1;
+}

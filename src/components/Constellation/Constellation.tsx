@@ -7,10 +7,10 @@ import "./Constellation.css";
 // Six hubs, three on each side of her, spread wide. Every kind always has a hub, so the sky
 // reads the same before anything is approved (empty hubs show dashed placeholder stars).
 // Stars stack in a column between the hub and her, each with a short label.
-const W = 1500;
+const W = 1300;
 const H = 900;
-const HUB_X = 560; // hub distance from the centre line
-const FACE_EDGE = 300; // spokes stop this far from the centre line, just short of her hair
+const HUB_X = 520; // hub distance from the centre line
+const FACE_EDGE = 290; // spokes stop this far from the centre line, just short of her hair
 const PER_HUB = 6;
 const GHOSTS = 3;
 const GAP = 34; // vertical gap between stars in a column
