@@ -33,7 +33,7 @@ function validateSpecs(value: unknown): ScenarioSpec[] | undefined {
       tasks.push({ title: task.title, ...(typeof task.hours === "number" ? { hours: task.hours } : {}), ...(typeof task.taskId === "string" ? { taskId: task.taskId } : {}), ...(typeof task.dueAt === "string" ? { dueAt: task.dueAt } : {}) });
     }
     const hoursShift = spec.hoursShift === undefined ? [] : spec.hoursShift;
-    if (!Array.isArray(hoursShift) || hoursShift.some(shift => !shift || typeof shift !== "object" || typeof (shift as { hours?: unknown }).hours !== "number" || !Number.isFinite((shift as { hours: number }).hours))) return undefined;
+    if (!Array.isArray(hoursShift) || hoursShift.some(shift => !shift || typeof shift !== "object" || typeof (shift as { hours?: unknown }).hours !== "number" || !Number.isFinite((shift as { hours: number }).hours) || ((shift as { from?: unknown }).from !== undefined && typeof (shift as { from?: unknown }).from !== "string") || ((shift as { to?: unknown }).to !== undefined && typeof (shift as { to?: unknown }).to !== "string"))) return undefined;
     specs.push({ id: spec.id, label: spec.label, summary: `${spec.summary} Horizon: ${root.horizon.trim()}.`, tasks, priority: spec.priority as ScenarioSpec["priority"], hoursShift: hoursShift as ScenarioSpec["hoursShift"] });
   }
   return specs;

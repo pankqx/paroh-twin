@@ -3,6 +3,7 @@ import type { TwinState } from "../types";
 import { LocalDataService, questionsForTwinState } from "./LocalDataService";
 import { connectorSamples } from "../../mock/connectorSamples";
 import { buildTwinContext } from "../ai/buildTwinContext";
+import { POST as parseWhatIfPost } from "../../app/api/parse-whatif/route";
 
 const blankTwin = (confidenceByDomain: Record<string, number>): TwinState => ({
   confidenceByDomain, loadPct: 0, habitConsistency: 0, goalAlignment: 0,
@@ -98,9 +99,22 @@ describe("stale decisions", () => {
     const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
     const service = new LocalDataService(storage);
     const scenarios = [{ id: "s", label: "Study", summary: "Study", onTimeProb: 0.5, peakLoad: 0.5, goalImpact: 0, assumptions: [] }];
-    await service.decisions.upsert({ id: "old-decision", prompt: "Study or project?", scenarios, recommendedId: "s", predictedChoiceId: "s", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" });
+    await service.decisions.upsert({ id: "old-decision", prompt: "Study or project?", scenarios, recommendedId: "s", predictedChoiceId: "s", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-03-01T00:00:00.000Z" });
     await service.facts.upsert({ id: "new-deadline", kind: "deadline", text: "Biology exam is tomorrow", category: "study", data: { title: "Biology exam", due: "2026-10-02T09:00:00.000Z" }, sourceId: "journal", sourceType: "journal", status: "approved", confidence: 0.9, createdAt: "2026-02-01T00:00:00.000Z", updatedAt: "2026-02-01T00:00:00.000Z" });
     expect(await service.staleDecisionIds()).toContain("old-decision");
+  });
+});
+
+describe("what-if clarification handling", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("returns one focused clarification when the referenced tasks are missing", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    await service.resetAll();
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => parseWhatIfPost(new Request("http://localhost/api/parse-whatif", init))));
+    const result = await service.proposeScenarios("What if I finish the project tonight instead of revising for tomorrow's exam?");
+    expect(result).toHaveLength(1);
+    expect(result[0].needsInfo).toMatch(/estimate|open task/i);
   });
 });
 

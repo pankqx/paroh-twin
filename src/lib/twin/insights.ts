@@ -9,7 +9,7 @@ export function twinInsights(data: TwinData): string[] {
   if (study.length >= 3) {
     const ratio = estimationBias(data.tasks).study;
     if (ratio >= 1.05) insights.push(`Study tasks take ${ratio.toFixed(1)}x longer than you estimate.`);
-    else if (ratio <= 0.95) insights.push(`Study tasks take about ${(1 / ratio).toFixed(1)}x less time than you estimate.`);
+    else if (ratio <= 0.95) insights.push(`Study tasks take about ${ratio.toFixed(1)}x as long as you estimate.`);
     else insights.push("Your study estimates are close to your actual time so far.");
   }
 

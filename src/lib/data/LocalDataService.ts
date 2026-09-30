@@ -161,7 +161,7 @@ export class LocalDataService implements DataService {
     if (!this.state.consent.decisions || !this.state.consent.tasks) return [];
     const decisions = await this.decisions.list();
     const facts = (await this.facts.list()).filter(fact => fact.status === "approved" && isCurrentFact(fact) && (fact.kind === "task" || fact.kind === "deadline"));
-    return decisions.filter(decision => facts.some(fact => new Date(fact.updatedAt).getTime() > new Date(decision.updatedAt).getTime()))
+    return decisions.filter(decision => facts.some(fact => new Date(fact.updatedAt).getTime() > new Date(decision.createdAt).getTime()))
       .map(decision => decision.id);
   }
   async nextQuestions() {
@@ -211,14 +211,17 @@ export class LocalDataService implements DataService {
       if (specs.some(spec => !spec || typeof spec !== "object" || typeof (spec as { id?: unknown }).id !== "string" || !Array.isArray((spec as { tasks?: unknown }).tasks))) throw new Error("What-if parser returned invalid specs");
     } catch {
       specs = parseWhatIfCanned(prompt, data);
-      if (specs.every(spec => !spec.tasks.length) || /^(should i study\??|should i revise\??|what should i do\??)$/i.test(prompt.trim())) {
-        return [{ id: "clarify-whatif", label: "Need one detail", summary: "", onTimeProb: 0, peakLoad: 0, goalImpact: 0, assumptions: [], needsInfo: "What two options should I compare, and how many hours should I plan for each?" }];
+      const missing = specs.find(spec => spec.needsInfo);
+      if (missing || specs.every(spec => !spec.tasks.length) || /^(should i study\??|should i revise\??|what should i do\??)$/i.test(prompt.trim())) {
+        return [{ id: "clarify-whatif", label: "Need one detail", summary: "", onTimeProb: 0, peakLoad: 0, goalImpact: 0, assumptions: [], needsInfo: missing?.needsInfo ?? "What two options should I compare, and how many hours should I plan for each?" }];
       }
     }
-    return specs.map(value => {
+    const results = specs.map(value => {
       const spec = value as ReturnType<typeof parseWhatIfCanned>[number];
       return simulate(spec, data);
     });
+    const needsInfo = results.find(result => result.needsInfo)?.needsInfo;
+    return needsInfo ? [{ id: "clarify-whatif", label: "Need one detail", summary: "", onTimeProb: 0, peakLoad: 0, goalImpact: 0, assumptions: [], needsInfo }] : results;
   }
   async explain(decisionId: string) {
     const decision = await this.decisions.get(decisionId);
