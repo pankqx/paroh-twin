@@ -33,6 +33,8 @@ const openSeeds: TaskSeed[] = [
   { title: "Finish project discussion", category: "study", estHours: 2, actualHours: 0, goalId: "goal-2", dueInDays: 4, dueHour: 18 },
   { title: "Proofread project report", category: "study", estHours: 1.5, actualHours: 0, goalId: "goal-2", dueInDays: 4, dueHour: 18 },
   { title: "Prepare seminar notes", category: "career", estHours: 1, actualHours: 0, dueInDays: 8, dueHour: 16 },
+  { title: "Update portfolio", category: "career", estHours: 1.5, actualHours: 0, dueInDays: 12, dueHour: 16 },
+  { title: "Plan next study cycle", category: "personal", estHours: 0.5, actualHours: 0, dueInDays: 18, dueHour: 12 },
 ];
 
 const entryBodies = [

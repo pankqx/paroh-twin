@@ -28,7 +28,7 @@ describe("relative Asha sample seed", () => {
   });
 
   it("keeps study estimates near 1.3x and preserves goal-linked work and fidelity history", () => {
-    expect(sample.tasks).toHaveLength(25);
+    expect(sample.tasks).toHaveLength(27);
     expect(estimationBias(sample.tasks).study).toBeCloseTo(1.3, 1);
     expect(sample.tasks.some(task => task.done && task.goalId)).toBe(true);
     expect(sample.checkins).toHaveLength(14);
