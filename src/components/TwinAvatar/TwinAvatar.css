@@ -75,6 +75,10 @@
   opacity: calc(var(--o, 1) * (1 - var(--form, 0) * var(--fade, 0.55)));
 }
 
+.twin-avatar[data-formed] .ln.detail {
+  display: none;
+}
+
 /* Dark drawn features (brows, lids, lashes) fade in as she gains colour. */
 .dk {
   fill: none;
@@ -157,7 +161,7 @@
 .tf-eye {
   transition: transform 55ms linear;
 }
-.twin-avatar.blinking .tf-eye {
+.twin-avatar[data-blink] .tf-eye {
   transform: scaleY(0.08);
 }
 .tf-pupil {

@@ -142,3 +142,8 @@ const getPrefs = () => {
 export function usePrefs(): Prefs {
   return useSyncExternalStore(subscribePrefs, getPrefs, () => DEFAULTS);
 }
+
+// Development only: lets screenshots and the console drive her (window.__paroh.play("dance")).
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  (window as unknown as { __paroh: unknown }).__paroh = { setLive, play, setPrefs };
+}

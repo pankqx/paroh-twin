@@ -2,7 +2,7 @@
 
 import { animate, motion, useMotionValue } from "motion/react";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import StageFX from "@/components/TwinStage/StageFX";
 import { useLive, usePrefs } from "./avatarStore";
 import TwinAvatar from "./TwinAvatar";
@@ -31,6 +31,16 @@ export default function AvatarHost() {
   const route = routeOf(pathname);
   const live = useLive();
   const prefs = usePrefs();
+
+  // Reduced motion: she is a still, coloured portrait everywhere (no line-art reveal).
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduce(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const hostRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
@@ -152,7 +162,7 @@ export default function AvatarHost() {
       <StageFX active={route === "talk"} state={live.state} level={live.level} />
       <motion.div className="avatar-mover" style={{ x, y, scale, opacity, originX: 0, originY: 0 }}>
         <TwinAvatar
-          form={route === "talk" ? 1 : 0}
+          form={route === "talk" || reduce ? 1 : 0}
           state={live.state}
           mouth={live.mouth}
           level={live.level}

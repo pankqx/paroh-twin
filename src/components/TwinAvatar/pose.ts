@@ -83,8 +83,8 @@ function withState(p: Pose, c: Ctx): Pose {
       p.hr += 7;
       p.hx += 5;
       p.brow = 3;
-      p.ru = 10;
-      p.rf = -118 + S(t * 1.8) * 3;
+      p.ru = 4;
+      p.rf = -146 + S(t * 1.8) * 3;
       p.lean += 1.2;
       break;
     }

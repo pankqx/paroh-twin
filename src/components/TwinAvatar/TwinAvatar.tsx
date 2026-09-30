@@ -77,7 +77,7 @@ const emptyBag = (): Bag => ({ fig: null, headB: null, headF: null, torso: null,
 
 /** A line that draws itself on (CSS dash, no JS per path). The aurora line at form 0, a soft rim light later. */
 function Ln({ d, order = 0, w = 1.5, o = 1, fade = 0.55, grad }: { d: string; order?: number; w?: number; o?: number; fade?: number; grad: string }) {
-  return <path d={d} pathLength={1} className="ln draw" stroke={`url(#${grad})`} strokeWidth={w} style={{ ["--o" as string]: o, ["--fade" as string]: fade, animationDelay: `${0.1 + order}s` }} />;
+  return <path d={d} pathLength={1} className={`ln draw${fade >= 1 ? " detail" : ""}`} stroke={`url(#${grad})`} strokeWidth={w} style={{ ["--o" as string]: o, ["--fade" as string]: fade, animationDelay: `${0.1 + order}s` }} />;
 }
 /** A darker drawn feature that takes over from the aurora line as she gains colour. */
 function Dk({ d, w = 1.5, o = 1 }: { d: string; w?: number; o?: number }) {
@@ -185,6 +185,8 @@ const Art = memo(function Art({ uid, bagRef, look }: { uid: string; bagRef: RefO
           <Ln d={A.hand} order={0.75} grad={gradB} />
           <Ln d={A.thumb} order={0.78} grad={gradB} o={0.8} />
           <Ln d={A.fingers.join(" ")} order={0.8} grad={gradB} o={0.5} w={1} fade={1} />
+          <Dk d={A.fingers.join(" ")} w={1} o={0.3} />
+          <Dk d={A.cuff} w={2} o={0.3} />
         </g>
       </g>
     );
@@ -209,7 +211,7 @@ const Art = memo(function Art({ uid, bagRef, look }: { uid: string; bagRef: RefO
         <radialGradient id={id("skinF")} cx="0.42" cy="0.36" r="0.8">
           {stop(0, "color-mix(in srgb, var(--skin) 76%, white)")}
           {stop(0.55, "var(--skin)")}
-          {stop(1, "color-mix(in srgb, var(--skin) 68%, #5a2540)")}
+          {stop(1, "color-mix(in srgb, var(--skin) 60%, #5a2540)")}
         </radialGradient>
         <linearGradient id={id("skinB")} x1="0" y1="0" x2="1" y2="0">
           {stop(0, "color-mix(in srgb, var(--skin) 78%, #4a2236)")}
@@ -290,9 +292,17 @@ const Art = memo(function Art({ uid, bagRef, look }: { uid: string; bagRef: RefO
             <Ln d={G.NECK_EDGES} order={0.3} grad={gradB} fade={0.8} />
             <Ln d={G.COLLARBONES.join(" ")} order={0.6} w={1.1} o={0.6} grad={gradB} fade={1} />
             <Ln d={G.GARMENT_FOLDS.join(" ")} order={0.7} w={1} o={0.35} grad={gradB} fade={1} />
+            <Dk d={G.GARMENT_FOLDS.join(" ")} w={1.6} o={0.16} />
+            <Dk d={G.COLLARBONES.join(" ")} w={1.2} o={0.22} />
           </g>
 
-          {/* 3. Arms: upper arm, forearm, hand, each turning on its own joint */}
+          {/* 3. Arms: upper arm, forearm, hand, each turning on its own joint. The shoulder caps stay on the body so a swung arm never leaves a gap. */}
+          {[G.ARM.shoulder, G.ARM_R.shoulder].map((sp, i) => (
+            <g key={i}>
+              <circle cx={sp.x + (i ? -8 : 8)} cy={sp.y + 6} r="36" className="occ" />
+              <circle cx={sp.x + (i ? -8 : 8)} cy={sp.y + 6} r="36" fill={`url(#${id("outfit")})`} className="fill" style={{ ["--fd" as string]: 0.06 }} />
+            </g>
+          ))}
           {arm("l")}
           {arm("r")}
         </g>
@@ -323,6 +333,7 @@ const Art = memo(function Art({ uid, bagRef, look }: { uid: string; bagRef: RefO
             <Ln d={cr} order={0.3} grad={grad} />
             <Ln d={G.JAW_HATCH.join(" ")} order={0.75} w={0.9} o={0.5} grad={grad} fade={1} />
             <Ln d={G.CHEEK_LINES.join(" ")} order={0.8} w={0.9} o={0.4} grad={grad} fade={1} />
+            <Dk d={G.CHEEK_LINES.slice(0, 1).join(" ")} w={1.4} o={0.1} />
             <Ln d={G.TEMPLE_LINES.join(" ")} order={0.7} w={0.9} o={0.4} grad={grad} fade={1} />
 
             <g ref={ref("brows")} className="brows">
@@ -414,11 +425,20 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
     if (!root) return;
     const from = parseFloat(root.style.getPropertyValue("--form"));
     const start = Number.isFinite(from) ? from : form;
+    // "formed" drops the line-art details (already invisible) from painting once she is coloured.
+    const setFormed = (on: boolean) => root.toggleAttribute("data-formed", on);
     if (reduce || start === form) {
       root.style.setProperty("--form", String(form));
+      setFormed(form >= 1);
       return;
     }
-    const c = animate(start, form, { duration: 1.6, ease: [0.2, 0.7, 0.2, 1], onUpdate: (v) => root.style.setProperty("--form", v.toFixed(3)) });
+    setFormed(false);
+    const c = animate(start, form, {
+      duration: 1.6,
+      ease: [0.2, 0.7, 0.2, 1],
+      onUpdate: (v) => root.style.setProperty("--form", v.toFixed(3)),
+      onComplete: () => setFormed(form >= 1),
+    });
     return () => c.stop();
   }, [form, reduce]);
 
@@ -474,8 +494,8 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
     let off = 0;
     const loop = () => {
       timer = window.setTimeout(() => {
-        root.classList.add("blinking");
-        off = window.setTimeout(() => root.classList.remove("blinking"), 120);
+        root.setAttribute("data-blink", "");
+        off = window.setTimeout(() => root.removeAttribute("data-blink"), 120);
         loop();
       }, 3000 + Math.random() * 3000);
     };
@@ -483,7 +503,7 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
     return () => {
       clearTimeout(timer);
       clearTimeout(off);
-      root.classList.remove("blinking");
+      root.removeAttribute("data-blink");
     };
   }, [reduce]);
 
@@ -538,11 +558,17 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
 
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
+      const L = live.current;
+      if (L.paused) {
+        last = now;
+        return;
+      }
+      // Resting breathing is slow: 30 updates a second is plenty. Anything livelier gets every frame.
+      const busy = L.state !== "idle" || action !== undefined;
+      if (!busy && now - last < 32) return;
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
       const t = now / 1000;
-      const L = live.current;
-      if (L.paused) return;
       const speaking = L.state === "speaking";
 
       // Word boundaries: the mouth leaving 0 is a beat. Without speech data, make our own.
@@ -639,17 +665,17 @@ export default function TwinAvatar({ form, state, mouth, level = 0, look = "woma
       <Art uid={uid} bagRef={bagRef} look={look} />
       <svg className="ta-fx" viewBox={`0 0 ${G.VIEW_W} ${G.VIEW_H}`} aria-hidden="true">
         {flareKey > 0 && (
-          <g key={flareKey} transform={`translate(${mp.x} ${mp.y})`}>
+          <g key={`flare-${flareKey}`} transform={`translate(${mp.x} ${mp.y})`}>
             <circle r="10" className="tf-flare" />
             <circle r="10" className="tf-flare ring" />
           </g>
         )}
         {burst > 0 && (
-          <g key={burst} transform="translate(300 260)">
+          <g key={`burst-${burst}`} transform="translate(300 260)">
             {Array.from({ length: 14 }, (_, i) => {
               const a = (i / 14) * Math.PI * 2;
-              const r = 150 + (i % 3) * 40;
-              return <path key={i} className="spark" d="M 0 -7 L 2 -2 L 7 0 L 2 2 L 0 7 L -2 2 L -7 0 L -2 -2 Z" style={{ ["--sx" as string]: `${Math.cos(a) * r}px`, ["--sy" as string]: `${Math.sin(a) * r - 20}px`, animationDelay: `${(i % 4) * 0.05}s` }} />;
+              const r = 170 + (i % 3) * 50;
+              return <path key={i} className="spark" d="M 0 -11 L 3 -3 L 11 0 L 3 3 L 0 11 L -3 3 L -11 0 L -3 -3 Z" style={{ fill: ["var(--amber)", "var(--rose)", "var(--teal)"][i % 3], ["--sx" as string]: `${Math.cos(a) * r}px`, ["--sy" as string]: `${Math.sin(a) * r - 20}px`, animationDelay: `${(i % 4) * 0.05}s` }} />;
             })}
           </g>
         )}
