@@ -132,6 +132,13 @@ export class LocalDataService implements DataService {
     const twin = await this.getTwinState();
     return pulseWhispers(twin, this.state.consent.tasks ? await this.tasks.list() : [], this.state.consent.habits && this.state.consent.tasks ? await this.habits.list() : []);
   }
+  async staleDecisionIds(): Promise<string[]> {
+    if (!this.state.consent.decisions || !this.state.consent.tasks) return [];
+    const decisions = await this.decisions.list();
+    const facts = (await this.facts.list()).filter(fact => fact.status === "approved" && isCurrentFact(fact) && (fact.kind === "task" || fact.kind === "deadline"));
+    return decisions.filter(decision => facts.some(fact => new Date(fact.updatedAt).getTime() > new Date(decision.updatedAt).getTime()))
+      .map(decision => decision.id);
+  }
   async nextQuestions() {
     return questionsForTwinState(await this.getTwinState());
   }

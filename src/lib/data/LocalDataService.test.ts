@@ -91,6 +91,17 @@ describe("approved fact conflicts", () => {
   });
 });
 
+describe("stale decisions", () => {
+  it("flags decisions followed by an approved deadline or task fact", async () => {
+    const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } as unknown as Storage;
+    const service = new LocalDataService(storage);
+    const scenarios = [{ id: "s", label: "Study", summary: "Study", onTimeProb: 0.5, peakLoad: 0.5, goalImpact: 0, assumptions: [] }];
+    await service.decisions.upsert({ id: "old-decision", prompt: "Study or project?", scenarios, recommendedId: "s", predictedChoiceId: "s", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" });
+    await service.facts.upsert({ id: "new-deadline", kind: "deadline", text: "Biology exam is tomorrow", category: "study", data: { title: "Biology exam", due: "2026-10-02T09:00:00.000Z" }, sourceId: "journal", sourceType: "journal", status: "approved", confidence: 0.9, createdAt: "2026-02-01T00:00:00.000Z", updatedAt: "2026-02-01T00:00:00.000Z" });
+    expect(await service.staleDecisionIds()).toContain("old-decision");
+  });
+});
+
 describe("converse", () => {
   afterEach(() => vi.unstubAllGlobals());
   const makeService = () => {
