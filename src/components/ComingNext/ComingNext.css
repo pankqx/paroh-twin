@@ -1,0 +1,124 @@
+.coming {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: center;
+  min-height: calc(100vh - 140px);
+  max-width: 1000px;
+}
+
+.coming-art {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+
+.coming-art svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.coming-orbit {
+  fill: none;
+  stroke: color-mix(in srgb, var(--violet) 55%, transparent);
+  stroke-width: 1.5;
+}
+
+.coming-orbit.dashed {
+  stroke-dasharray: 4 7;
+}
+
+.coming-orbit.faint {
+  stroke: color-mix(in srgb, var(--teal) 35%, transparent);
+}
+
+.coming-core {
+  fill: color-mix(in srgb, var(--violet) 18%, transparent);
+  stroke: color-mix(in srgb, var(--violet) 70%, transparent);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 5;
+}
+
+/* A small planet circling the dashed orbit (rotation of a centred wrapper). */
+.coming-planet {
+  position: absolute;
+  inset: 0;
+  animation: coming-circle 18s linear infinite;
+}
+
+.coming-planet::after {
+  content: "";
+  position: absolute;
+  top: calc(10% - 5px);
+  left: calc(50% - 5px);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 14px var(--teal);
+}
+
+.coming-copy h1 {
+  font-size: 2.6rem;
+  margin-top: 0.2rem;
+}
+
+.coming-blurb {
+  font-size: 1.05rem;
+  color: var(--text-soft);
+}
+
+.coming-points {
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+}
+
+.coming-points li {
+  position: relative;
+  padding: 0.55rem 0 0.55rem 1.4rem;
+  color: var(--muted);
+  border-bottom: 1px dashed var(--stroke);
+}
+
+.coming-points li::before {
+  content: "";
+  position: absolute;
+  left: 0.2rem;
+  top: 1.05rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--violet);
+}
+
+@keyframes coming-circle {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .coming {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    min-height: 0;
+  }
+
+  .coming-art {
+    max-width: 240px;
+  }
+
+  .coming-copy h1 {
+    font-size: 2.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coming-planet {
+    animation: none;
+  }
+}

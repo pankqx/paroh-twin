@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { dataService } from "@/app/dataService";
+import { notifyFactsChanged } from "@/components/shell/events";
 import { demoEntry } from "@/mock/demoEntry";
 import type { JournalEntry, Level } from "@/lib/types";
 import "./journal.css";
@@ -133,6 +134,7 @@ export default function JournalPage() {
         source: "journal",
         sourceId: entry.id,
       });
+      notifyFactsChanged();
       setOutcome(facts.length ? { kind: "found", count: facts.length } : { kind: "none" });
     } catch {
       setOutcome({ kind: "error" });

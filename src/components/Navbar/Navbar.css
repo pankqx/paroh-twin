@@ -1,99 +1,267 @@
-.navbar {
+/* ---------- Top bar ---------- */
+
+.topbar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 40;
   display: flex;
   align-items: center;
-  gap: 2rem;
-  padding: 0.9rem 2rem;
-  background: rgba(11, 13, 23, 0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--stroke);
 }
 
-.navbar-brand {
+.topbar-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   font-family: var(--font-display);
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--text);
+  flex-shrink: 0;
 }
 
-.navbar-brand:hover {
+.topbar-brand:hover {
   text-decoration: none;
 }
 
-.navbar-links {
+.topbar-links {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.15rem;
   flex: 1;
+  min-width: 0;
 }
 
-.navbar-links a {
-  font-size: 0.9rem;
+.topbar-links a {
+  position: relative;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
   font-weight: 500;
   color: var(--muted);
-  padding: 0.4rem 0.9rem;
-  border-radius: 100px;
-  border: 1px solid transparent;
-  transition:
-    color 0.2s var(--ease),
-    background 0.2s var(--ease),
-    border-color 0.2s var(--ease);
+  transition: color 0.25s var(--ease);
 }
 
-.navbar-links a:hover {
+.topbar-links a:hover {
   color: var(--text);
   text-decoration: none;
-  background: var(--surface);
 }
 
-.navbar-links a.active {
+.topbar-links a.active {
   color: var(--text);
-  background: var(--violet-tint);
-  border-color: rgba(139, 124, 255, 0.4);
-  box-shadow: 0 0 18px -6px rgba(139, 124, 255, 0.7);
 }
 
-.navbar-right {
+.topbar-label {
+  position: relative;
+  z-index: 1;
+}
+
+.topbar-active {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--violet) 16%, transparent);
+  border: 1px solid var(--stroke-glow);
+}
+
+.topbar-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.6rem;
+  flex-shrink: 0;
 }
 
-.navbar-pill {
-  font-size: 0.72rem;
+.topbar-pill {
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--amber);
-  background: var(--amber-tint);
-  border: 1px solid rgba(246, 179, 92, 0.3);
-  border-radius: 100px;
-  padding: 0.18rem 0.7rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+  white-space: nowrap;
+}
+
+.topbar-voice,
+.topbar-approvals {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-soft);
+  border: 1px solid var(--stroke);
+  white-space: nowrap;
+}
+
+.topbar-voice:hover,
+.topbar-approvals:hover,
+.topbar-approvals.active {
+  border-color: var(--stroke-glow);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.topbar-voice-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background-color 0.25s var(--ease);
+}
+
+.topbar-voice.on .topbar-voice-dot {
+  background: var(--teal);
+  box-shadow: 0 0 10px var(--teal);
+}
+
+.topbar-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--amber);
+  box-shadow: 0 0 14px -2px color-mix(in srgb, var(--amber) 80%, transparent);
+}
+
+@media (max-width: 1100px) {
+  .topbar-pill {
+    display: none;
+  }
+}
+
+/* ---------- Mobile tab bar + sheet ---------- */
+
+.tabbar,
+.sheet,
+.sheet-scrim {
+  display: none;
 }
 
 @media (max-width: 720px) {
-  .navbar {
-    flex-wrap: wrap;
-    gap: 0.6rem 1rem;
-    padding: 0.8rem 1.25rem;
+  .topbar {
+    padding: 0.7rem 1.1rem;
+    gap: 0.75rem;
   }
 
-  .navbar-brand {
-    order: 1;
+  .topbar-links {
+    display: none;
   }
 
-  .navbar-right {
-    order: 2;
+  .topbar-right {
     margin-left: auto;
   }
 
-  .navbar-links {
-    order: 3;
-    flex-basis: 100%;
-    flex-wrap: wrap;
-    margin-left: -0.9rem;
+  .topbar-pill {
+    display: inline-block;
+    font-size: 0.7rem;
+  }
+
+  .topbar-approvals {
+    display: none;
+  }
+
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    height: calc(var(--bar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid var(--stroke);
+  }
+
+  .tabbar a,
+  .tabbar button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--muted);
+    border-radius: 0;
+  }
+
+  .tabbar a:hover {
+    text-decoration: none;
+  }
+
+  .tabbar .active {
+    color: var(--teal);
+  }
+
+  .tabbar-dot {
+    position: absolute;
+    top: 10px;
+    right: calc(50% - 16px);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  .sheet-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 46;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .sheet {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 47;
+    padding: 1rem 1rem calc(1.25rem + var(--bar-h) + env(safe-area-inset-bottom));
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: color-mix(in srgb, var(--bg-2) 92%, transparent);
+  }
+
+  .sheet a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 0.75rem;
+    border-bottom: 1px solid var(--stroke);
+    color: var(--text-soft);
+    font-size: 1rem;
+  }
+
+  .sheet a:last-child {
+    border-bottom: 0;
+  }
+
+  .sheet a.active {
+    color: var(--teal);
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar-pill {
+    display: none;
   }
 }

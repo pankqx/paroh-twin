@@ -7,17 +7,17 @@ export function riskOf(onTime: number): Risk {
   return "at risk";
 }
 
-// Reuses the shared status colours: forest / amber / rust.
-const CLASS: Record<Risk, string> = {
-  "on track": "status-approved",
-  tight: "status-pending",
-  "at risk": "status-rejected",
+// Risk colours: on track = teal, tight = amber, at risk = rose.
+export const RISK_CLASS: Record<Risk, string> = {
+  "on track": "risk-ok",
+  tight: "risk-tight",
+  "at risk": "risk-high",
 };
 
 export default function RiskPill({ onTime }: { onTime: number }) {
   const risk = riskOf(onTime);
   return (
-    <span className={`status-pill ${CLASS[risk]}`}>
+    <span className={`risk-pill ${RISK_CLASS[risk]}`}>
       {risk} · {Math.round(onTime * 100)}%
     </span>
   );

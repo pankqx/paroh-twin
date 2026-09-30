@@ -9,79 +9,106 @@
 .welcome-card {
   width: 100%;
   max-width: 420px;
-  padding: 2.5rem 2.25rem;
+  padding: 2.25rem 2.1rem 2rem;
+  text-align: center;
   animation: rise 800ms var(--ease) both;
 }
 
-.welcome-card h1 {
-  margin: 0.8rem 0 0.3rem;
-  font-size: 2.6rem;
+.welcome-orb {
+  width: 132px;
+  margin: -0.5rem auto 0.25rem;
+}
+
+.welcome-title {
+  font-size: 2.8rem;
+  font-weight: 500;
+  margin: 0 0 0.3rem;
 }
 
 .welcome-line {
-  margin-bottom: 1.75rem;
-  color: var(--muted);
+  margin: 0 auto 1.75rem;
+  color: var(--text-soft);
 }
 
 .welcome-toggles {
   list-style: none;
-  margin: 0 0 2rem;
+  margin: 0 0 1.75rem;
   padding: 0;
+  text-align: left;
 }
 
 .welcome-toggles li {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.8rem 0.25rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-soft);
+  gap: 1rem;
+  padding: 0.75rem 0.15rem;
+  border-bottom: 1px solid var(--stroke);
 }
 
 .welcome-toggles li:first-child {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--stroke);
 }
 
-/* Switch, driven by aria-checked */
+.welcome-toggle-label {
+  display: block;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.welcome-toggle-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Switch: the knob moves with transform, the track fades between two layers. */
 .toggle {
   position: relative;
-  width: 2.5rem;
-  height: 1.4rem;
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 1.45rem;
   padding: 0;
-  border-radius: 100px;
-  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
   background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
 }
 
-.toggle::after {
+.toggle::before {
   content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--aurora);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+
+.toggle[aria-checked="true"]::before {
+  opacity: 1;
+}
+
+.toggle-knob {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: calc(1.4rem - 6px);
-  height: calc(1.4rem - 6px);
+  width: calc(1.45rem - 6px);
+  height: calc(1.45rem - 6px);
   border-radius: 50%;
-  background: var(--muted);
-  transition:
-    transform 0.25s var(--ease),
-    background 0.25s var(--ease);
+  background: var(--text);
+  transition: transform 0.3s var(--ease);
 }
 
-.toggle[aria-checked="true"] {
-  background: var(--accent);
-  border-color: transparent;
-  box-shadow: 0 0 16px -4px rgba(79, 209, 197, 0.7);
-}
-
-.toggle[aria-checked="true"]::after {
+.toggle[aria-checked="true"] .toggle-knob {
+  transform: translateX(1.15rem);
   background: var(--bg);
-  transform: translateX(1.1rem);
 }
 
 .welcome-note {
-  margin: 1.75rem 0 0;
+  margin: 1.5rem 0 0;
   padding-top: 1.1rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--stroke);
   font-size: 0.8rem;
   color: var(--muted);
+  text-align: left;
 }

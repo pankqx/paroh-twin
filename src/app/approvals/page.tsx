@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { dataService } from "@/app/dataService";
 import { recordGrowth } from "@/app/bloomGrowth";
+import { notifyFactsChanged } from "@/components/shell/events";
 import FactCard, { type CardPhase } from "@/components/FactCard/FactCard";
 import LedgerList from "@/components/LedgerList/LedgerList";
 import type { Fact, JournalEntry } from "@/lib/types";
@@ -41,6 +42,7 @@ export default function ApprovalsPage() {
 
   const refresh = useCallback(async () => {
     const [f, e] = await Promise.all([dataService.listFacts(), dataService.entries.list()]);
+    notifyFactsChanged();
     setFacts(f);
     setEntries(e);
   }, []);
