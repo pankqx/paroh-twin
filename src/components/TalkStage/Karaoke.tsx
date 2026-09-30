@@ -29,14 +29,16 @@ export default function Karaoke({ line, sentence, speaking }: { line: string; se
 
   if (at < 0) return <>{line}</>;
 
-  const words = sentence.split(/(\s+)/);
-  let w = -1;
+  const parts = sentence.split(/(\s+)/);
+  const order: number[] = []; // word number of each part, -1 for spaces
+  let n = 0;
+  for (const part of parts) order.push(/\S/.test(part) ? n++ : -1);
   return (
     <>
       <span className="k-said">{line.slice(0, at)}</span>
-      {words.map((part, i) => {
-        if (/^\s+$/.test(part) || part === "") return part;
-        w += 1;
+      {parts.map((part, i) => {
+        const w = order[i];
+        if (w < 0) return part;
         const cls = w < idx ? "k-said" : w === idx ? "k-now" : "k-next";
         return (
           <span key={i} className={cls}>
