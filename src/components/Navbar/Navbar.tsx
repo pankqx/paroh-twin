@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import ApprovalsPanel from "@/components/ApprovalsPanel/ApprovalsPanel";
 import OrbMark from "@/components/shell/OrbMark";
 import { usePendingCount } from "@/components/shell/usePendingCount";
 import { useVoicePref } from "@/components/shell/useVoicePref";
@@ -85,20 +86,26 @@ export default function Navbar() {
   const pending = usePendingCount();
   const [voiceOn, setVoiceOn] = useVoicePref();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [trayOpen, setTrayOpen] = useState(false);
 
-  // Close the sheet whenever the route changes.
+  // Close the sheet and the tray whenever the route changes.
   const [lastPath, setLastPath] = useState(pathname);
   if (lastPath !== pathname) {
     setLastPath(pathname);
     setSheetOpen(false);
+    setTrayOpen(false);
   }
 
   useEffect(() => {
-    if (!sheetOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSheetOpen(false);
+    if (!sheetOpen && !trayOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setSheetOpen(false);
+      setTrayOpen(false);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sheetOpen]);
+  }, [sheetOpen, trayOpen]);
 
   if (pathname.startsWith("/welcome")) return null;
 
@@ -150,10 +157,16 @@ export default function Navbar() {
             <span className="topbar-voice-dot" aria-hidden="true" />
             Voice {voiceOn ? "on" : "off"}
           </button>
-          <Link
-            href="/approvals"
-            className={`topbar-approvals ${isActive(pathname, "/approvals") ? "active" : ""}`}
+          <button
+            type="button"
+            className={`topbar-approvals ${trayOpen || isActive(pathname, "/approvals") ? "active" : ""}`}
             aria-label={approvalsLabel}
+            aria-expanded={trayOpen}
+            aria-controls="approvals-tray"
+            onClick={() => {
+              setSheetOpen(false);
+              setTrayOpen((o) => !o);
+            }}
           >
             Approvals
             <AnimatePresence initial={false} mode="popLayout">
@@ -170,9 +183,46 @@ export default function Navbar() {
                 </motion.span>
               )}
             </AnimatePresence>
-          </Link>
+          </button>
         </div>
       </header>
+
+      <AnimatePresence>
+        {trayOpen && (
+          <>
+            <motion.div
+              className="tray-scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setTrayOpen(false)}
+            />
+            <motion.aside
+              id="approvals-tray"
+              className="glass tray"
+              role="dialog"
+              aria-label="Approvals"
+              initial={{ y: "-105%", opacity: 0.6 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "-105%", opacity: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 30 }}
+            >
+              <div className="tray-head">
+                <h2>Approvals</h2>
+                <Link href="/approvals" className="btn-text">
+                  Open as a page
+                </Link>
+                <button type="button" className="tray-close" aria-label="Close approvals" onClick={() => setTrayOpen(false)}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M3 3l10 10M13 3L3 13" />
+                  </svg>
+                </button>
+              </div>
+              <ApprovalsPanel variant="tray" />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Mobile bottom tab bar */}
       <nav className="tabbar" aria-label="Main (mobile)">
@@ -229,10 +279,17 @@ export default function Navbar() {
                   {label}
                 </Link>
               ))}
-              <Link href="/approvals" className={isActive(pathname, "/approvals") ? "active" : undefined}>
+              <button
+                type="button"
+                className="sheet-approvals"
+                onClick={() => {
+                  setSheetOpen(false);
+                  setTrayOpen(true);
+                }}
+              >
                 Approvals
                 {pending > 0 && <span className="topbar-badge num">{pending}</span>}
-              </Link>
+              </button>
             </motion.div>
           </>
         )}

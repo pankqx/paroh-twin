@@ -135,6 +135,57 @@
   box-shadow: 0 0 14px -2px color-mix(in srgb, var(--amber) 80%, transparent);
 }
 
+/* ---------- Approvals tray (slide-over from the top) ---------- */
+
+.tray-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  background: rgba(3, 2, 8, 0.55);
+}
+
+.tray {
+  position: fixed;
+  z-index: 42;
+  top: calc(var(--bar-h) - 6px);
+  right: 1.5rem;
+  width: min(560px, calc(100vw - 2rem));
+  max-height: calc(100vh - var(--bar-h) - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem 1.4rem 1.5rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-2) 92%, transparent);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8);
+}
+
+.tray-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.tray-head h2 {
+  margin: 0;
+  flex: 1;
+}
+
+.tray-close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--stroke);
+  color: var(--text-soft);
+}
+
+.tray-close:hover {
+  border-color: var(--stroke-glow);
+  color: var(--text);
+}
+
 @media (max-width: 1100px) {
   .topbar-pill {
     display: none;
@@ -170,6 +221,14 @@
 
   .topbar-approvals {
     display: none;
+  }
+
+  .tray {
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    top: calc(var(--bar-h) - 10px);
+    max-height: calc(100vh - var(--bar-h) - var(--bar-h) - 1rem);
   }
 
   .tabbar {
@@ -257,6 +316,17 @@
 
   .sheet a.active {
     color: var(--teal);
+  }
+
+  .sheet-approvals {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 0.75rem;
+    color: var(--text-soft);
+    font-size: 1rem;
+    border-radius: 0;
+    text-align: left;
   }
 }
 
