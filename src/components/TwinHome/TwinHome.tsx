@@ -16,7 +16,8 @@ import Ring from "@/components/Ring/Ring";
 import Sparkline from "@/components/Sparkline/Sparkline";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
 import HomeLife from "./HomeLife";
-import TwinFace, { type TwinFaceHandle } from "@/components/TwinFace/TwinFace";
+import TwinAvatar, { type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
+import "@/components/TwinAvatar/TwinAvatar.css";
 import { SAMPLE_STUDENT_NAME } from "@/mock/sample";
 import { simulate } from "@/lib/twin/scenarios";
 import type { Fact, TwinState } from "@/lib/types";
@@ -152,7 +153,7 @@ export default function TwinHome() {
   const [view, setView] = useState<View | null>(null);
   const [grew, setGrew] = useState<string[]>([]);
   const [focused, setFocused] = useState<Fact | null>(null);
-  const face = useRef<TwinFaceHandle>(null);
+  const face = useRef<TwinAvatarHandle>(null);
 
   useEffect(() => {
     let live = true;
@@ -195,7 +196,7 @@ export default function TwinHome() {
           />
           <Constellation facts={approved} onFocusFact={setFocused} />
           <div className="twin-stage-face">
-            <TwinFace ref={face} state="idle" />
+            <TwinAvatar ref={face} state="idle" form={0} />
           </div>
 
           <div className="twin-hero-text">

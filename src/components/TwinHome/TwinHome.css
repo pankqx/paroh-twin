@@ -24,8 +24,8 @@
 .twin-stage-face {
   position: absolute;
   left: 50%;
-  top: calc((100cqh - var(--u)) / 2 + var(--u) * 0.02);
-  height: calc(var(--u) * 0.96);
+  top: calc((100cqh - var(--u)) / 2 - var(--u) * 0.04);
+  height: calc(var(--u) * 1.22);
   transform: translateX(-50%);
   --face-h: 100%;
 }

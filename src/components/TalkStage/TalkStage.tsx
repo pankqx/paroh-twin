@@ -83,6 +83,8 @@ export default function TalkStage() {
   const [level, setLevel] = useState(0);
   const [cards, setCards] = useState<Array<{ fact: Fact; said: string }>>([]);
   const [notice, setNotice] = useState("");
+  const [history, setHistory] = useState<Array<{ who: "twin" | "you"; text: string }>>([]);
+  const histRef = useRef<HTMLOListElement>(null);
   const [voiceOn] = useVoicePref();
 
   const canDictate = useSyncExternalStore(
@@ -174,6 +176,7 @@ export default function TalkStage() {
 
   const say = useCallback((text: string) => {
     setLine(text);
+    setHistory((h) => [...h.slice(-19), { who: "twin" as const, text }]);
     speech.speak(text);
   }, []);
 
@@ -207,6 +210,7 @@ export default function TalkStage() {
     listen.stop();
     setStep("thinking");
     setHeard(answer);
+    setHistory((h) => [...h.slice(-19), { who: "you" as const, text: answer }]);
     setNotice("");
 
     const consent = await dataService.getConsent();
@@ -311,6 +315,12 @@ export default function TalkStage() {
     return () => window.clearTimeout(id);
   }, []);
 
+  useEffect(() => {
+    histRef.current?.scrollTo({ top: histRef.current.scrollHeight, behavior: "smooth" });
+  }, [history.length]);
+  // Everything said before the line she is on right now (that one is shown large).
+  const past = history.length && history[history.length - 1].who === "twin" ? history.slice(0, -1) : history;
+
   const listening = step === "listening";
   const asking = step === "ask" || listening;
 
@@ -328,6 +338,16 @@ export default function TalkStage() {
 
         {/* Left: her question, big, with the word being spoken lit. */}
         <section className="talk-left" aria-live="polite">
+          {past.length > 0 && (
+            <ol className="talk-history" ref={histRef} aria-label="Conversation so far">
+              {past.map((m, i) => (
+                <li key={i} className={m.who}>
+                  <span>{m.who === "twin" ? "Twin" : "You"}</span>
+                  {m.text}
+                </li>
+              ))}
+            </ol>
+          )}
           {step === "start" ? (
             <div className="talk-start">
               <p className="talk-eyebrow">Voice check-in</p>
