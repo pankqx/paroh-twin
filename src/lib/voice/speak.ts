@@ -17,6 +17,7 @@ let queue: string[] = [];
 let generation = 0;
 let fallbackTimer: ReturnType<typeof setInterval> | undefined;
 let mouthReleaseTimer: ReturnType<typeof setTimeout> | undefined;
+let voiceLook: "woman" | "man" = "woman";
 
 function clearMouthTimers() {
   if (fallbackTimer) clearInterval(fallbackTimer);
@@ -40,9 +41,14 @@ function preferredVoice(): SpeechSynthesisVoice | undefined {
   if (typeof window === "undefined" || !window.speechSynthesis) return undefined;
   const voices = window.speechSynthesis.getVoices();
   const normalized = (voice: SpeechSynthesisVoice) => voice.lang.toLowerCase().replace("_", "-");
-  return voices.find(voice => normalized(voice) === "en-in")
-    ?? voices.find(voice => normalized(voice) === "en-gb")
-    ?? voices.find(voice => normalized(voice) === "en-us");
+  const languages = ["en-in", "en-gb", "en-us"];
+  const genderPattern = voiceLook === "woman" ? /\b(?:female|woman|girl)\b|samantha|zira|aria|jenny/i : /\b(?:male|man|boy)\b|daniel|david|guy/i;
+  for (const language of languages) {
+    const matchingLanguage = voices.filter(voice => normalized(voice) === language);
+    const preferredGender = matchingLanguage.find(voice => genderPattern.test(voice.name));
+    if (preferredGender) return preferredGender;
+  }
+  return voices.find(voice => languages.includes(normalized(voice))) ?? voices.find(voice => genderPattern.test(voice.name));
 }
 
 function playNext(run: number) {
@@ -116,6 +122,11 @@ export function stop(): void {
 
 /** Immediately cancel current synthesis and discard queued speech, for example when dictation starts. */
 export function cancel(): void { stop(); }
+
+/** Set a best-effort voice persona; language and available voices vary by device. */
+export function setVoiceLook(look: "woman" | "man" | "spirit"): void {
+  voiceLook = look === "man" ? "man" : "woman";
+}
 
 export function setEnabled(enabled: boolean): void {
   enabledCache = enabled;

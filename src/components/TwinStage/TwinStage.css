@@ -1,0 +1,106 @@
+.twin-stage-shell {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.twin-stage-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 650ms ease;
+}
+
+.twin-stage-shell.active .twin-stage-backdrop { opacity: 1; }
+
+.twin-stage-aurora {
+  position: absolute;
+  inset: -24%;
+  opacity: calc(0.28 + var(--stage-level, 0) * 0.4);
+  background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--violet) 28%, transparent), transparent 40%), radial-gradient(ellipse at 31% 53%, color-mix(in srgb, var(--teal) 18%, transparent), transparent 39%), radial-gradient(ellipse at 72% 60%, color-mix(in srgb, var(--amber) 10%, transparent), transparent 40%);
+  transform: scale(calc(1 + var(--stage-level, 0) * 0.035));
+  transition: opacity 120ms linear, transform 120ms linear;
+}
+
+.twin-stage-rings {
+  position: absolute;
+  width: min(118vw, 1200px);
+  height: min(118vw, 1200px);
+  left: 50%;
+  top: 34%;
+  overflow: visible;
+  transform: translate(-50%, -50%);
+}
+
+.twin-stage-concentric circle {
+  fill: none;
+  stroke: color-mix(in srgb, var(--violet) 27%, transparent);
+  stroke-width: 1;
+  opacity: calc(0.18 + var(--stage-level, 0) * 0.3);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.twin-stage-concentric circle:nth-child(2) { stroke: color-mix(in srgb, var(--teal) 22%, transparent); }
+.twin-stage-concentric circle:nth-child(3) { stroke: color-mix(in srgb, var(--amber) 17%, transparent); }
+
+.twin-stage-arcs {
+  fill: none;
+  stroke: color-mix(in srgb, var(--teal) 50%, transparent);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  opacity: calc(0.18 + var(--stage-level, 0) * 0.48);
+  transform-box: view-box;
+  transform-origin: center;
+}
+
+.twin-stage-shell.active .twin-stage-arcs { animation: stage-arc 2.4s ease-in-out infinite alternate; }
+
+.twin-stage-particles { position: absolute; inset: 0; }
+.stage-particle {
+  position: absolute;
+  left: 57%;
+  top: 34%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--teal);
+  opacity: 0;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--teal) 75%, transparent);
+  transform: translate(var(--dx), var(--dy));
+}
+.twin-stage-shell.active .stage-particle { animation: stage-spiral 3.6s cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay) infinite; }
+
+.twin-stage-memories { position: absolute; inset: 0; }
+.twin-stage-memories span {
+  position: absolute;
+  max-width: 22rem;
+  color: var(--text-soft);
+  font-size: clamp(0.72rem, 1.1vw, 0.9rem);
+  text-shadow: 0 1px 8px var(--bg);
+}
+
+.twin-stage-content { position: relative; z-index: 1; min-height: inherit; }
+
+@keyframes stage-spiral {
+  0% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); }
+  14% { opacity: 0.75; }
+  100% { opacity: 0; transform: translate(0, 0) scale(0.12); }
+}
+
+@keyframes stage-arc {
+  from { opacity: calc(0.18 + var(--stage-level, 0) * 0.35); transform: scale(0.98); }
+  to { opacity: calc(0.28 + var(--stage-level, 0) * 0.55); transform: scale(1.015); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twin-stage-backdrop,
+  .twin-stage-aurora { transition: none; }
+  .twin-stage-shell.active .twin-stage-arcs,
+  .twin-stage-shell.active .stage-particle { animation: none; }
+  .twin-stage-shell.active .stage-particle { opacity: 0.4; transform: translate(calc(var(--dx) * 0.08), calc(var(--dy) * 0.08)); }
+}

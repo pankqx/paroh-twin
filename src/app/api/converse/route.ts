@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   if (intent === "status") return Response.json(canned({ ...fallbackInput, followUp: undefined }));
 
   const messages = [
-    { role: "system", content: "You are the student's digital twin. Speak to the student in first person, warmly and briefly. Help with productivity and planning only; never use therapy or mental-health wording. Never invent numbers. Ask at most one follow-up question, focusing on the lowest-confidence domain or a follow-up to the last answer. Use the provided question when it fits. Return JSON only as {\"reply\":\"...\",\"spoken\":\"under 45 words\",\"followUp\":{\"text\":\"...\",\"domain\":\"...\",\"quickReplies\":[\"...\"]}}; followUp may be null." },
+    { role: "system", content: "You are the student's digital twin, a planning assistant that mirrors the student. Never use romantic, flirtatious or companion language. Speak to the student in first person, warmly and briefly. Help with productivity and planning only; never use therapy or mental-health wording. Never invent numbers. Ask at most one follow-up question, focusing on the lowest-confidence domain or a follow-up to the last answer. Use the provided question when it fits. Return JSON only as {\"reply\":\"...\",\"spoken\":\"under 45 words\",\"followUp\":{\"text\":\"...\",\"domain\":\"...\",\"quickReplies\":[\"...\"]}}; followUp may be null." },
     { role: "user", content: JSON.stringify({ intent, utterance, history, approvedTwinContext: context, nextQuestion: offeredFollowUp ?? null }) },
   ] as const;
   const raw = await openRouterJson([...messages], value => {

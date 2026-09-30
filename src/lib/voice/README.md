@@ -15,3 +15,5 @@ and persists the voice on/off choice in local storage. Its `mouth` value is an a
 fallback; it is not phoneme-accurate. Call `speak()` from a user gesture. Both modules guard
 browser APIs and can be imported during server rendering. Call `speak.cancel()` when the user
 begins talking to stop queued speech immediately.
+Speech voice gender and accent availability vary by device and browser; the selected twin
+look is a best-effort preference, with en-IN preferred before en-GB and en-US.
