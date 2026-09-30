@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { dataService } from "@/app/dataService";
 import { takeGrowth } from "@/app/bloomGrowth";
 import Constellation, { describeFact } from "@/components/Constellation/Constellation";
@@ -12,20 +12,20 @@ import SpotlightCard from "@/components/fx/SpotlightCard";
 import Heatmap from "@/components/Heatmap/Heatmap";
 import Ring from "@/components/Ring/Ring";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
-import VoiceOrb, { type OrbDomain } from "@/components/VoiceOrb/VoiceOrb";
+import TwinFace, { type TwinFaceHandle } from "@/components/TwinFace/TwinFace";
 import { SAMPLE_STUDENT_NAME } from "@/mock/sample";
 import { simulate } from "@/lib/twin/scenarios";
 import type { Fact, TwinState } from "@/lib/types";
 import "./TwinHome.css";
 
-// Engine domain keys, in ring order.
+// Engine domain keys, shown as "how well she knows you".
 const DOMAINS: Array<{ key: string; label: string }> = [
-  { key: "tasks", label: "TASKS" },
-  { key: "habits", label: "HABITS" },
-  { key: "routines", label: "ROUTINES" },
-  { key: "mood", label: "ENERGY" },
-  { key: "goals", label: "GOALS" },
-  { key: "planner", label: "PLANNER" },
+  { key: "tasks", label: "Tasks" },
+  { key: "habits", label: "Habits" },
+  { key: "routines", label: "Routines" },
+  { key: "mood", label: "Energy" },
+  { key: "goals", label: "Goals" },
+  { key: "planner", label: "Planner" },
 ];
 
 const RISK_COLOUR = { "on track": "var(--teal)", tight: "var(--amber)", "at risk": "var(--rose)" };
@@ -118,15 +118,16 @@ async function loadView(): Promise<View> {
 
 export default function TwinHome() {
   const [view, setView] = useState<View | null>(null);
-  const [flare, setFlare] = useState<string[]>([]);
+  const [grew, setGrew] = useState<string[]>([]);
   const [focused, setFocused] = useState<Fact | null>(null);
+  const face = useRef<TwinFaceHandle>(null);
 
   useEffect(() => {
     let live = true;
     loadView().then((v) => {
       if (!live) return;
       // Domains that grew since an approval elsewhere pulse once on arrival.
-      setFlare(Object.keys(takeGrowth()));
+      setGrew(Object.keys(takeGrowth()));
       setView(v);
     });
     return () => {
@@ -134,15 +135,18 @@ export default function TwinHome() {
     };
   }, []);
 
+  // After the draw-on, her mind point flares once for facts approved elsewhere.
+  useEffect(() => {
+    if (!view || grew.length === 0) return;
+    const t = window.setTimeout(() => face.current?.flare(), 2000);
+    return () => window.clearTimeout(t);
+  }, [view, grew]);
+
   if (!view) return <main className="page twin" aria-busy="true" />;
 
   const { twin, deadlines, approved, guesses } = view;
   const name = SAMPLE_STUDENT_NAME.split(" ")[0];
   const load = Math.round(twin.loadPct);
-  const domains: OrbDomain[] = DOMAINS.map((d) => ({
-    ...d,
-    confidence: twin.confidenceByDomain[d.key] ?? 0,
-  }));
 
   return (
     <main className="page twin">
@@ -177,14 +181,8 @@ export default function TwinHome() {
 
         <div className="twin-stage">
           <Constellation facts={approved} onFocusFact={setFocused} />
-          <div className="twin-stage-orb">
-            <VoiceOrb
-              state="idle"
-              confidence={domains}
-              load={twin.loadPct}
-              fidelity={twin.fidelity}
-              flare={flare}
-            />
+          <div className="twin-stage-face">
+            <TwinFace ref={face} state="idle" />
           </div>
           {approved.length === 0 && (
             <div className="twin-doodle" aria-hidden="true">
@@ -302,6 +300,28 @@ export default function TwinHome() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="glass twin-panel twin-coverage rise" style={{ ["--i" as string]: 7 }}>
+          <h2>How well she knows you</h2>
+          <p className="twin-panel-note">
+            Confidence per area, from the data you allowed and the facts you approved. More data
+            raises it; it is never a guarantee.
+          </p>
+          <ul className="coverage">
+            {DOMAINS.map((d, i) => {
+              const c = twin.confidenceByDomain[d.key] ?? 0;
+              return (
+                <li key={d.key} className={c < 0.3 ? "sparse" : undefined}>
+                  <span className="coverage-label">{d.label}</span>
+                  <span className="coverage-track">
+                    <span className="coverage-fill" style={{ transform: `scaleX(${Math.max(c, 0.02)})`, animationDelay: `${0.4 + i * 0.08}s` }} />
+                  </span>
+                  <span className="coverage-pct num">{Math.round(c * 100)}%</span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </section>
     </main>

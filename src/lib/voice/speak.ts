@@ -1,17 +1,29 @@
 export interface SpeakingState {
   isSpeaking: boolean;
   currentSentence: string;
+  speaking: boolean;
+  sentence: string;
+  mouth: 0 | 1 | 2 | 3;
 }
 
 export type SpeakingListener = (state: SpeakingState) => void;
 
 const ENABLED_KEY = "paroh-voice-enabled";
 const listeners = new Set<SpeakingListener>();
-const idleState: SpeakingState = { isSpeaking: false, currentSentence: "" };
+const idleState: SpeakingState = { isSpeaking: false, currentSentence: "", speaking: false, sentence: "", mouth: 0 };
 let state: SpeakingState = idleState;
 let enabledCache: boolean | undefined;
 let queue: string[] = [];
 let generation = 0;
+let fallbackTimer: ReturnType<typeof setInterval> | undefined;
+let mouthReleaseTimer: ReturnType<typeof setTimeout> | undefined;
+
+function clearMouthTimers() {
+  if (fallbackTimer) clearInterval(fallbackTimer);
+  if (mouthReleaseTimer) clearTimeout(mouthReleaseTimer);
+  fallbackTimer = undefined;
+  mouthReleaseTimer = undefined;
+}
 
 function emit(next: SpeakingState) {
   state = next;
@@ -35,6 +47,7 @@ function preferredVoice(): SpeechSynthesisVoice | undefined {
 
 function playNext(run: number) {
   if (run !== generation || typeof window === "undefined" || !window.speechSynthesis || typeof SpeechSynthesisUtterance === "undefined") return;
+  clearMouthTimers();
   const sentence = queue.shift();
   if (!sentence || !getEnabled()) {
     queue = [];
@@ -45,9 +58,31 @@ function playNext(run: number) {
   const voice = preferredVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 0.95;
+  let receivedWordBoundary = false;
+  let fallbackMouth: 0 | 1 | 2 | 3 = 0;
+  const publishMouth = (mouth: 0 | 1 | 2 | 3) => emit({ isSpeaking: true, currentSentence: sentence, speaking: true, sentence, mouth });
+  utterance.onboundary = event => {
+    if (run !== generation || (event.name && event.name !== "word")) return;
+    const word = sentence.slice(event.charIndex).match(/^[\p{L}\p{N}'’-]+/u)?.[0] ?? "";
+    if (!word) return;
+    receivedWordBoundary = true;
+    if (fallbackTimer) clearInterval(fallbackTimer);
+    fallbackTimer = undefined;
+    // Word length is only a loose visual cue, not phoneme tracking.
+    const mouth: 1 | 2 | 3 = word.length <= 2 ? 1 : word.length <= 5 ? 2 : 3;
+    publishMouth(mouth);
+    if (mouthReleaseTimer) clearTimeout(mouthReleaseTimer);
+    mouthReleaseTimer = setTimeout(() => { if (run === generation) publishMouth(0); }, 120);
+  };
   utterance.onend = () => { if (run === generation) playNext(run); };
   utterance.onerror = () => { if (run === generation) playNext(run); };
-  emit({ isSpeaking: true, currentSentence: sentence });
+  emit({ isSpeaking: true, currentSentence: sentence, speaking: true, sentence, mouth: 0 });
+  // Some speech engines omit boundary events; cycle gently while a sentence is active.
+  fallbackTimer = setInterval(() => {
+    if (receivedWordBoundary || run !== generation) return;
+    fallbackMouth = ((fallbackMouth % 3) + 1) as 1 | 2 | 3;
+    publishMouth(fallbackMouth);
+  }, 170);
   window.speechSynthesis.speak(utterance);
 }
 
@@ -74,6 +109,7 @@ export function speak(text: string): void {
 export function stop(): void {
   generation += 1;
   queue = [];
+  clearMouthTimers();
   if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
   emit(idleState);
 }

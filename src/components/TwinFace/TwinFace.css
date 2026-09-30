@@ -1,0 +1,240 @@
+/* Sizing: pages set --face-h. Hero ~60vh, Talk ~75vh. */
+.twin-face {
+  --tf-a: var(--teal);
+  --tf-b: var(--violet);
+  --tf-c: var(--amber);
+  position: relative;
+  height: var(--face-h, clamp(380px, 60vh, 860px));
+  aspect-ratio: 600 / 800;
+  width: auto;
+  max-width: 100%;
+}
+
+.twin-face svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Stroke colour shows the state (also the only signal under reduced motion). */
+.twin-face.state-listening {
+  --tf-a: var(--teal);
+  --tf-b: var(--teal);
+  --tf-c: var(--violet);
+}
+.twin-face.state-thinking {
+  --tf-a: var(--violet);
+  --tf-b: var(--amber);
+  --tf-c: var(--amber);
+}
+.twin-face.state-speaking {
+  --tf-a: var(--violet);
+  --tf-b: var(--rose);
+  --tf-c: var(--amber);
+}
+
+.tf-stop {
+  transition: stop-color 0.7s var(--ease);
+}
+.tf-stop.a {
+  stop-color: var(--tf-a);
+}
+.tf-stop.b {
+  stop-color: var(--tf-b);
+}
+.tf-stop.c {
+  stop-color: var(--tf-c);
+}
+
+/* Breathing and leaning. Every animated group sits in a translate() wrapper, so its
+   local origin (0 0) is the pivot. Transform only. */
+.tf-breathe {
+  animation: tf-breathe 4.6s ease-in-out infinite alternate;
+}
+
+.tf-lean {
+  transition: transform 1s var(--ease);
+}
+
+.twin-face.state-listening .tf-lean {
+  transform: translateY(-6px) scale(1.028);
+}
+
+.twin-face.state-speaking .tf-breathe {
+  animation-duration: 2.8s;
+}
+
+.tf-sway {
+  animation: tf-sway 9s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+/* Soft glow after the draw-on. Opacity only. */
+.tf-halo {
+  opacity: 0;
+  animation: tf-fade-in 1.4s var(--ease) 1.7s forwards;
+}
+.tf-halo path {
+  opacity: 0.11;
+}
+
+/* Eyes */
+.tf-eye {
+  transition: transform 55ms linear;
+}
+.twin-face.blinking .tf-eye {
+  transform: scaleY(0.08);
+}
+
+.tf-pupil {
+  transform: translate(var(--px, 0px), var(--py, 0px));
+  transition: transform 160ms var(--ease);
+}
+
+.tf-pupil-dot {
+  transition: transform 0.5s var(--ease);
+}
+.twin-face.state-listening .tf-pupil-dot {
+  transform: scale(1.3);
+}
+
+.tf-pupil-fill {
+  fill: var(--text);
+}
+.tf-glint {
+  fill: var(--bg);
+  opacity: 0.85;
+}
+
+/* Listening ring */
+.tf-ring {
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+}
+.tf-ring-level {
+  transform: scale(calc(1 + var(--lvl, 0) * 0.06));
+  transition: transform 90ms linear;
+}
+.twin-face.state-listening .tf-ring {
+  opacity: calc(0.3 + var(--lvl, 0) * 0.65);
+  animation: tf-ring-pulse 2.2s ease-in-out infinite alternate;
+}
+
+/* Thought dots */
+.tf-thought circle {
+  fill: var(--amber);
+  opacity: 0;
+}
+.twin-face.state-thinking .tf-thought circle {
+  animation: tf-thought 1.3s ease-in-out infinite;
+}
+
+/* Mind point */
+.tf-mind-halo {
+  fill: color-mix(in srgb, var(--amber) 40%, transparent);
+  animation: tf-mind-pulse 3.4s ease-in-out infinite alternate;
+}
+.tf-mind-core {
+  fill: var(--amber);
+}
+
+.tf-flare {
+  fill: color-mix(in srgb, var(--amber) 55%, transparent);
+  animation: tf-flare 1100ms var(--ease) both;
+}
+.tf-flare.ring {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.5;
+  animation-delay: 120ms;
+}
+
+@keyframes tf-breathe {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.012);
+  }
+}
+
+@keyframes tf-sway {
+  from {
+    transform: rotate(calc(var(--dir, 1) * -1.3deg));
+  }
+  to {
+    transform: rotate(calc(var(--dir, 1) * 1.3deg));
+  }
+}
+
+@keyframes tf-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tf-ring-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes tf-thought {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  45% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes tf-mind-pulse {
+  from {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes tf-flare {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(4.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-breathe,
+  .tf-sway,
+  .tf-mind-halo,
+  .twin-face.state-listening .tf-ring,
+  .twin-face.state-thinking .tf-thought circle {
+    animation: none;
+  }
+
+  .tf-halo {
+    animation: none;
+    opacity: 1;
+  }
+
+  .twin-face.state-thinking .tf-thought circle {
+    opacity: 0.8;
+  }
+
+  .tf-lean,
+  .twin-face.state-listening .tf-lean {
+    transform: none;
+  }
+}
