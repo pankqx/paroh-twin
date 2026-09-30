@@ -429,3 +429,14 @@
     grid-column: 1 / -1;
   }
 }
+
+/* The coloured character (TwinAvatar): 900:1080 box, sized by height. */
+.talk-face .twin-face.ta {
+  --face-h: min(calc(100vh - var(--bar-h) - 1.5rem), calc((100vw - var(--fill-side, 0px)) * 1.2));
+  margin-inline: auto;
+}
+@media (max-width: 1099px) {
+  .talk-face .twin-face.ta {
+    --face-h: clamp(300px, 46vh, 560px);
+  }
+}

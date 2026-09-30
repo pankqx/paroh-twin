@@ -15,7 +15,8 @@ import Doodle from "@/components/Doodle/Doodle";
 import FactCard from "@/components/FactCard/FactCard";
 import { notifyFactsChanged } from "@/components/shell/events";
 import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
-import TwinFace, { type FaceState } from "@/components/TwinFace/TwinFace";
+import TwinAvatar, { type AvatarState } from "@/components/TwinAvatar/TwinAvatar";
+import "@/components/TwinAvatar/TwinAvatar.css";
 import Waveform from "@/components/Waveform/Waveform";
 import Karaoke from "./Karaoke";
 import * as listen from "@/lib/voice/listen";
@@ -294,7 +295,7 @@ export default function TalkStage() {
     if (step === "listening" || step === "thinking") setStep("ask");
   }
 
-  const faceState: FaceState =
+  const faceState: AvatarState =
     step === "listening"
       ? "listening"
       : step === "thinking"
@@ -304,6 +305,12 @@ export default function TalkStage() {
           : "idle";
   const q = questions?.[qi];
 
+  const [bloom, setBloom] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setBloom(true), 450);
+    return () => window.clearTimeout(id);
+  }, []);
+
   const listening = step === "listening";
   const asking = step === "ask" || listening;
 
@@ -311,11 +318,11 @@ export default function TalkStage() {
     <main className="talk">
       <div className="talk-stage">
         <div className="talk-face">
-          <TwinFace
-            fill
+          <TwinAvatar
             state={faceState}
             level={level}
             mouth={speaking ? mouth : undefined}
+            form={bloom ? 1 : 0}
           />
         </div>
 

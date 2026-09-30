@@ -1,0 +1,161 @@
+/* TwinAvatar: colour layers over the line art. `--form` runs 0 (line art) to 1 (coloured). */
+
+.twin-face.ta {
+  height: var(--face-h, 100%);
+  aspect-ratio: 900 / 1080;
+  width: auto;
+  max-width: none;
+}
+
+.ta .ta-flesh {
+  opacity: var(--form, 0);
+}
+.ta[data-flat="true"] .ta-flesh {
+  display: none;
+}
+
+/* Line art stays as rim light on top of the colour; body lines give way to the garment. */
+.ta .ta-lines {
+  opacity: calc(1 - var(--form, 0) * 0.42);
+}
+.ta .ta-hatch {
+  opacity: calc(1 - var(--form, 0));
+}
+.ta .ta-bodylines {
+  opacity: calc(1 - var(--form, 0));
+}
+
+/* Eyes */
+.ta .ta-sclera {
+  fill: #f6f1f8;
+}
+.ta .ta-lidshade {
+  fill: none;
+  stroke: var(--skin-sh);
+  stroke-width: 9;
+  stroke-linecap: round;
+  opacity: 0.3;
+}
+.ta .ta-ink path {
+  fill: none;
+  stroke: #1a1024;
+  stroke-linecap: round;
+}
+.ta .ta-ink path + path {
+  opacity: 0.6;
+}
+.ta .ta-pupil-dark {
+  fill: #120b1f;
+}
+.ta .ta-pupil-light,
+.ta .ta-glint-line {
+  opacity: calc(1 - var(--form, 0));
+}
+.ta .ta-catch {
+  fill: #fff;
+  opacity: 0.95;
+}
+.ta .ta-catch.soft {
+  opacity: 0.55;
+}
+
+/* Brows, nose, lips */
+.ta .ta-brow {
+  fill: none;
+  stroke: color-mix(in srgb, var(--hair) 70%, #000);
+  stroke-width: 4.6;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+.ta.look-man .ta-brow {
+  stroke-width: 6.4;
+}
+.ta .ta-nose {
+  fill: none;
+  stroke: var(--skin-sh);
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: 0.22;
+}
+.ta .ta-mouth-dark {
+  fill: #3a1630;
+}
+.ta .ta-lipshine {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.22;
+}
+
+/* Hair */
+.ta .ta-sheen {
+  fill: none;
+  stroke: var(--hair-hi);
+  stroke-width: 10;
+  stroke-linecap: round;
+  opacity: 0.1;
+}
+.ta .ta-sheen.b {
+  stroke-width: 6;
+  opacity: 0.16;
+}
+
+/* Garment */
+.ta .ta-fold {
+  fill: none;
+  stroke: #000;
+  stroke-width: 9;
+  stroke-linecap: round;
+  opacity: 0.16;
+}
+.ta .ta-fold.soft {
+  stroke-width: 3;
+  opacity: 0.22;
+}
+.ta .ta-trim {
+  fill: none;
+  stroke: var(--outfit-hi);
+  stroke-width: 4;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+.ta .ta-sleeve-fold {
+  fill: none;
+  stroke: #000;
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0.16;
+}
+
+/* Hands */
+.ta .ta-thumb {
+  fill: none;
+  stroke: var(--skin);
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+.ta .ta-fingers {
+  fill: none;
+  stroke: var(--skin-sh);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+/* Deterministic screenshots: hold every CSS animation. */
+.ta-still .ta * {
+  animation: none !important;
+}
+.ta-still .ta .tf-strand {
+  stroke-dashoffset: 0 !important;
+}
+.ta-still .ta .tf-halo {
+  opacity: 1 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ta .ta-flesh {
+    opacity: var(--form, 0);
+  }
+}
