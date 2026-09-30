@@ -168,3 +168,16 @@
   stroke-width: 10;
   opacity: 0.3;
 }
+
+/* Plain stage behind her: the rings belong to the line-art face only. */
+.ta .ta-rings {
+  opacity: calc(1 - var(--form, 0));
+}
+.ta .ta-lidshade {
+  stroke: color-mix(in srgb, var(--skin-sh) 55%, #7a4ac8);
+  stroke-width: 13;
+  opacity: 0.32;
+}
+.ta .ta-brow {
+  stroke-width: 3.6;
+}

@@ -27,11 +27,11 @@ export const BODY_SHIFT = -44;
 
 // ---- Head ----------------------------------------------------------------------------------
 
-export const CONTOUR_L = "M 198 290 C 182 350, 180 424, 198 470 C 218 520, 258 552, 300 554";
+export const CONTOUR_L = "M 198 290 C 184 350, 186 420, 206 470 C 226 522, 264 558, 300 562";
 export const CONTOUR_R = mirror(CONTOUR_L);
 /** Face fill: follows the avatar contour (a touch wider and rounder than the line-art face). */
 export const FACE_FILL =
-  "M 198 290 C 182 350, 180 424, 198 470 C 218 520, 258 552, 300 554 C 342 552, 382 520, 402 470 C 420 424, 418 350, 402 290 C 398 226, 352 186, 300 184 C 248 186, 202 226, 198 290 Z";
+  "M 198 290 C 184 350, 186 420, 206 470 C 226 522, 264 558, 300 562 C 336 558, 374 522, 394 470 C 414 420, 416 350, 402 290 C 398 226, 352 186, 300 184 C 248 186, 202 226, 198 290 Z";
 
 /** Skin of the neck and the open neckline. */
 export const NECK_FILL =
@@ -102,10 +102,10 @@ export function mouthPathsAv(h: number) {
   const lx = 268;
   const rx = 332;
   const lift = h * 0.22;
-  const up = cy - 12 - lift;
+  const up = cy - 15 - lift;
   const gapTop = cy - 1.5 - lift * 0.6;
   const gapBottom = cy + 1.5 + h * 0.78;
-  const lowerBottom = cy + 19 + h * 0.9;
+  const lowerBottom = cy + 23 + h * 0.9;
   const pinch = h * 0.04;
   const upper = `M ${rnd(lx + pinch)} ${cyc} C ${rnd(282)} ${rnd(cy - 6 - lift)}, ${rnd(292)} ${rnd(up - 1)}, 300 ${rnd(up)} C ${rnd(308)} ${rnd(up - 1)}, ${rnd(318)} ${rnd(cy - 6 - lift)}, ${rnd(rx - pinch)} ${cyc}`;
   const lower = `M ${rnd(lx + pinch)} ${cyc} C ${rnd(287)} ${rnd(lowerBottom)}, ${rnd(313)} ${rnd(lowerBottom)}, ${rnd(rx - pinch)} ${cyc}`;

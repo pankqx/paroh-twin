@@ -99,7 +99,7 @@ function Strand({ d, order, w = 1, o = 1, sway, dir = 1, dur = 9, rip = false }:
   );
 }
 
-const NOSE_T = "translate(300 456) scale(0.5) translate(-300 -434)";
+const NOSE_T = "translate(300 456) scale(0.62) translate(-300 -434)";
 
 export default function TwinAvatar({
   state,
@@ -357,7 +357,7 @@ export default function TwinAvatar({
   const fm = blooming ? `url(#${id("bloom")})` : undefined; // bloom mask for colour layers
 
   const eye = (side: "left" | "right", c: { cx: number; cy: number }, order: number) => (
-    <g key={side} transform={`translate(${c.cx} ${c.cy + 24}) scale(1.3 1.75)`}>
+    <g key={side} transform={`translate(${c.cx} ${c.cy + 20}) scale(1.28 1.5)`}>
       <g className="tf-eye">
         <g transform={`translate(${-c.cx} ${-c.cy})`}>
           <g className="ta-flesh" mask={fm}>
@@ -387,7 +387,7 @@ export default function TwinAvatar({
             </g>
           </g>
           <g className="ta-flesh ta-ink" mask={fm}>
-            <path d={G.EYE[side].upper} strokeWidth="2.7" />
+            <path d={G.EYE[side].upper} strokeWidth="3.6" />
             <path d={G.LASHES[side].split(/(?=M )/).slice(0, 9).join(" ")} strokeWidth="1.3" />
           </g>
           <g {...figureProps} strokeWidth="1.6" className="ta-lines">
@@ -413,7 +413,7 @@ export default function TwinAvatar({
       </g>
       <Line d={A.CONTOUR_L} order={0.3} reduce={reduce} />
       <Line d={A.CONTOUR_R} order={0.3} reduce={reduce} />
-      <g transform="translate(0 26)">
+      <g transform="translate(0 22)">
         <Line d={G.BROWS.left} order={0.5} reduce={reduce} w={2.2} />
         <Line d={G.BROWS.right} order={0.5} reduce={reduce} w={2.2} />
       </g>
@@ -578,7 +578,7 @@ export default function TwinAvatar({
         </defs>
 
         {/* listening ring */}
-        <g transform="translate(300 420)">
+        <g transform="translate(300 420)" className="ta-rings">
           <g className="tf-ring-level">
             <g className="tf-ring">
               <ellipse rx="262" ry="352" fill="none" stroke={`url(#${grad})`} strokeWidth="1.2" />
@@ -586,7 +586,7 @@ export default function TwinAvatar({
           </g>
         </g>
         {/* voice rings */}
-        <g transform="translate(300 420)" className="tf-voice">
+        <g transform="translate(300 420)" className="tf-voice ta-rings">
           {[0, 1, 2, 3].map((i) => (
             <g key={i} className="tf-vring" style={{ animationDelay: `${i * 0.6}s` }}>
               <ellipse rx={268 + i * 6} ry={358 + i * 8} fill="none" stroke={`url(#${grad})`} strokeWidth="1.2" />
@@ -652,8 +652,12 @@ export default function TwinAvatar({
                 <ellipse cx="232" cy="456" rx="46" ry="32" fill={`url(#${id("blush")})`} />
                 <ellipse cx="368" cy="456" rx="46" ry="32" fill={`url(#${id("blush")})`} />
                 <ellipse cx="300" cy="448" rx="10" ry="6" fill={`url(#${id("glow")})`} />
+                <ellipse cx="228" cy="410" rx="30" ry="14" fill={`url(#${id("glow")})`} transform="rotate(-18 228 410)" />
+                <ellipse cx="372" cy="410" rx="30" ry="14" fill={`url(#${id("glow")})`} transform="rotate(18 372 410)" />
+                <path d="M 214 486 C 232 520, 262 540, 298 546" fill="none" stroke="var(--skin-sh)" strokeWidth="14" strokeLinecap="round" opacity="0.13" />
+                <path d="M 386 486 C 368 520, 338 540, 302 546" fill="none" stroke="var(--skin-sh)" strokeWidth="14" strokeLinecap="round" opacity="0.13" />
                 <path d={G.NOSE_BRIDGE} className="ta-nose" transform={NOSE_T} />
-                <g transform="translate(0 26)">
+                <g transform="translate(0 22)">
                   <path d={G.BROWS.left} className="ta-brow" />
                   <path d={G.BROWS.right} className="ta-brow" />
                 </g>
