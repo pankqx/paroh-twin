@@ -1,4 +1,12 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Paroh — student digital twin
+
+Paroh is a hackathon prototype that uses approved student planning facts to derive patterns, compare what-if scenarios, and explain recommendations. The app includes clearly labelled sample student data. It is a planning tool, not a therapy or mental-health product. AI calls run on the server; OpenRouter is the default hosted provider and consent filters the data sent to it.
+
+## AI configuration
+
+Copy `.env.example` to `.env.local` and set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and optionally `OPENROUTER_FALLBACK_MODEL`. `LLM_BASE_URL` defaults to `https://openrouter.ai/api/v1`. To use an OpenAI-compatible local service such as Ollama, set `LLM_BASE_URL` to its `/v1` base URL and set `OPENROUTER_MODEL` to a model available there; a key is not required for a custom base URL.
+
+LLM output only structures text. Scenario probabilities and student patterns are computed in TypeScript. If a provider is unavailable, the engine uses canned results.
 
 ## Getting Started
 
