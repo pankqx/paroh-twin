@@ -17,23 +17,24 @@ export interface TwinContextSource {
   checkins: Repo<CheckIn>;
 }
 
-const topicConsent: Partial<Record<Fact["kind"], keyof ConsentSettings>> = {
-  task: "tasks",
-  deadline: "tasks",
-  habit: "tasks", // Habits are covered by the tasks consent category in Night Plan.
-  routine: "tasks",
-  goal: "planner",
-  decision: "decisions",
+const topicConsent: Partial<Record<Fact["kind"], Array<keyof ConsentSettings>>> = {
+  task: ["tasks"],
+  deadline: ["tasks"],
+  habit: ["tasks", "habits"], // Respect both current toggles; Night Plan groups habits under tasks.
+  routine: ["tasks"],
+  preference: ["journal"],
+  goal: ["planner"],
+  decision: ["decisions"],
 };
 
 function factIsConsented(fact: Fact, consent: ConsentSettings): boolean {
   const sourceAllowed = fact.sourceType === "journal"
-    ? consent.journal
-    : fact.sourceType === "question"
-      ? consent.voice
-      : true;
-  const topic = topicConsent[fact.kind];
-  return sourceAllowed && (!topic || consent[topic]);
+      ? consent.journal
+      : fact.sourceType === "question"
+        ? consent.voice
+        : true; // Manual facts are additionally gated by their topic category below.
+  const topics = topicConsent[fact.kind] ?? [];
+  return sourceAllowed && topics.every(topic => consent[topic]);
 }
 
 const average = (values: number[]) => values.length
@@ -55,10 +56,12 @@ export async function buildTwinContext(
 
   const context: TwinContext = { approvedFacts };
   if (consent.tasks) {
-    const [tasks, habits] = await Promise.all([source.tasks.list(), source.habits.list()]);
-    context.habitConsistency = Math.round(habitConsistency(habits) * 100) / 100;
+    const tasks = await source.tasks.list();
     const bias = estimationBias(tasks);
     context.estimationBias = Object.fromEntries(Object.entries(bias).map(([category, ratio]) => [category, Math.round(ratio * 100) / 100])) as Partial<Record<Category, number>>;
+  }
+  if (consent.tasks && consent.habits) {
+    context.habitConsistency = Math.round(habitConsistency(await source.habits.list()) * 100) / 100;
   }
   if (consent.mood) {
     const checkins = await source.checkins.list();

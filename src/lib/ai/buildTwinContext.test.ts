@@ -39,4 +39,11 @@ describe("buildTwinContext", () => {
     const consent = { ...allConsent, journal: false, voice: false, tasks: false, mood: false, planner: false, decisions: false };
     expect(await buildTwinContext(consent, source)).toEqual({ approvedFacts: [] });
   });
+
+  it("omits habit data unless both current task and habit toggles are enabled", async () => {
+    const consent = { ...allConsent, habits: false };
+    const context = await buildTwinContext(consent, source);
+    expect(context.habitConsistency).toBeUndefined();
+    expect(context.approvedFacts.some(item => item.kind === "habit")).toBe(false);
+  });
 });
