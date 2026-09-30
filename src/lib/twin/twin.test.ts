@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { Task } from "../types";
+import type { Decision, Task } from "../types";
 import { estimationBias, load } from "./index";
-import { simulate } from "./scenarios";
+import { recordChoice, simulate } from "./scenarios";
 import { LocalDataService } from "../data/LocalDataService";
 
 const task = (id: string, patch: Partial<Task> = {}): Task => ({ id, title: id, category: "study", estHours: 1, actualHours: 1.3, done: true,
@@ -39,5 +39,19 @@ describe("twin calculations", () => {
     expect(after.confidenceByDomain.tasks).toBeGreaterThan(before.confidenceByDomain.tasks);
     expect(await service.memories?.list()).toHaveLength(1);
     expect((await service.tasks.list()).some(t => t.title === "Review notes")).toBe(true);
+  });
+
+  it("reports feedback delta and learns a near-exam preference", () => {
+    const scenarios = [
+      { id: "exam", label: "Revise for exam", summary: "Exam revision", onTimeProb: 0.8, peakLoad: 0.5, goalImpact: 0, assumptions: [] },
+      { id: "project", label: "Finish project", summary: "Project work", onTimeProb: 0.7, peakLoad: 0.4, goalImpact: 0.2, assumptions: [] },
+    ];
+    const decisions: Decision[] = ["a", "b"].map(id => ({ id, prompt: "What if finish project instead of revising for tomorrow's exam?", scenarios, recommendedId: "project", predictedChoiceId: "project", chosenScenarioId: "exam", createdAt: "2026-09-01T00:00:00.000Z", updatedAt: "2026-09-01T00:00:00.000Z" }));
+    decisions.push({ id: "c", prompt: "What if project tonight or revise for tomorrow's exam?", scenarios, recommendedId: "exam", predictedChoiceId: "exam", createdAt: "2026-09-02T00:00:00.000Z", updatedAt: "2026-09-02T00:00:00.000Z" });
+    const result = recordChoice(decisions, "c", "accept", "exam");
+    expect(result.fidelityBefore).toBe(0);
+    expect(result.fidelityAfter).toBeCloseTo(1 / 3);
+    expect(result.learned).toContain("You prefer exam-first when an exam is under 48h away.");
+    expect(result.nextPrediction).toBe("exam");
   });
 });

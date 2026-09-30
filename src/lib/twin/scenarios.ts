@@ -64,6 +64,21 @@ export function predictChoice(scenarios: Scenario[], decisions: Decision[]): str
 
 export function recordChoice(decisions: Decision[], decisionId: string, userChoice: Decision["userChoice"], chosenScenarioId?: string) {
   const next = decisions.map(d => d.id === decisionId ? { ...d, userChoice, chosenScenarioId, updatedAt: new Date().toISOString() } : d);
+  const beforeObserved = decisions.filter(d => d.chosenScenarioId).slice(-10);
   const observed = next.filter(d => d.chosenScenarioId).slice(-10);
-  return { decisions: next, fidelity: observed.length ? observed.filter(d => d.predictedChoiceId === d.chosenScenarioId).length / observed.length : 0 };
+  const score = (items: Decision[]) => items.length ? items.filter(d => d.predictedChoiceId === d.chosenScenarioId).length / items.length : 0;
+  const closeCalls = observed.filter(d => /exam|revision|revise/i.test(`${d.prompt} ${d.scenarios.map(s => `${s.label} ${s.summary}`).join(" ")}`));
+  const examFirst = closeCalls.filter(d => {
+    const chosen = d.scenarios.find(s => s.id === d.chosenScenarioId);
+    return /exam|revision|revise/i.test(`${chosen?.label ?? ""} ${chosen?.summary ?? ""}`);
+  });
+  const learned = closeCalls.length >= 2 && examFirst.length / closeCalls.length >= 0.6 &&
+    closeCalls.some(d => /tomorrow|today|48 ?hours?|under 2 days/i.test(d.prompt))
+    ? ["You prefer exam-first when an exam is under 48h away."] : [];
+  const counts = new Map<string, number>();
+  for (const decision of observed) counts.set(decision.chosenScenarioId!, (counts.get(decision.chosenScenarioId!) ?? 0) + 1);
+  const nextPrediction = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? "";
+  const fidelityBefore = score(beforeObserved);
+  const fidelityAfter = score(observed);
+  return { decisions: next, fidelity: fidelityAfter, fidelityBefore, fidelityAfter, learned, nextPrediction };
 }
