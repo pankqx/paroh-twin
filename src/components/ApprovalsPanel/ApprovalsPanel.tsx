@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { dataService } from "@/app/dataService";
 import { approveFact, editFact, rejectFact } from "@/app/factActions";
+import EmptyOrbit from "@/components/EmptyOrbit/EmptyOrbit";
 import FactCard from "@/components/FactCard/FactCard";
 import LedgerList from "@/components/LedgerList/LedgerList";
 import { FACTS_CHANGED } from "@/components/shell/events";
@@ -77,7 +78,7 @@ export default function ApprovalsPanel({ variant = "page" }: { variant?: "page" 
       </p>
 
       {pending.length === 0 ? (
-        <p className="empty-state">Nothing waiting for review. Take a breath.</p>
+        <EmptyOrbit title="Nothing waiting for review. Take a breath." doodle="all caught up" />
       ) : (
         <div className="approvals-list">
           {pending.map((fact) => (
@@ -100,6 +101,7 @@ export default function ApprovalsPanel({ variant = "page" }: { variant?: "page" 
           items={decided}
           keyOf={(f) => f.id}
           empty="Nothing decided yet."
+          emptyDoodle="your choices land here"
           render={(f) => (
             <div className="decided">
               <span className={`status-pill ${f.status === "approved" ? "status-approved" : "status-rejected"}`}>{f.status}</span>

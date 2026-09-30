@@ -78,3 +78,9 @@
     padding: 1.5rem 1.25rem;
   }
 }
+
+.journal-doodle {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
+}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { dataService } from "@/app/dataService";
+import Doodle from "@/components/Doodle/Doodle";
 import { notifyFactsChanged } from "@/components/shell/events";
 import { demoEntry } from "@/mock/demoEntry";
 import type { JournalEntry, Level } from "@/lib/types";
@@ -229,6 +230,9 @@ export default function JournalPage() {
         <button type="submit" className="btn-primary btn-block" disabled={busy || !body.trim()}>
           {busy ? "Reading your entry…" : "Find what to remember"}
         </button>
+        <div className="journal-doodle">
+          <Doodle text="your choice, not mine" arrow="up-right" />
+        </div>
 
         {outcome && (
           <p className={`journal-result ${outcome.kind === "error" ? "error-text" : ""}`} role="status">

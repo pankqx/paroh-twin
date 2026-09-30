@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { approveFact, editFact, rejectFact } from "@/app/factActions";
 import { dataService } from "@/app/dataService";
+import Doodle from "@/components/Doodle/Doodle";
 import FactCard from "@/components/FactCard/FactCard";
 import { notifyFactsChanged } from "@/components/shell/events";
 import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
@@ -287,9 +288,12 @@ export default function TalkStage() {
               She asks a few short questions. Answer by voice, a tap, or typing. Nothing joins her
               memory until you approve it.
             </p>
-            <button type="button" className="btn-primary" onClick={start} disabled={!questions}>
-              Start talking
-            </button>
+            <div className="talk-start-row">
+              <button type="button" className="btn-primary" onClick={start} disabled={!questions}>
+                Start talking
+              </button>
+              <Doodle text="tap to talk" arrow="up-left" tone="teal" className="talk-doodle" />
+            </div>
             <p className="talk-fine">
               {canSpeak ? "She speaks aloud once you start. " : "This browser can't speak aloud, so you get captions only. "}
               Voice input uses your browser&rsquo;s speech service; Paroh never records or stores audio.

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { dataService } from "@/app/dataService";
 import { takeGrowth } from "@/app/bloomGrowth";
+import Doodle from "@/components/Doodle/Doodle";
+import EmptyOrbit from "@/components/EmptyOrbit/EmptyOrbit";
 import Constellation, { describeFact } from "@/components/Constellation/Constellation";
 import Aurora from "@/components/fx/Aurora";
 import BlurText from "@/components/fx/BlurText";
@@ -184,14 +186,13 @@ export default function TwinHome() {
           <div className="twin-stage-face">
             <TwinFace ref={face} state="idle" />
           </div>
-          {approved.length === 0 && (
-            <div className="twin-doodle" aria-hidden="true">
-              <span className="doodle">approve a fact, get a star</span>
-              <svg viewBox="0 0 60 40" width="60" height="40">
-                <path d="M4 6 C 22 4, 40 14, 50 32 M 50 32 l -9 -3 M 50 32 l 1 -9" />
-              </svg>
-            </div>
-          )}
+          <div className="twin-doodle">
+            {approved.length === 0 ? (
+              <Doodle text="approve a fact, get a star" arrow="down-left" />
+            ) : (
+              <Doodle text="hover a star" arrow="down-left" tone="teal" />
+            )}
+          </div>
         </div>
       </section>
 
@@ -278,7 +279,7 @@ export default function TwinHome() {
           <h2>Coming up</h2>
           <p className="twin-panel-note">On-time odds from 500 simulated runs of {name}&rsquo;s own pace.</p>
           {deadlines.length === 0 ? (
-            <p className="empty-state">No deadlines in sight.</p>
+            <EmptyOrbit title="No deadlines in sight." doodle="a quiet week" />
           ) : (
             <ul className="risk-list">
               {deadlines.map((d) => (

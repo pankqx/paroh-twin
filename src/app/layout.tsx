@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AtmosphereShell from "@/components/Atmosphere/AtmosphereShell";
 import Navbar from "@/components/Navbar/Navbar";
 import "../styles/globals.css";
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body>
+        <AtmosphereShell />
         <Navbar />
         {children}
       </body>
