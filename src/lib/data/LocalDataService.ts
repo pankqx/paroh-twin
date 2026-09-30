@@ -4,7 +4,7 @@ import { createSampleData } from "../../mock/sample";
 import { connectorSamples } from "../../mock/connectorSamples";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
-import { deriveTwinState } from "../twin";
+import { deriveTwinState, predictedNeeds as predictNeeds, twinInsights as getInsights } from "../twin";
 import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
 import { pulseWhispers } from "../twin/pulseWhispers";
 
@@ -128,6 +128,20 @@ export class LocalDataService implements DataService {
     const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: (this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal")).filter(isCurrentFact) };
     return deriveTwinState(data);
   }
+  private async twinData(): Promise<TwinData> {
+    const facts = await this.facts.list();
+    return {
+      tasks: this.state.consent.tasks ? await this.tasks.list() : [],
+      goals: this.state.consent.planner ? await this.goals.list() : [],
+      habits: this.state.consent.tasks && this.state.consent.habits ? await this.habits.list() : [],
+      checkins: this.state.consent.mood ? await this.checkins.list() : [],
+      decisions: this.state.consent.decisions ? await this.decisions.list() : [],
+      facts: facts.filter(fact => isCurrentFact(fact) && (this.state.consent.journal || fact.sourceType !== "journal")),
+      now: stamp(),
+    };
+  }
+  async twinInsights() { return getInsights(await this.twinData()); }
+  async predictedNeeds() { return predictNeeds(await this.twinData()); }
   async getWhispers(): Promise<Whisper[]> {
     const twin = await this.getTwinState();
     return pulseWhispers(twin, this.state.consent.tasks ? await this.tasks.list() : [], this.state.consent.habits && this.state.consent.tasks ? await this.habits.list() : []);

@@ -61,6 +61,8 @@ export interface DataService {
 
   // twin (derived from approved facts and permitted data)
   getTwinState(): Promise<TwinState>;
+  twinInsights(): Promise<string[]>;
+  predictedNeeds(): Promise<string[]>;
   getWhispers(): Promise<Whisper[]>;
   staleDecisionIds(): Promise<string[]>;
   nextQuestions(): Promise<{ id: string; text: string; domain: string; quickReplies: string[] }[]>;

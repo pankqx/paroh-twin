@@ -81,3 +81,4 @@ export function deriveTwinState(data: TwinData): TwinState {
 }
 
 export { categories as TWIN_CATEGORIES };
+export { twinInsights, predictedNeeds } from "./insights";
