@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { useEffect, useId, useImperativeHandle, useRef, useState, type Ref } from "react";
 import * as G from "./geometry";
 import { registerMindPoint } from "./mindPoint";
@@ -23,11 +23,27 @@ interface Props {
   mouth?: 0 | 1 | 2 | 3;
   /** Where she looks, -1..1 on each axis. Omit to follow the cursor. */
   lookAt?: { x: number; y: number };
+  /** Scale to about 90vh and centre in the space she is given. */
+  fill?: boolean;
   className?: string;
   ref?: Ref<TwinFaceHandle>;
 }
 
 const EASE = [0.2, 0.7, 0.2, 1] as const;
+
+// motion's useReducedMotion returns a ref value that does not re-render after hydration, which
+// left the draw-on stuck part-way for people who prefer reduced motion. Track it as state.
+function useReducedMotionState(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduce(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return reduce;
+}
 const clamp = (v: number, lo = -1, hi = 1) => Math.min(hi, Math.max(lo, v));
 
 // A draw-on line. With reduced motion it is simply drawn.
@@ -65,8 +81,39 @@ function Line({
   );
 }
 
-export default function TwinFace({ state, level = 0, mouth, lookAt, className, ref }: Props) {
-  const reduce = useReducedMotion();
+// A hair strand or fine detail line: drawn on with a CSS dash (no JS per path), then idle.
+function Strand({ d, order, w = 1, o = 1, sway, dir = 1, dur = 9, rip = false }: {
+  d: string;
+  order: number;
+  w?: number;
+  o?: number;
+  sway?: number; // index, sets the stagger
+  dir?: 1 | -1;
+  dur?: number;
+  rip?: boolean;
+}) {
+  const path = (
+    <path
+      d={d}
+      pathLength={1}
+      className="tf-strand"
+      strokeWidth={w}
+      style={{ ["--o" as string]: o, animationDelay: `${0.1 + order}s` }}
+    />
+  );
+  if (sway === undefined) return path;
+  return (
+    <g
+      className={`tf-sway${rip ? " rip" : ""}`}
+      style={{ ["--dir" as string]: dir, ["--d" as string]: `${dur}s`, animationDelay: `${-sway * 0.73}s` }}
+    >
+      {path}
+    </g>
+  );
+}
+
+export default function TwinFace({ state, level = 0, mouth, lookAt, fill, className, ref }: Props) {
+  const reduce = useReducedMotionState();
   const uid = useId().replace(/:/g, "");
   const grad = `tf-grad-${uid}`;
   const fade = `tf-fade-${uid}`;
@@ -196,6 +243,8 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
 
   const closed = G.mouthPaths(0);
   const swayDur = state === "thinking" ? 3.6 : 9;
+  // How loud she is: live input while listening, the mouth shape (or a steady guess) while speaking.
+  const amp = state === "speaking" ? Math.max(clamp(level, 0, 1), mouth === undefined ? 0.6 : mouth / 3) : clamp(level, 0, 1);
   const figureProps = { fill: "none", stroke: `url(#${grad})`, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
   const eye = (side: "left" | "right", c: { cx: number; cy: number }, order: number) => (
@@ -209,6 +258,8 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
             <g className="tf-pupil">
               <g transform={`translate(${c.cx} ${c.cy})`}>
                 <circle r="11.5" className="tf-iris" stroke={`url(#${grad})`} fill="none" strokeWidth="1.5" />
+                <circle r="7.6" stroke={`url(#${grad})`} fill="none" strokeWidth="0.7" opacity="0.5" />
+                <path d={G.IRIS_SPOKES} stroke={`url(#${grad})`} strokeWidth="0.7" opacity="0.6" />
                 <g className="tf-pupil-dot">
                   <circle r="4.8" className="tf-pupil-fill" />
                 </g>
@@ -221,6 +272,7 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
             <Line d={G.EYE[side].lower} order={order} reduce={reduce} />
             <Line d={G.EYE[side].crease} order={order + 0.05} reduce={reduce} o={0.55} w={1.2} />
             <Line d={G.EYE[side].flick} order={order + 0.05} reduce={reduce} w={1.4} />
+            <Strand d={G.LASHES[side]} order={order + 0.15} w={1.25} o={0.9} />
           </g>
         </g>
       </g>
@@ -229,18 +281,13 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
 
   const staticLines = (
     <>
-      {G.HAIR.map((p, i) => (
-        <g key={p.id} transform="translate(300 190)">
-          <g
-            className="tf-sway"
-            style={{ animationDelay: `${-i * 1.3}s`, animationDuration: `${swayDur + (i % 4) * 1.4}s`, ["--dir" as string]: i % 2 ? 1 : -1 }}
-          >
-            <g transform="translate(-300 -190)">
-              <Line d={p.d} order={p.order} reduce={reduce} o={0.85} w={1.4} />
-            </g>
-          </g>
-        </g>
-      ))}
+      {G.JAW_HATCH.length > 0 && <Strand d={G.JAW_HATCH.join(" ")} order={0.75} w={0.9} o={0.5} />}
+      <Strand d={G.CHEEK_LINES.join(" ")} order={0.8} w={0.9} o={0.4} />
+      <Strand d={G.TEMPLE_LINES.join(" ")} order={0.7} w={0.9} o={0.4} />
+      <Strand d={G.NECK_SHADE.join(" ")} order={0.8} w={0.9} o={0.4} />
+      <Strand d={G.NOSE_SHADE.join(" ")} order={0.85} w={0.9} o={0.45} />
+      <Strand d={G.THROAT} order={0.85} w={1} o={0.5} />
+      <Strand d={G.SHOULDER_DETAIL.join(" ")} order={0.6} w={1} o={0.45} />
       <Line d={G.CONTOUR_LEFT} order={0.3} reduce={reduce} />
       <Line d={G.CONTOUR_RIGHT} order={0.3} reduce={reduce} />
       <Line d={G.BROWS.left} order={0.5} reduce={reduce} w={2.2} />
@@ -264,12 +311,12 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
   return (
     <div
       ref={rootRef}
-      className={`twin-face state-${state} ${className ?? ""}`}
+      className={`twin-face state-${state}${fill ? " fill" : ""} ${className ?? ""}`}
       role="img"
       aria-label={`Line drawing of the student's twin, a young woman. She is ${
         state === "idle" ? "resting" : state
       }.`}
-      style={{ ["--lvl" as string]: clamp(level, 0, 1) }}
+      style={{ ["--lvl" as string]: clamp(level, 0, 1), ["--amp" as string]: amp }}
     >
       <svg viewBox={`0 0 ${G.VIEW_W} ${G.VIEW_H}`} aria-hidden="true">
         <defs>
@@ -297,6 +344,15 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
           </g>
         </g>
 
+        {/* voice rings: radiate from her while she speaks. Opacity and scale only. */}
+        <g transform="translate(300 420)" className="tf-voice">
+          {[0, 1, 2, 3].map((i) => (
+            <g key={i} className="tf-vring" style={{ animationDelay: `${i * 0.6}s` }}>
+              <ellipse rx={268 + i * 6} ry={358 + i * 8} fill="none" stroke={`url(#${grad})`} strokeWidth="1.2" />
+            </g>
+          ))}
+        </g>
+
         <g mask={`url(#${mask})`}>
           <g transform="translate(300 640)">
             <g className="tf-lean">
@@ -304,7 +360,7 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
                 <g transform="translate(-300 -640)">
                   {/* soft glow, fades in after the draw-on */}
                   <g className="tf-halo" {...figureProps} strokeWidth="7">
-                    {G.HAIR.map((p) => (
+                    {G.HAIR_FRONT.filter((_, i) => i % 3 === 0).map((p) => (
                       <path key={p.id} d={p.d} />
                     ))}
                     <path d={G.CONTOUR_LEFT} />
@@ -318,7 +374,20 @@ export default function TwinFace({ state, level = 0, mouth, lookAt, className, r
                   </g>
 
                   <g {...figureProps} strokeWidth="1.5">
+                    <g className="tf-hair back">
+                      {G.HAIR_BACK.map((p, i) => (
+                        <Strand key={p.id} d={p.d} order={p.order} w={1} o={0.42} sway={i} dir={i % 2 ? 1 : -1} dur={swayDur + (i % 5) * 1.3} rip />
+                      ))}
+                    </g>
                     {staticLines}
+                    <g className="tf-hair front">
+                      {G.HAIR_FRONT.map((p, i) => (
+                        <Strand key={p.id} d={p.d} order={p.order} w={1.15} o={0.8} sway={i + 3} dir={i % 2 ? -1 : 1} dur={swayDur + (i % 4) * 1.1} rip />
+                      ))}
+                      {G.FRINGE.map((p, i) => (
+                        <Strand key={p.id} d={p.d} order={p.order} w={1.3} o={0.9} sway={i} dir={i % 2 ? -1 : 1} dur={swayDur * 0.8} rip />
+                      ))}
+                    </g>
                     {eye("left", G.LEFT_EYE, 0.45)}
                     {eye("right", G.RIGHT_EYE, 0.45)}
                     <Line d={closed.upper} order={0.72} reduce={reduce} pathRef={upperRef} w={1.7} />

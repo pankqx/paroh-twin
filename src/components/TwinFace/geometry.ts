@@ -17,28 +17,60 @@ export interface Part {
   order: number;
 }
 
-// ---- Hair: 12 separate strands that sway slowly around the crown. -------------------------
+// ---- Hair: 50 strands in two layers (back, front) ----------------------------------------
+// Each layer is a blend between two hand-placed guide curves on the left, mirrored for the
+// right. All guides share one command structure, so a strand is a plain number-wise lerp.
 
-const LEFT_HAIR = [
-  // outer sweep, longest; the crown is wide and round, not a point
-  "M 300 182 C 206 160, 146 226, 140 334 C 134 428, 110 506, 88 596 C 76 648, 84 724, 62 792",
-  "M 298 186 C 232 178, 184 236, 176 332 C 170 414, 152 494, 132 574 C 120 634, 127 706, 108 784",
-  "M 298 190 C 250 200, 208 250, 200 320 C 196 382, 184 452, 170 522 C 158 582, 167 652, 151 732",
-  // hugs the face
-  "M 298 194 C 260 214, 228 258, 214 324 C 208 384, 208 442, 200 502 C 194 544, 198 594, 189 644",
-  // fringe sweeping across the forehead
+const nums = (d: string) => (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+const rebuild = (v: number[]) => {
+  const r = v.map((x) => Math.round(x * 10) / 10);
+  let out = `M ${r[0]} ${r[1]}`;
+  for (let i = 2; i < r.length; i += 6) out += ` C ${r[i]} ${r[i + 1]}, ${r[i + 2]} ${r[i + 3]}, ${r[i + 4]} ${r[i + 5]}`;
+  return out;
+};
+const blend = (a: number[], b: number[], t: number, wobble: number) =>
+  a.map((x, i) => x + (b[i] - x) * t + (i > 1 ? Math.sin(i * 1.7 + t * 9) * wobble : 0));
+
+// back layer: falls behind the shoulders, wide and long
+const BACK_A = nums("M 300 180 C 196 154, 132 226, 122 340 C 114 440, 84 520, 58 612 C 44 664, 52 736, 30 800");
+const BACK_B = nums("M 298 186 C 226 176, 170 240, 160 338 C 152 424, 132 500, 110 586 C 98 642, 104 712, 88 796");
+// front layer: frames the face and falls in front of the neck
+const FRONT_A = nums("M 298 188 C 244 196, 204 250, 196 322 C 190 386, 180 456, 164 530 C 152 590, 160 660, 144 740");
+const FRONT_B = nums("M 300 194 C 262 214, 230 258, 216 326 C 210 384, 210 442, 202 500 C 196 544, 200 594, 191 650");
+
+const BACK_N = 26;
+const FRONT_N = 24;
+
+function layer(a: number[], b: number[], n: number, prefix: string, baseOrder: number): { left: Part[]; right: Part[] } {
+  const left: Part[] = [];
+  const right: Part[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0 : i / (n - 1);
+    const d = rebuild(blend(a, b, t, 1.6));
+    const order = baseOrder + (i % 9) * 0.05;
+    left.push({ id: `${prefix}-l${i}`, d, order });
+    right.push({ id: `${prefix}-r${i}`, d: mirror(d), order });
+  }
+  return { left, right };
+}
+
+const back = layer(BACK_A, BACK_B, BACK_N / 2, "hb", 0.02);
+const front = layer(FRONT_A, FRONT_B, FRONT_N / 2, "hf", 0.1);
+
+/** Strands behind the head and shoulders (drawn first, fainter). */
+export const HAIR_BACK: Part[] = [...back.left, ...back.right];
+/** Strands framing the face (drawn last, brighter). */
+export const HAIR_FRONT: Part[] = [...front.left, ...front.right];
+/** Fringe: short strands sweeping across the forehead. */
+export const FRINGE: Part[] = [
   "M 300 192 C 268 214, 240 242, 222 286 C 215 302, 212 316, 210 334",
-];
-
-const RIGHT_HAIR = [
-  "M 300 182 C 394 158, 456 228, 462 338 C 468 432, 490 514, 514 604 C 528 658, 516 734, 540 796",
-  "M 302 186 C 368 180, 416 238, 424 336 C 430 416, 450 490, 466 568 C 478 628, 470 700, 492 778",
-  "M 302 190 C 350 202, 392 252, 400 322 C 404 384, 416 450, 432 516 C 444 578, 434 646, 450 726",
-  "M 302 194 C 340 216, 372 260, 386 326 C 392 384, 392 440, 400 500 C 406 542, 400 592, 411 642",
-  "M 300 192 C 334 212, 362 238, 380 280 C 388 298, 390 316, 391 334",
-];
-
-export const HAIR: Part[] = [...LEFT_HAIR, ...RIGHT_HAIR].map((d, i) => ({ id: `hair-${i}`, d, order: 0.05 + (i % 6) * 0.06 }));
+  "M 300 192 C 272 210, 250 232, 234 262 C 228 274, 224 286, 222 300",
+  "M 300 192 C 262 222, 236 258, 226 300",
+].flatMap((d, i) => [
+  { id: `fr-l${i}`, d, order: 0.3 + i * 0.05 },
+  { id: `fr-r${i}`, d: mirror(d), order: 0.3 + i * 0.05 },
+]);
+export const HAIR: Part[] = [...HAIR_BACK, ...HAIR_FRONT, ...FRINGE];
 
 // ---- Face ---------------------------------------------------------------------------------
 
@@ -90,6 +122,131 @@ export const THOUGHT_DOTS = [
   { x: 450, y: 230 },
   { x: 470, y: 206 },
 ];
+
+// ---- Fine detail: contour hatching, cheekbones, neck shading, lashes, iris, collarbones ----
+
+type Pt = { x: number; y: number };
+const bez = (p0: Pt, p1: Pt, p2: Pt, p3: Pt, t: number): Pt => {
+  const u = 1 - t;
+  return {
+    x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+    y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+  };
+};
+const pt = (v: number[], o: number): Pt => ({ x: v[o], y: v[o + 1] });
+/** Point and unit tangent at t (0..1) along a single-segment "M C" path. */
+function sample(d: string, t: number): { p: Pt; tan: Pt } {
+  const v = nums(d);
+  const a = pt(v, 0);
+  const b = pt(v, 2);
+  const c = pt(v, 4);
+  const e = pt(v, 6);
+  const p = bez(a, b, c, e, t);
+  const q = bez(a, b, c, e, Math.min(1, t + 0.01));
+  const r = bez(a, b, c, e, Math.max(0, t - 0.01));
+  const len = Math.hypot(q.x - r.x, q.y - r.y) || 1;
+  return { p, tan: { x: (q.x - r.x) / len, y: (q.y - r.y) / len } };
+}
+const f1 = (x: number) => Math.round(x * 10) / 10;
+const seg = (a: Pt, b: Pt) => `M ${f1(a.x)} ${f1(a.y)} L ${f1(b.x)} ${f1(b.y)}`;
+
+// Jaw hatch: short strokes stepping in from the jaw line, like a pen sketch.
+const JAW_LEFT = "M 204 420 C 214 470, 244 514, 300 567";
+function jawHatch(): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < 9; i++) {
+    const { p, tan } = sample(JAW_LEFT, 0.12 + i * 0.1);
+    const nx = -tan.y; // normal pointing inward (towards x = 300)
+    const ny = tan.x;
+    const sign = nx > 0 ? 1 : -1;
+    const len = 9 + (i % 3) * 3.5;
+    out.push(seg({ x: p.x + sign * nx * 2, y: p.y + sign * ny * 2 }, { x: p.x + sign * nx * len + 2, y: p.y + sign * ny * len + 5 }));
+  }
+  return out;
+}
+const JAW_L = jawHatch();
+export const JAW_HATCH: string[] = [...JAW_L, ...JAW_L.map(mirror)];
+
+// Cheekbone arcs and temple lines.
+const CHEEK_L = [
+  "M 208 396 C 216 408, 230 418, 250 424",
+  "M 204 410 C 212 424, 228 436, 248 442",
+  "M 214 384 C 224 392, 236 396, 250 398",
+];
+export const CHEEK_LINES: string[] = [...CHEEK_L, ...CHEEK_L.map(mirror)];
+
+const TEMPLE_L = ["M 206 300 C 204 318, 204 330, 207 344", "M 212 296 C 210 312, 210 322, 212 334"];
+export const TEMPLE_LINES: string[] = [...TEMPLE_L, ...TEMPLE_L.map(mirror)];
+
+// Neck shading under the jaw plus the hollow at the throat.
+const NECK_SHADE_L = [
+  "M 268 570 C 268 590, 266 608, 260 626",
+  "M 276 574 C 276 594, 274 612, 270 632",
+  "M 284 576 C 284 596, 283 614, 281 634",
+  "M 258 566 C 258 588, 254 608, 246 630",
+];
+export const NECK_SHADE: string[] = [...NECK_SHADE_L, ...NECK_SHADE_L.map(mirror)];
+export const THROAT = "M 292 640 C 296 648, 304 648, 308 640";
+
+// Nose wing shading and philtrum.
+export const NOSE_SHADE: string[] = [
+  "M 274 424 C 270 430, 268 436, 272 440",
+  mirror("M 274 424 C 270 430, 268 436, 272 440"),
+  "M 293 446 C 296 456, 304 456, 307 446",
+];
+
+// Eyelashes: short strokes fanning out from the upper lid (and a few on the lower lid).
+// `dir` is the direction of the outer corner on screen: -1 for the left eye, +1 for the right.
+function lashes(upper: string, lower: string, dir: 1 | -1): string {
+  const parts: string[] = [];
+  const n = 9;
+  for (let i = 0; i < n; i++) {
+    // t runs inner corner -> outer corner for the left eye; flip for the mirrored path
+    const t = 0.12 + (i / (n - 1)) * 0.8;
+    const { p, tan } = sample(upper, t);
+    let nx = tan.y;
+    let ny = -tan.x;
+    if (ny > 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    const len = 5 + Math.sin(t * Math.PI) * 5 + (i % 2) * 1.4;
+    const outer = dir === -1 ? 1 - t : t; // 1 at the outer corner
+    parts.push(seg(p, { x: p.x + nx * len + dir * outer * 3.2, y: p.y + ny * len }));
+  }
+  for (let i = 0; i < 4; i++) {
+    const { p } = sample(lower, 0.25 + i * 0.17);
+    parts.push(seg(p, { x: p.x + dir * 0.8, y: p.y + 3.4 }));
+  }
+  return parts.join(" ");
+}
+export const LASHES = {
+  left: lashes(EYE_UPPER, EYE_LOWER, -1),
+  right: lashes(mirror(EYE_UPPER), mirror(EYE_LOWER), 1),
+};
+
+// Iris radial lines, in iris-local coordinates (centre at 0,0).
+function irisSpokes(): string {
+  const parts: string[] = [];
+  const n = 18;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + 0.1;
+    const r0 = 6.2;
+    const r1 = 10.4 + (i % 2) * 0.6;
+    parts.push(seg({ x: Math.cos(a) * r0, y: Math.sin(a) * r0 }, { x: Math.cos(a) * r1, y: Math.sin(a) * r1 }));
+  }
+  return parts.join(" ");
+}
+export const IRIS_SPOKES = irisSpokes();
+
+// Trapezius, a second shoulder contour and the notch between the collarbones.
+const SHOULDER_DETAIL_L = [
+  "M 232 676 C 214 686, 196 690, 176 696",
+  "M 244 658 C 214 668, 176 684, 132 708",
+  "M 226 690 C 190 706, 140 726, 96 756",
+  "M 268 640 C 262 660, 250 672, 236 680",
+];
+export const SHOULDER_DETAIL: string[] = [...SHOULDER_DETAIL_L, ...SHOULDER_DETAIL_L.map(mirror), "M 300 704 C 301 722, 301 738, 300 752"];
 
 // ---- Mouth: four shapes, one continuous parameter ------------------------------------------
 
