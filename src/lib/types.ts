@@ -9,7 +9,14 @@ export type FactKind =
   | "preference"
   | "deadline"
   | "decision";
-export type ConsentCategory = "journal" | "tasks" | "mood" | "planner";
+export type ConsentCategory =
+  | "journal"
+  | "tasks"
+  | "habits"
+  | "mood"
+  | "planner"
+  | "voice"
+  | "decisions";
 export type Level = 1 | 2 | 3 | 4 | 5;
 
 interface Base {
@@ -98,4 +105,43 @@ export interface TwinState {
   heatmap: number[][]; // 7 (Mon-Sun) x 24, normalised 0-1
   fidelity: number; // 0-1, rolling accuracy of twin's guesses
   updatedAt: string; // ISO
+}
+
+/** A small, dated audit item shown in the twin's memory timeline. */
+export interface MemoryItem extends Base {
+  text: string;
+  sourceId: string;
+  kind: FactKind;
+}
+
+/** Inputs shared by deterministic twin calculations. */
+export interface TwinData {
+  tasks: Task[];
+  goals: Goal[];
+  habits: Habit[];
+  checkins: CheckIn[];
+  decisions: Decision[];
+  facts?: Fact[];
+  now?: string;
+}
+
+export interface ScenarioSpec {
+  id: string;
+  label: string;
+  summary: string;
+  tasks: Array<{ title: string; hours?: number; taskId?: string; dueAt?: string; goalId?: string }>;
+  hoursShift?: Array<{ hours: number; from?: string; to?: string }>;
+  priority: "deadline" | "goal" | "rest" | "health" | "neutral";
+  needsInfo?: string;
+}
+
+export interface SampleData {
+  studentName: string;
+  tasks: Task[];
+  goals: Goal[];
+  habits: Habit[];
+  checkins: CheckIn[];
+  entries: JournalEntry[];
+  decisions: Decision[];
+  facts: Fact[];
 }

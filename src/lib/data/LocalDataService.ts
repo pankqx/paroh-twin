@@ -1,0 +1,114 @@
+import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData } from "../types";
+import type { DataService, Repo } from "./DataService";
+import { sampleData } from "../../mock/sample";
+import { extractCanned } from "../ai/extractCanned";
+import { demoFacts, demoEntry } from "../../mock/demoEntry";
+import { deriveTwinState } from "../twin";
+import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
+
+type State = { entries: JournalEntry[]; facts: Fact[]; tasks: Task[]; goals: Goal[]; habits: Habit[]; checkins: CheckIn[]; decisions: Decision[]; memories: MemoryItem[]; consent: ConsentSettings };
+const KEY = "paroh-local-data-v1";
+const defaultConsent: ConsentSettings = { journal: true, tasks: true, habits: true, mood: true, planner: true, voice: false, decisions: true };
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const stamp = () => new Date().toISOString();
+
+function seededState(): State {
+  return { entries: clone(sampleData.entries), facts: clone(sampleData.facts), tasks: clone(sampleData.tasks), goals: clone(sampleData.goals), habits: clone(sampleData.habits), checkins: clone(sampleData.checkins), decisions: clone(sampleData.decisions), memories: [], consent: { ...defaultConsent } };
+}
+
+export class LocalDataService implements DataService {
+  private state: State;
+  private storage: Storage | undefined;
+
+  constructor(storage?: Storage) {
+    this.storage = storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
+    let initial: State | undefined;
+    try { const raw = this.storage?.getItem(KEY); if (raw) initial = JSON.parse(raw) as State; } catch { /* recover with sample data */ }
+    this.state = initial ?? seededState();
+    this.persist();
+  }
+
+  private persist() { try { this.storage?.setItem(KEY, JSON.stringify(this.state)); } catch { /* storage may be unavailable */ } }
+  private repo<T extends { id: string }>(key: keyof State): Repo<T> {
+    return {
+      list: async () => clone(this.state[key] as unknown as T[]),
+      get: async (id: string) => clone((this.state[key] as unknown as T[]).find(item => item.id === id)),
+      upsert: async (item: T) => { const list = this.state[key] as unknown as T[]; const i = list.findIndex(row => row.id === item.id); if (i < 0) list.push(clone(item)); else list[i] = clone(item); this.persist(); return clone(item); },
+      remove: async (id: string) => { this.state[key] = (this.state[key] as unknown as T[]).filter(item => item.id !== id) as never; this.persist(); },
+    };
+  }
+
+  entries = this.repo<JournalEntry>("entries");
+  facts = this.repo<Fact>("facts");
+  tasks = this.repo<Task>("tasks");
+  goals = this.repo<Goal>("goals");
+  habits = this.repo<Habit>("habits");
+  checkins = this.repo<CheckIn>("checkins");
+  decisions = this.repo<Decision>("decisions");
+  memories = this.repo<MemoryItem>("memories");
+
+  async saveEntry(entry: JournalEntry) { return this.entries.upsert(entry); }
+  async listFacts() { return this.facts.list(); }
+  async setFactStatus(id: string, status: "approve" | "reject" | "edit", edits: Partial<Fact> = {}) {
+    const current = await this.facts.get(id);
+    if (!current) throw new Error(`Fact ${id} was not found`);
+    const now = stamp();
+    const fact: Fact = { ...current, ...edits, status: status === "approve" ? "approved" : status === "reject" ? "rejected" : current.status, updatedAt: now };
+    await this.facts.upsert(fact);
+    if (status === "approve") {
+      const data = fact.data;
+      await this.memories.upsert({ id: `memory-${fact.id}`, text: fact.text, sourceId: fact.id, kind: fact.kind, createdAt: now, updatedAt: now });
+      if (fact.kind === "task" || fact.kind === "deadline") {
+        const title = String(data.title ?? fact.text);
+        const existing = (await this.tasks.list()).find(t => t.title.toLowerCase() === title.toLowerCase());
+        if (!existing) await this.tasks.upsert({ id: `fact-task-${fact.id}`, title, category: fact.category, dueAt: typeof data.due === "string" ? data.due : undefined, estHours: typeof data.estHours === "number" ? data.estHours : 1, done: false, createdAt: now, updatedAt: now });
+      }
+      if (fact.kind === "goal") {
+        const title = String(data.title ?? fact.text);
+        if (!(await this.goals.list()).some(g => g.title.toLowerCase() === title.toLowerCase())) await this.goals.upsert({ id: `fact-goal-${fact.id}`, title, category: fact.category, progress: 0, createdAt: now, updatedAt: now });
+      }
+      if (fact.kind === "habit" && !(await this.habits.list()).some(h => h.title.toLowerCase() === String(data.title ?? fact.text).toLowerCase())) {
+        await this.habits.upsert({ id: `fact-habit-${fact.id}`, title: String(data.title ?? fact.text), category: fact.category, log: {}, createdAt: now, updatedAt: now });
+      }
+    }
+    return fact;
+  }
+
+  async getConsent() { return { ...this.state.consent }; }
+  async setConsent(consent: ConsentSettings) { this.state.consent = { ...consent }; this.persist(); }
+  async getTwinState() {
+    const visibleFacts = await this.facts.list();
+    const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal") };
+    return deriveTwinState(data);
+  }
+  async extractFacts(input: { text: string; source: "journal" | "question"; sourceId: string }) {
+    if (!this.state.consent.journal) return [];
+    const sourceEntry = (await this.entries.list()).find(entry => entry.id === input.sourceId);
+    const result = sourceEntry?.id === demoEntry.id || input.text.trim() === demoEntry.body.trim() ? clone(demoFacts) : extractCanned(input.text, input.sourceId, input.source);
+    for (const fact of result) await this.facts.upsert(fact);
+    return result;
+  }
+  async proposeScenarios(prompt: string): Promise<Scenario[]> {
+    const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: [], decisions: this.state.consent.decisions ? await this.decisions.list() : [] };
+    const specs = parseWhatIfCanned(prompt, data);
+    return specs.map(spec => simulate(spec, data));
+  }
+  async explain(decisionId: string) {
+    const decision = await this.decisions.get(decisionId);
+    if (!decision) return { text: "I do not have enough saved scenario data to explain this yet.", spoken: "I need more saved data to explain this choice.", usedFactIds: [] };
+    const usedFactIds = (await this.facts.list()).filter(f => f.status === "approved").slice(-3).map(f => f.id);
+    const best = recommend(decision.scenarios);
+    const text = best ? `${best.label} is the stronger option in the current estimates. ${best.assumptions.join(" ")}` : "I do not have enough scenario data to compare these options.";
+    return { text, spoken: text.slice(0, 220), usedFactIds };
+  }
+  async previewPayload(kind: "extract" | "scenarios" | "explain", input: unknown) {
+    const categories: ConsentCategory[] = kind === "extract" ? ["journal"] : kind === "scenarios" ? ["tasks", "planner", "decisions"] : ["tasks", "decisions"];
+    const allowed = categories.filter(category => this.state.consent[category]);
+    return { categories: allowed, text: JSON.stringify({ kind, input: allowed.includes("journal") || kind !== "extract" ? input : "[omitted: journal consent is off]" }) };
+  }
+  async loadSampleData() { this.state = seededState(); this.persist(); }
+  async resetAll() { this.state = { ...seededState(), entries: [], facts: [], tasks: [], goals: [], habits: [], checkins: [], decisions: [], memories: [] }; try { this.storage?.removeItem(KEY); } catch { /* unavailable */ } }
+}
+
+export const localDataService = new LocalDataService();
+export default LocalDataService;

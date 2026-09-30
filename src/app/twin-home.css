@@ -1,0 +1,159 @@
+.twin-home {
+  max-width: 920px;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: center;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--forest);
+}
+
+.hero-title {
+  font-size: 2.4rem;
+  line-height: 1.12;
+  max-width: 14ch;
+  margin-bottom: 0.75rem;
+}
+
+.hero-lede {
+  max-width: 46ch;
+  margin-bottom: 1.75rem;
+  font-size: 1.02rem;
+}
+
+.btn-primary.big {
+  display: inline-block;
+  padding: 0.95rem 1.9rem;
+  font-size: 1.02rem;
+}
+
+.btn-primary.big:hover {
+  text-decoration: none;
+}
+
+.hero-visual {
+  min-width: 0;
+}
+
+/* ---------- Sections ---------- */
+
+.home-section {
+  margin-top: 3.5rem;
+}
+
+.section-note {
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.home-section .ledger {
+  margin-top: 1rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.row-title {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.row-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.goal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.goal-pct {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+/* ---------- Memory timeline ---------- */
+
+.memory {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.memory-date {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.memory-text {
+  color: var(--ink-soft);
+}
+
+.kind-pill {
+  display: inline-flex;
+  padding: 0.15em 0.7em;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 720px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .hero-visual {
+    order: -1;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  .hero-title {
+    font-size: 2.1rem;
+  }
+
+  .home-section {
+    margin-top: 2.75rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .memory {
+    grid-template-columns: 1fr auto;
+    gap: 0.15rem 1rem;
+  }
+
+  .memory-date {
+    grid-column: 1 / -1;
+  }
+}

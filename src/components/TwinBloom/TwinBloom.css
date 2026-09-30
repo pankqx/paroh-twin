@@ -1,0 +1,84 @@
+.bloom {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.bloom-track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.bloom-arc {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  animation: bloom-arc-in 1000ms var(--ease) both;
+}
+
+.leaf {
+  fill: var(--forest-tint);
+  stroke: var(--forest);
+  stroke-width: 1;
+  transition: stroke-width 0.5s var(--ease);
+}
+
+.leaf-sparse {
+  fill: none;
+  stroke-dasharray: 3 3;
+}
+
+.bloom-leaf {
+  transform-origin: 0 0;
+  animation: bloom-grow 800ms var(--ease) both;
+}
+
+.bloom-label {
+  font-family: var(--font-body);
+  font-size: 14px;
+  fill: var(--muted);
+}
+
+.bloom-hub {
+  fill: var(--paper-raised);
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
+.bloom-fidelity {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 500;
+  fill: var(--ink);
+}
+
+@keyframes bloom-grow {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bloom-arc-in {
+  from {
+    stroke-dashoffset: var(--arc-full);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bloom-leaf,
+  .bloom-arc {
+    animation: none;
+  }
+}

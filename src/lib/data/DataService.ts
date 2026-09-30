@@ -7,6 +7,7 @@ import type {
   Goal,
   Habit,
   JournalEntry,
+  MemoryItem,
   Scenario,
   Task,
   TwinState,
@@ -33,6 +34,7 @@ export interface DataService {
   habits: Repo<Habit>;
   checkins: Repo<CheckIn>;
   decisions: Repo<Decision>;
+  memories?: Repo<MemoryItem>;
 
   // consent
   getConsent(): Promise<ConsentSettings>;
@@ -40,6 +42,9 @@ export interface DataService {
 
   // twin (derived from approved facts and permitted data)
   getTwinState(): Promise<TwinState>;
+  saveEntry?(entry: JournalEntry): Promise<JournalEntry>;
+  listFacts?(): Promise<Fact[]>;
+  setFactStatus?(id: string, status: "approve" | "reject" | "edit", edits?: Partial<Fact>): Promise<Fact>;
 
   // AI (server-side, OpenRouter, with canned fallback)
   extractFacts(input: {
