@@ -13,9 +13,11 @@ interface Props {
   habitPct: number;
   loadPct: number;
   approvedCount: number;
+  /** Called each time a new bubble line appears (the twin mouths it). */
+  onLine?: (i: number) => void;
 }
 
-export default function HomeLife({ name, deadline, habitPct, loadPct, approvedCount }: Props) {
+export default function HomeLife({ name, deadline, habitPct, loadPct, approvedCount, onLine }: Props) {
   const lines = [
     `Hi ${name}. Ready when you are.`,
     deadline
@@ -27,6 +29,9 @@ export default function HomeLife({ name, deadline, habitPct, loadPct, approvedCo
       : "Tap talk and teach me one thing about you.",
   ];
   const [i, setI] = useState(0);
+  useEffect(() => {
+    onLine?.(i);
+  }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const id = window.setInterval(() => setI((n) => (n + 1) % lines.length), 4200);
     return () => window.clearInterval(id);

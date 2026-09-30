@@ -196,3 +196,18 @@
   animation: none;
   opacity: 1;
 }
+
+/* Glossy ring of light across the crown of her hair. */
+.ta .ta-halo-shine {
+  fill: none;
+  stroke: var(--hair-hi);
+  stroke-width: 14;
+  stroke-linecap: round;
+  opacity: 0.22;
+  filter: blur(3px);
+}
+/* Lips: a little gloss. */
+.ta .ta-lipshine {
+  stroke-width: 3;
+  opacity: 0.35;
+}

@@ -101,6 +101,10 @@ function Strand({ d, order, w = 1, o = 1, sway, dir = 1, dur = 9, rip = false }:
   );
 }
 
+/** Side-swept fringe: from the parting on her right, down across the forehead to her left brow. */
+const BANGS =
+  "M 338 196 C 298 200, 258 222, 232 258 C 216 280, 206 306, 204 336 C 220 318, 240 300, 264 286 C 292 270, 322 260, 350 256 C 372 254, 390 260, 400 272 C 398 236, 372 204, 338 196 Z";
+
 const NOSE_T = "translate(300 456) scale(0.62) translate(-300 -434)";
 
 export default function TwinAvatar({
@@ -140,7 +144,9 @@ export default function TwinAvatar({
 
   // Live props for the animation loop (so it never restarts).
   const live = useRef({ state, level, action, form, freezeT, reduce });
-  live.current = { state, level, action, form, freezeT, reduce };
+  useEffect(() => {
+    live.current = { state, level, action, form, freezeT, reduce };
+  });
   const tween = useRef({ from: form, to: form, start: 0, dur: 1700, cur: form });
   const act = useRef<{ type: AvatarAction; start: number; until: number; amt: number }>({ type: "none", start: 0, until: 0, amt: 0 });
 
@@ -543,12 +549,12 @@ export default function TwinAvatar({
             <stop offset="1" stopColor="color-mix(in srgb, var(--lip) 88%, #000)" />
           </linearGradient>
           <radialGradient id={id("iris")} cx="0.5" cy="0.45" r="0.6">
-            <stop offset="0" stopColor="#8be9d8" />
-            <stop offset="0.55" stopColor="#3f7fc4" />
-            <stop offset="1" stopColor="#3a2b82" />
+            <stop offset="0" stopColor="#f1c27a" />
+            <stop offset="0.45" stopColor="#9a6435" />
+            <stop offset="1" stopColor="#3a2216" />
           </radialGradient>
           <radialGradient id={id("blush")} cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stopColor="#ff6f8d" stopOpacity="0.5" />
+            <stop offset="0" stopColor="#ff7f96" stopOpacity="0.34" />
             <stop offset="1" stopColor="#ff6f8d" stopOpacity="0" />
           </radialGradient>
           <radialGradient id={id("glow")} cx="0.5" cy="0.5" r="0.5">
@@ -663,6 +669,14 @@ export default function TwinAvatar({
                 <path d={A.LOCK_RIGHT} fill={`url(#${id("hair")})`} />
                 <path d="M 296 160 C 250 170, 214 214, 200 280" className="ta-sheen b" />
                 <path d="M 304 160 C 350 170, 386 214, 400 280" className="ta-sheen b" />
+                {style.look !== "man" && (
+                  <>
+                    <path d={BANGS} fill={`url(#${id("hair")})`} />
+                    <path d="M 330 212 C 296 222, 258 246, 232 286" className="ta-sheen" />
+                    <path d="M 348 222 C 318 234, 284 254, 258 284" className="ta-sheen b" />
+                  </>
+                )}
+                <path d="M 226 196 C 262 176, 338 176, 374 196" className="ta-halo-shine" />
               </g>
               {faceLines}
               <g {...figureProps} strokeWidth="1.5">

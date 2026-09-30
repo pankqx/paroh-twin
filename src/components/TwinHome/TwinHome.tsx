@@ -162,6 +162,17 @@ export default function TwinHome() {
   const prefs = usePrefs();
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
+  // Home life: she silently "says" each bubble line, and now and then nods or tilts.
+  const [mouthing, setMouthing] = useState(false);
+  const [nowMs] = useState(() => Date.now());
+  const mouthTimer = useRef(0);
+  const onLine = (i: number) => {
+    setMouthing(true);
+    window.clearTimeout(mouthTimer.current);
+    mouthTimer.current = window.setTimeout(() => setMouthing(false), 1900);
+    if (i % 2 === 1) face.current?.react("nod", 900);
+  };
+  useEffect(() => () => window.clearTimeout(mouthTimer.current), []);
   // Side cards and chips fade out first, then the route changes so the morph starts from a clean stage.
   const goTalk = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -205,8 +216,9 @@ export default function TwinHome() {
       <section className="twin-hero">
         <div className={`twin-stage${leaving ? " leaving" : ""}`}>
           <HomeLife
+            onLine={onLine}
             name={name}
-            deadline={deadlines[0] ? { title: deadlines[0].title.length > 28 ? `${deadlines[0].title.slice(0, 26)}…` : deadlines[0].title, days: Math.max(0, Math.ceil((new Date(deadlines[0].due).getTime() - Date.now()) / 86400000)) } : undefined}
+            deadline={deadlines[0] ? { title: deadlines[0].title.length > 28 ? `${deadlines[0].title.slice(0, 26)}…` : deadlines[0].title, days: Math.max(0, Math.ceil((new Date(deadlines[0].due).getTime() - nowMs) / 86400000)) } : undefined}
             habitPct={Math.round(twin.habitConsistency * 100)}
             loadPct={load}
             approvedCount={approved.length}
@@ -215,7 +227,7 @@ export default function TwinHome() {
           <div className="twin-stage-face">
             <ViewTransition name="twin" share="morph" default="none">
               <div className="twin-morph">
-                <TwinAvatar ref={face} style={prefs} state="idle" form={0} />
+                <TwinAvatar ref={face} style={prefs} state={mouthing ? "speaking" : "idle"} form={0} />
               </div>
             </ViewTransition>
           </div>
