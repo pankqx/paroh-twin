@@ -192,10 +192,12 @@ export class LocalDataService implements DataService {
         }
         const twin = await this.getTwinState();
         const now = Date.now();
-        const dueSoon = (await this.tasks.list()).filter(task => !task.done && task.dueAt && new Date(task.dueAt).getTime() >= now && new Date(task.dueAt).getTime() <= now + 7 * 86400000).length;
-        const studyBias = twin.estimationBias.study;
+        const tasks = await this.tasks.list();
+        const dueSoon = tasks.filter(task => !task.done && task.dueAt && new Date(task.dueAt).getTime() >= now && new Date(task.dueAt).getTime() <= now + 7 * 86400000).length;
         const deadlineLabel = dueSoon === 1 ? "open deadline" : "open deadlines";
-        const reply = `Your planned load is ${Math.round(twin.loadPct)}% of this week's capacity, with ${dueSoon} ${deadlineLabel} in the next seven days. Study tasks average about ${studyBias.toFixed(1)} times their estimate.`;
+        const studySamples = tasks.filter(task => task.category === "study" && task.done && task.actualHours !== undefined && task.estHours > 0).length;
+        const biasNote = studySamples >= 3 ? ` Study tasks average about ${twin.estimationBias.study.toFixed(1)} times their estimate.` : "";
+        const reply = `Your planned load is ${Math.round(twin.loadPct)}% of this week's capacity, with ${dueSoon} ${deadlineLabel} in the next seven days.${biasNote}`;
         return { reply, spoken: shortSpeech(reply), candidateFacts, intent };
       }
 
