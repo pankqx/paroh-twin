@@ -1,4 +1,4 @@
-import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData } from "../types";
+import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState } from "../types";
 import type { DataService, Repo } from "./DataService";
 import { sampleData } from "../../mock/sample";
 import { extractCanned } from "../ai/extractCanned";
@@ -11,6 +11,25 @@ const KEY = "paroh-local-data-v1";
 const defaultConsent: ConsentSettings = { journal: true, tasks: true, habits: true, mood: true, planner: true, voice: false, decisions: true };
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const stamp = () => new Date().toISOString();
+
+const questionOrder = ["tasks", "habits", "routines", "energy", "goals", "planner"] as const;
+const questionTemplates: Record<(typeof questionOrder)[number], { text: string; quickReplies: string[] }> = {
+  tasks: { text: "Which task should we plan first this week?", quickReplies: ["Exam revision", "Project work", "A smaller task"] },
+  habits: { text: "Which habit would you like to keep steady this week?", quickReplies: ["Morning review", "Focused study", "Evening walk"] },
+  routines: { text: "When do you usually focus best?", quickReplies: ["Morning", "Afternoon", "Evening"] },
+  energy: { text: "When do you usually have the most energy for study?", quickReplies: ["Morning", "Afternoon", "Evening"] },
+  goals: { text: "Which goal matters most to you this week?", quickReplies: ["Exam preparation", "Project", "Steady routine"] },
+  planner: { text: "How much time can you set aside for study tomorrow?", quickReplies: ["1–2 hours", "2–3 hours", "3 or more hours"] },
+};
+
+/** Stable tie-breaking keeps the same low-confidence prompt order between visits. */
+export function questionsForTwinState(state: TwinState) {
+  return [...questionOrder]
+    .map((domain, index) => ({ domain, index, confidence: state.confidenceByDomain[domain === "energy" ? "mood" : domain] ?? 0 }))
+    .sort((a, b) => a.confidence - b.confidence || a.index - b.index)
+    .slice(0, 3)
+    .map(({ domain }) => ({ id: `twin-question-${domain}`, text: questionTemplates[domain].text, domain, quickReplies: [...questionTemplates[domain].quickReplies] }));
+}
 
 function seededState(): State {
   return { entries: clone(sampleData.entries), facts: clone(sampleData.facts), tasks: clone(sampleData.tasks), goals: clone(sampleData.goals), habits: clone(sampleData.habits), checkins: clone(sampleData.checkins), decisions: clone(sampleData.decisions), memories: [], consent: { ...defaultConsent } };
@@ -80,6 +99,9 @@ export class LocalDataService implements DataService {
     const visibleFacts = await this.facts.list();
     const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal") };
     return deriveTwinState(data);
+  }
+  async nextQuestions() {
+    return questionsForTwinState(await this.getTwinState());
   }
   async extractFacts(input: { text: string; source: "journal" | "question"; sourceId: string }) {
     if (!this.state.consent.journal) return [];
