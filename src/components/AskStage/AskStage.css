@@ -1,0 +1,40 @@
+.ask { display: grid; gap: 1.2rem; max-width: 1040px; margin-inline: auto; padding-bottom: 4rem; }
+.ask-head h1 { margin: 0.1rem 0 0.3rem; }
+.ask-eyebrow { color: var(--teal); font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; margin: 0; }
+.ask-lede, .ask-hint { color: var(--muted, var(--text)); opacity: 0.75; font-size: 0.9rem; margin: 0; }
+.ask-memory { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ask-mchip { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.82rem; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.04); }
+.ask-mchip.conflict { border-color: color-mix(in srgb, var(--amber) 50%, transparent); }
+.ask-mchip.stale { border-color: color-mix(in srgb, var(--violet) 50%, transparent); }
+.ask-input { padding: 1.1rem 1.3rem; display: grid; gap: 0.8rem; }
+.ask-q { font-size: 1.15rem; margin: 0 0 0.5rem; color: var(--text); }
+.ask-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ask-row { display: flex; gap: 0.6rem; align-items: center; }
+.ask-row input { flex: 1; min-width: 0; padding: 0.65rem 0.9rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05); color: var(--text); font: inherit; }
+.ask-mic { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: transparent; color: var(--text); display: grid; place-items: center; cursor: pointer; }
+.ask-mic.on { border-color: var(--rose); color: var(--rose); }
+.ask-fork { display: grid; gap: 0.5rem; }
+.ask-prompt { justify-self: center; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.18); text-align: center; max-width: 100%; }
+.ask-forklines { width: 100%; height: 56px; }
+.ask-paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.ask-path { padding: 1.1rem 1.2rem; display: grid; gap: 0.6rem; align-content: start; }
+.ask-path header { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
+.ask-path h2 { font-size: 1.05rem; margin: 0; }
+.ask-path.rec { border-color: color-mix(in srgb, var(--teal) 60%, transparent); }
+.ask-path.chosen { box-shadow: 0 0 0 2px var(--green); }
+.ask-badge { font-size: 0.72rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--teal) 25%, transparent); color: var(--teal); }
+.ask-badge.alt { background: color-mix(in srgb, var(--violet) 25%, transparent); color: var(--violet); }
+.ask-sum { margin: 0; opacity: 0.8; font-size: 0.92rem; }
+.ask-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0; }
+.ask-stats dt { font-size: 0.72rem; opacity: 0.65; }
+.ask-stats dd { margin: 0; font-size: 1.25rem; }
+.ask-say { padding: 1rem 1.3rem; display: grid; gap: 0.7rem; }
+.ask-say-text { margin: 0; font-size: 1.05rem; line-height: 1.5; }
+.ask-say-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.ask-after { padding: 1.1rem 1.3rem; display: grid; gap: 0.6rem; justify-items: start; }
+.ask-after h2 { margin: 0; font-size: 1.05rem; }
+.ask-delta { margin: 0; }
+.ask-deltachip { margin-left: 0.6rem; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem; background: color-mix(in srgb, var(--green) 25%, transparent); color: var(--green); }
+.ask-deltachip.down { background: color-mix(in srgb, var(--amber) 25%, transparent); color: var(--amber); }
+.ask-learned { margin: 0; color: var(--teal); font-size: 0.9rem; }
+@media (max-width: 720px) { .ask-paths { grid-template-columns: 1fr; } .ask-forklines { display: none; } }
