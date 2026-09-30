@@ -90,3 +90,21 @@ LLM_FALLBACK_MODEL=gpt-4.1-mini. Server code only; never log the key. README/Sou
 Talk: chat history large on the left with the input under it, quick-reply chips removed, her bigger in
 the middle, details on the right. Home: full-width stage, bigger half-body twin, side cards on wide
 screens. Home to Talk uses a shared view-transition (the twin morphs), then blooms into colour.
+
+## Claude Code: motion pass and smooth Home to Talk (paste as one prompt)
+
+**J. Motion and transition.** Read docs/DESIGN_SYSTEM.md first. On the Talk and Home pages only
+(src/components/TalkStage, TwinHome, TwinAvatar), using `motion` and CSS (transform and opacity only,
+honour prefers-reduced-motion, one heavy effect per screen):
+1. Smooth Home to Talk: the twin already shares `<ViewTransition name="twin" share="morph">` between
+   the two pages. Make it feel seamless: add `::view-transition-group(.morph){animation-duration:700ms;
+   animation-timing-function:cubic-bezier(.2,.7,.2,1)}` in globals.css, fade the Talk page panels
+   (chat, details) in 300 ms AFTER the morph ends (stagger 80 ms), start the colour bloom when the morph
+   ends (not on a fixed timer) and fade the Home side cards and chips out on click. Test in Chrome.
+2. Talk stage life: behind her, a slow aurora wash (reuse fx/Aurora) and 20 to 30 tiny drifting light
+   particles (opacity and translate only); a soft pulse glow under her that swells with her voice level
+   when she speaks; chat bubbles slide and fade in; the active question types in word by word; the Approve
+   card springs in with a slight overshoot and a spark burst where it flies to her mind point.
+3. Home life: stars twinkle on staggered delays, the constellation lines draw on once at load, the bubble
+   and chips float gently, the stat numbers count up once.
+Do not change the engine or data flow. Run `npm run build`, then commit.
