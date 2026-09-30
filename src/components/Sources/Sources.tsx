@@ -141,18 +141,15 @@ export default function Sources() {
     setBusy(kind);
     setNote("");
     try {
-      // previewConnector numbers facts from 1 for every message, so ids collide. Give each a
-      // unique, stable id (same on every preview, so re-running never duplicates).
-      const facts = (await dataService.previewConnector(kind)).map((f, i) => ({ ...f, id: `sample-${kind}-fact-${i + 1}` }));
-      // Send them to the Approvals tray: store as pending unless they already exist.
-      const stored = new Map((await dataService.facts.list()).map((f) => [f.id, f]));
+      // previewConnector stores its candidates as pending (ids are stable per sample message).
+      // Put back anything already decided so re-running a preview never undoes an approval.
+      const before = new Map((await dataService.facts.list()).map((f) => [f.id, f]));
+      const facts = await dataService.previewConnector(kind);
       let waiting = 0;
       for (const fact of facts) {
-        const existing = stored.get(fact.id);
-        if (!existing) {
-          await dataService.facts.upsert({ ...fact, status: "pending" });
-          waiting++;
-        } else if (existing.status === "pending") waiting++;
+        const existing = before.get(fact.id);
+        if (existing && existing.status !== "pending") await dataService.facts.upsert(existing);
+        else waiting++;
       }
       setPreview((p) => ({ ...p, [kind]: { facts, waiting } }));
       notifyFactsChanged();
@@ -196,6 +193,10 @@ export default function Sources() {
           twin learns.
         </p>
       </header>
+
+      <p className="src-banner" role="note">
+        Sample messages. Real connectors are roadmap.
+      </p>
 
       {/* The orbit: live sources feed the core, roadmap sources are dashed and not connected. */}
       <section className="src-orbit" aria-label="Sources around your twin">
@@ -323,6 +324,13 @@ export default function Sources() {
                           </li>
                         );
                       })}
+                    </ul>
+                    <ul className="src-cands" aria-label="Candidate facts">
+                      {preview[road.id]!.facts.map((f) => (
+                        <li key={f.id}>
+                          <span className="kind-pill">{f.kind}</span> {f.text}
+                        </li>
+                      ))}
                     </ul>
                     <p className="src-sent">
                       {preview[road.id]!.waiting > 0 ? (
