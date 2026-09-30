@@ -1,10 +1,11 @@
-import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState } from "../types";
+import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, Habit, JournalEntry, MemoryItem, Scenario, Task, TwinData, TwinState, Whisper } from "../types";
 import type { DataService, Repo } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
 import { deriveTwinState } from "../twin";
 import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
+import { pulseWhispers } from "../twin/pulseWhispers";
 
 type State = { entries: JournalEntry[]; facts: Fact[]; tasks: Task[]; goals: Goal[]; habits: Habit[]; checkins: CheckIn[]; decisions: Decision[]; memories: MemoryItem[]; consent: ConsentSettings };
 const KEY = "paroh-local-data-v1";
@@ -101,6 +102,10 @@ export class LocalDataService implements DataService {
     const data: TwinData = { tasks: this.state.consent.tasks ? await this.tasks.list() : [], goals: this.state.consent.planner ? await this.goals.list() : [], habits: this.state.consent.habits ? await this.habits.list() : [], checkins: this.state.consent.mood ? await this.checkins.list() : [], decisions: this.state.consent.decisions ? await this.decisions.list() : [], facts: this.state.consent.journal ? visibleFacts : visibleFacts.filter(f => f.sourceType !== "journal") };
     return deriveTwinState(data);
   }
+  async getWhispers(): Promise<Whisper[]> {
+    const twin = await this.getTwinState();
+    return pulseWhispers(twin, this.state.consent.tasks ? await this.tasks.list() : [], this.state.consent.habits && this.state.consent.tasks ? await this.habits.list() : []);
+  }
   async nextQuestions() {
     return questionsForTwinState(await this.getTwinState());
   }
@@ -108,11 +113,11 @@ export class LocalDataService implements DataService {
     if (!this.state.consent.journal) return [];
     let result: Fact[];
     try {
-      const context = await buildTwinContext(this.state.consent, this);
+      const requestBody = await this.extractPayload(input);
       const response = await fetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...input, context }),
+        body: JSON.stringify(requestBody),
       });
       if (!response.ok) throw new Error("Fact extraction route failed");
       const payload: unknown = await response.json();
@@ -146,12 +151,12 @@ export class LocalDataService implements DataService {
     if (!decision) return { text: "I do not have enough saved scenario data to explain this yet.", spoken: "I need more saved data to explain this choice.", usedFactIds: [] };
     let usedFactIds: string[] = [];
     try {
-      const context = await buildTwinContext(this.state.consent, this);
-      usedFactIds = context.approvedFacts.map(fact => fact.id);
+      const requestBody = await this.explainPayload(decision);
+      usedFactIds = requestBody.approvedFacts.map(fact => fact.id);
       const response = await fetch("/api/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarios: decision.scenarios, recommendedId: decision.recommendedId, approvedFacts: context.approvedFacts, context }),
+        body: JSON.stringify(requestBody),
       });
       if (!response.ok) throw new Error("Explain route failed");
       const payload: unknown = await response.json();
@@ -168,7 +173,28 @@ export class LocalDataService implements DataService {
   async previewPayload(kind: "extract" | "scenarios" | "explain", input: unknown) {
     const categories: ConsentCategory[] = kind === "extract" ? ["journal"] : kind === "scenarios" ? ["tasks", "planner", "decisions"] : ["tasks", "decisions"];
     const allowed = categories.filter(category => this.state.consent[category]);
-    return { categories: allowed, text: JSON.stringify({ kind, input: allowed.includes("journal") || kind !== "extract" ? input : "[omitted: journal consent is off]" }) };
+    let payload: unknown;
+    if (kind === "extract") {
+      payload = this.state.consent.journal && input && typeof input === "object"
+        ? await this.extractPayload(input as { text: string; source: "journal" | "question"; sourceId: string })
+        : {};
+    } else if (kind === "explain") {
+      const decision = typeof input === "string" ? await this.decisions.get(input) : input as Decision | undefined;
+      payload = decision ? await this.explainPayload(decision) : {};
+    } else {
+      payload = {};
+    }
+    return { categories: allowed, text: JSON.stringify(payload) };
+  }
+
+  private async extractPayload(input: { text: string; source: "journal" | "question"; sourceId: string }) {
+    const context = await buildTwinContext(this.state.consent, this);
+    return { ...input, context };
+  }
+
+  private async explainPayload(decision: Decision) {
+    const context = await buildTwinContext(this.state.consent, this);
+    return { scenarios: decision.scenarios, recommendedId: decision.recommendedId, approvedFacts: context.approvedFacts, context };
   }
   async loadSampleData() { this.state = seededState(); this.persist(); }
   async resetAll() { this.state = { ...seededState(), entries: [], facts: [], tasks: [], goals: [], habits: [], checkins: [], decisions: [], memories: [] }; try { this.storage?.removeItem(KEY); } catch { /* unavailable */ } }

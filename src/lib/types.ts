@@ -85,6 +85,14 @@ export interface Scenario {
   assumptions: string[];
 }
 
+export interface Whisper {
+  id: string;
+  severity: "info" | "watch" | "act";
+  text: string;
+  kind: "load" | "deadline" | "streak" | "habit";
+  data: Record<string, unknown>;
+}
+
 export interface Decision extends Base {
   prompt: string;
   scenarios: Scenario[];
