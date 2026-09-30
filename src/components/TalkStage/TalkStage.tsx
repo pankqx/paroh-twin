@@ -23,6 +23,9 @@ import Gauges from "@/components/TwinStage/Gauges";
 import "@/components/TwinAvatar/TwinAvatar.css";
 import Waveform from "@/components/Waveform/Waveform";
 import Karaoke from "./Karaoke";
+import Aurora from "@/components/fx/Aurora";
+import { mindTarget } from "@/components/TwinAvatar/mindPoint";
+import { useMorphEnd, useTypedWords } from "./useMorphEnd";
 import * as listen from "@/lib/voice/listen";
 import * as speech from "@/lib/voice/speak";
 import type { Fact } from "@/lib/types";
@@ -72,6 +75,12 @@ const CONFIRMATIONS = [
 type Step = "start" | "ask" | "listening" | "thinking" | "review" | "done";
 
 const noopSubscribe = () => () => {};
+
+const PARTICLES = Array.from({ length: 26 }, (_, i) => {
+  const s = (i * 9301 + 49297) % 233280;
+  const u = (i * 7411 + 12345) % 233280;
+  return { x: 3 + (s / 233280) * 94, y: 5 + (u / 233280) * 90, s: 2 + (i % 3), d: 14 + (i % 7) * 3, l: -(i * 1.3), dx: (i % 2 ? 1 : -1) * (12 + (i % 5) * 7), dy: -(20 + (i % 4) * 12) };
+});
 
 export default function TalkStage() {
   const [questions, setQuestions] = useState<Question[] | null>(null);
@@ -272,6 +281,11 @@ export default function TalkStage() {
   }
 
   function arrived() {
+    const p = mindTarget()?.point();
+    if (p && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setBurst({ x: p.x, y: p.y, key: Date.now() });
+      window.setTimeout(() => setBurst(null), 900);
+    }
     approved.current += 1;
     refreshLearned();
     speech.speak(CONFIRMATIONS[confirmIdx.current++ % CONFIRMATIONS.length]);
@@ -317,11 +331,13 @@ export default function TalkStage() {
   const faceRef = useRef<TwinAvatarHandle>(null);
   useEffect(() => onAction((a) => faceRef.current?.react(a)), []);
 
-  const [bloom, setBloom] = useState(false);
-  useEffect(() => {
-    const id = window.setTimeout(() => setBloom(true), 750);
-    return () => window.clearTimeout(id);
-  }, []);
+  // Everything waits for the Home to Talk morph: the colour bloom starts when it ends, then
+  // the panels fade in 300 ms later, 80 ms apart.
+  const ready = useMorphEnd();
+  const bloom = ready;
+  const typedLine = useTypedWords(line);
+  const [burst, setBurst] = useState<{ x: number; y: number; key: number } | null>(null);
+  const glow = speaking ? 0.35 + (mouth / 3) * 0.65 : step === "listening" ? Math.min(1, level * 1.6) : 0;
 
   useEffect(() => {
     histRef.current?.scrollTo({ top: histRef.current.scrollHeight, behavior: "smooth" });
@@ -333,9 +349,16 @@ export default function TalkStage() {
   const asking = step === "ask" || listening;
 
   return (
-    <main className="talk">
+    <main className={`talk${ready ? " ready" : ""}`}>
+      <Aurora amplitude={0.7} speed={0.6} />
+      <div className="talk-particles" aria-hidden="true">
+        {PARTICLES.map((p, i) => (
+          <span key={i} style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, animationDuration: `${p.d}s`, animationDelay: `${p.l}s`, ["--dx" as string]: `${p.dx}px`, ["--dy" as string]: `${p.dy}px` }} />
+        ))}
+      </div>
       <div className="talk-stage">
         <div className="talk-face">
+          <div className="talk-glow" aria-hidden="true" style={{ transform: `translateX(-50%) scale(${0.8 + glow * 0.5})`, opacity: 0.25 + glow * 0.55 }} />
           <ViewTransition name="twin" share="morph" default="none">
             <div className="twin-morph">
               <TwinAvatar
@@ -355,10 +378,10 @@ export default function TalkStage() {
           {past.length > 0 && (
             <ol className="talk-history" ref={histRef} aria-label="Conversation so far">
               {past.map((m, i) => (
-                <li key={i} className={m.who}>
+                <motion.li key={i} className={m.who} initial={{ opacity: 0, x: m.who === "you" ? 24 : -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.45, ease: [0.2, 0.7, 0.2, 1] }}>
                   <span>{m.who === "twin" ? "Twin" : "You"}</span>
                   {m.text}
-                </li>
+                </motion.li>
               ))}
             </ol>
           )}
@@ -426,7 +449,7 @@ export default function TalkStage() {
 
               <p className="talk-eyebrow">{q ? q.domain : "Check-in"}</p>
               <p className="talk-caption">
-                <Karaoke line={line} sentence={sentence} speaking={speaking} />
+                <Karaoke line={typedLine} sentence={sentence} speaking={speaking} />
               </p>
 
               {listening && (
@@ -479,8 +502,8 @@ export default function TalkStage() {
                 transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
               >
                 {cards.map(({ fact, said }) => (
+                  <motion.div key={fact.id} initial={{ opacity: 0, scale: 0.88, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 13, mass: 0.9 }}>
                   <FactCard
-                    key={fact.id}
                     fact={fact}
                     quote={said}
                     onApprove={() => approveFact(fact)}
@@ -489,6 +512,7 @@ export default function TalkStage() {
                     onArrive={arrived}
                     onDone={() => dismissCard(fact.id)}
                   />
+                  </motion.div>
                 ))}
               </motion.div>
             )}
@@ -589,6 +613,15 @@ export default function TalkStage() {
           </AnimatePresence>
         </div>
       </div>
+      {burst && (
+        <div className="talk-burst" style={{ left: burst.x, top: burst.y }} aria-hidden="true">
+          {Array.from({ length: 12 }, (_, i) => {
+            const a = (i / 12) * Math.PI * 2;
+            const r = 46 + (i % 3) * 14;
+            return <motion.i key={`${burst.key}-${i}`} initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} animate={{ x: Math.cos(a) * r, y: Math.sin(a) * r, opacity: 0, scale: 0.2 }} transition={{ duration: 0.75, ease: [0.2, 0.7, 0.2, 1] }} />;
+          })}
+        </div>
+      )}
     </main>
   );
 }

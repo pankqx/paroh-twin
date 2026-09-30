@@ -543,3 +543,9 @@ label {
 body {
   overflow-x: clip;
 }
+
+/* Home <-> Talk: the twin morphs smoothly between the two pages. */
+::view-transition-group(.morph) {
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}

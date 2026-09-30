@@ -474,3 +474,45 @@
     display: block;
   }
 }
+
+/* ---------- Motion pass ---------- */
+
+/* Leaving for Talk: side cards and chips fade out (opacity only). */
+.twin-side,
+.hl {
+  transition: opacity 240ms var(--ease);
+}
+.twin-stage.leaving .twin-side,
+.twin-stage.leaving .hl {
+  opacity: 0;
+}
+
+/* Stars twinkle on staggered delays. The star itself is moved by motion, so the twinkle
+   sits on its parent group and only touches opacity. */
+.twin-stage .constellation g:has(> .const-star) {
+  animation: twin-twinkle 4.6s ease-in-out infinite;
+}
+.twin-stage .constellation g:has(> .const-star):nth-child(2n) { animation-delay: -1.3s; animation-duration: 5.4s; }
+.twin-stage .constellation g:has(> .const-star):nth-child(3n) { animation-delay: -2.6s; animation-duration: 3.9s; }
+.twin-stage .constellation g:has(> .const-star):nth-child(5n) { animation-delay: -0.6s; animation-duration: 6.1s; }
+@keyframes twin-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* The speech bubble text bobs gently while it is shown. */
+.hl-bubble-text {
+  display: inline-block;
+  animation: twin-bob 6s ease-in-out infinite;
+}
+@keyframes twin-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twin-stage .constellation g:has(> .const-star),
+  .hl-bubble-text {
+    animation: none;
+  }
+}

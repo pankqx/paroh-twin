@@ -505,3 +505,118 @@
     --face-h: clamp(300px, 46vh, 560px);
   }
 }
+
+/* ---------- Motion pass ---------- */
+
+/* Panels wait for the Home to Talk morph, then fade in 300 ms later, 80 ms apart. */
+.talk-left,
+.talk-right,
+.talk-dock-wrap {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.talk.ready .talk-left,
+.talk.ready .talk-right,
+.talk.ready .talk-dock-wrap {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 500ms var(--ease),
+    transform 500ms var(--ease);
+  transition-delay: 300ms;
+}
+.talk.ready .talk-right {
+  transition-delay: 380ms;
+}
+.talk.ready .talk-dock-wrap {
+  transition-delay: 460ms;
+}
+
+/* Tiny drifting lights behind her (opacity and translate only). */
+.talk-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.talk-particles span {
+  position: absolute;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--teal) 70%, white);
+  box-shadow: 0 0 8px var(--teal);
+  opacity: 0;
+  animation: talk-drift ease-in-out infinite;
+}
+.talk-particles span:nth-child(3n) {
+  background: color-mix(in srgb, var(--violet) 70%, white);
+  box-shadow: 0 0 8px var(--violet);
+}
+@keyframes talk-drift {
+  0% { opacity: 0; transform: translate(0, 0); }
+  25% { opacity: 0.7; }
+  75% { opacity: 0.5; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)); }
+}
+.talk-stage {
+  z-index: 1;
+}
+
+/* Soft glow under her that swells with her voice. */
+.talk-face {
+  position: relative;
+}
+.talk-face > .twin-morph {
+  position: relative;
+  z-index: 1;
+}
+.talk-glow {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: min(70%, 560px);
+  aspect-ratio: 1.6;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--teal) 55%, transparent), color-mix(in srgb, var(--violet) 22%, transparent) 60%, transparent);
+  transition:
+    transform 140ms linear,
+    opacity 140ms linear;
+  will-change: transform, opacity;
+}
+
+/* Spark burst where an approved card reaches her mind point. */
+.talk-burst {
+  position: fixed;
+  z-index: 70;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.talk-burst i {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .talk-left,
+  .talk-right,
+  .talk-dock-wrap {
+    opacity: 1;
+    transform: none;
+  }
+  .talk-particles span {
+    animation: none;
+    opacity: 0.35;
+  }
+  .talk-glow {
+    transition: none;
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { dataService } from "@/app/dataService";
 import { takeGrowth } from "@/app/bloomGrowth";
@@ -158,6 +159,16 @@ export default function TwinHome() {
   const [focused, setFocused] = useState<Fact | null>(null);
   const face = useRef<TwinAvatarHandle>(null);
   const prefs = usePrefs();
+  const router = useRouter();
+  const [leaving, setLeaving] = useState(false);
+  // Side cards and chips fade out first, then the route changes so the morph starts from a clean stage.
+  const goTalk = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return router.push("/talk");
+    setLeaving(true);
+    window.setTimeout(() => router.push("/talk"), 260);
+  };
   useEffect(() => onAction((a) => face.current?.react(a)), []);
 
   useEffect(() => {
@@ -191,7 +202,7 @@ export default function TwinHome() {
       <Aurora amplitude={0.8} speed={0.8} />
 
       <section className="twin-hero">
-        <div className="twin-stage">
+        <div className={`twin-stage${leaving ? " leaving" : ""}`}>
           <HomeLife
             name={name}
             deadline={deadlines[0] ? { title: deadlines[0].title.length > 28 ? `${deadlines[0].title.slice(0, 26)}…` : deadlines[0].title, days: Math.max(0, Math.ceil((new Date(deadlines[0].due).getTime() - Date.now()) / 86400000)) } : undefined}
@@ -249,7 +260,7 @@ export default function TwinHome() {
               Everything here comes from what {name} chose to share and approve.
             </p>
             <div className="twin-actions">
-              <Link href="/talk" className="btn-primary">
+              <Link href="/talk" className="btn-primary" onClick={goTalk}>
                 Talk to your twin
               </Link>
               <Link href="/ask" className="btn-ghost">
