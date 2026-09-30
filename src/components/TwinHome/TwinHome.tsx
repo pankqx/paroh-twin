@@ -13,6 +13,7 @@ import CountUp from "@/components/fx/CountUp";
 import SpotlightCard from "@/components/fx/SpotlightCard";
 import Heatmap from "@/components/Heatmap/Heatmap";
 import Ring from "@/components/Ring/Ring";
+import Sparkline from "@/components/Sparkline/Sparkline";
 import RiskPill, { riskOf } from "@/components/RiskPill/RiskPill";
 import TwinFace, { type TwinFaceHandle } from "@/components/TwinFace/TwinFace";
 import { SAMPLE_STUDENT_NAME } from "@/mock/sample";
@@ -40,7 +41,15 @@ interface Deadline {
   onTime: number; // 0-1
 }
 
+interface Series {
+  load: number[]; // estimated hours due per day, today + 6
+  habits: number[]; // share of habits done per day, last 14 days
+  goalHours: number[]; // goal-linked hours logged per day, last 7 days
+  guesses: boolean[]; // last 10 decisions: did the twin guess the choice?
+}
+
 interface View {
+  series: Series;
   twin: TwinState;
   deadlines: Deadline[];
   approved: Fact[];
@@ -59,12 +68,13 @@ const loadColour = (load: number) =>
   load > 85 ? "var(--rose)" : load >= 60 ? "var(--amber)" : "var(--teal)";
 
 async function loadView(): Promise<View> {
-  const [twin, facts, tasks, goals, decisions, consent] = await Promise.all([
+  const [twin, facts, tasks, goals, decisions, habits, consent] = await Promise.all([
     dataService.getTwinState(),
     dataService.facts.list(),
     dataService.tasks.list(),
     dataService.goals.list(),
     dataService.decisions.list(),
+    dataService.habits.list(),
     dataService.getConsent(),
   ]);
 
@@ -107,7 +117,26 @@ async function loadView(): Promise<View> {
   const recorded = decisions.filter((d) => d.chosenScenarioId).slice(-10);
   const hits = recorded.filter((d) => d.predictedChoiceId === d.chosenScenarioId).length;
 
+  // Real series behind the stat cards, all derived from the stored tasks, habits and decisions.
+  const dayKey = (t: number) => new Date(t).toISOString().slice(0, 10);
+  const days = (n: number, from: number, step: number) => Array.from({ length: n }, (_, i) => dayKey(from + i * step * 86400000));
+  const dueHours = new Map<string, number>();
+  for (const t of tasks) if (!t.done && t.dueAt) dueHours.set(t.dueAt.slice(0, 10), (dueHours.get(t.dueAt.slice(0, 10)) ?? 0) + t.estHours);
+  const goalHours = new Map<string, number>();
+  for (const t of tasks) {
+    if (t.done && t.goalId && t.completedAt) goalHours.set(t.completedAt.slice(0, 10), (goalHours.get(t.completedAt.slice(0, 10)) ?? 0) + (t.actualHours ?? t.estHours));
+  }
+  const series: Series = {
+    load: days(7, now, 1).map((k) => dueHours.get(k) ?? 0),
+    habits: days(14, now - 13 * 86400000, 1).map((k) =>
+      habits.length ? habits.filter((h) => h.log[k]).length / habits.length : 0,
+    ),
+    goalHours: days(7, now - 6 * 86400000, 1).map((k) => goalHours.get(k) ?? 0),
+    guesses: recorded.map((d) => d.predictedChoiceId === d.chosenScenarioId),
+  };
+
   return {
+    series,
     twin,
     deadlines,
     // Mirror the engine: journal-sourced facts only count while journal consent is on.
@@ -146,7 +175,7 @@ export default function TwinHome() {
 
   if (!view) return <main className="page twin" aria-busy="true" />;
 
-  const { twin, deadlines, approved, guesses } = view;
+  const { twin, deadlines, approved, guesses, series } = view;
   const name = SAMPLE_STUDENT_NAME.split(" ")[0];
   const load = Math.round(twin.loadPct);
 
@@ -155,37 +184,39 @@ export default function TwinHome() {
       <Aurora amplitude={0.8} speed={0.8} />
 
       <section className="twin-hero">
-        <div className="twin-hero-text">
-          <p className="twin-eyebrow">{name}&rsquo;s twin · sample data</p>
-          <BlurText text={`Hey ${name}, here’s your week.`} className="twin-title" />
-          <p className="twin-lede">
-            {deadlines.length > 0
-              ? `${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"} ahead and a ${load}% load. `
-              : `A ${load}% load this week. `}
-            Everything here comes from what {name} chose to share and approve.
-          </p>
-          <div className="twin-actions">
-            <Link href="/talk" className="btn-primary">
-              Talk to your twin
-            </Link>
-            <Link href="/ask" className="btn-ghost">
-              Ask a what-if
-            </Link>
+        <div className="twin-stage">
+          <Constellation facts={approved} onFocusFact={setFocused} />
+          <div className="twin-stage-face">
+            <TwinFace ref={face} state="idle" />
           </div>
-          <p className="twin-caption" aria-live="polite">
+
+          <div className="twin-hero-text">
+            <p className="twin-eyebrow">{name}&rsquo;s twin · sample data</p>
+            <BlurText text={`Hey ${name}, here’s your week.`} className="twin-title" />
+            <p className="twin-lede">
+              {deadlines.length > 0
+                ? `${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"} ahead and a ${load}% load. `
+                : `A ${load}% load this week. `}
+              Everything here comes from what {name} chose to share and approve.
+            </p>
+            <div className="twin-actions">
+              <Link href="/talk" className="btn-primary">
+                Talk to your twin
+              </Link>
+              <Link href="/ask" className="btn-ghost">
+                Ask a what-if
+              </Link>
+            </div>
+          </div>
+
+          <p className="glass twin-caption" aria-live="polite">
             {focused
               ? describeFact(focused)
               : approved.length > 0
                 ? `${approved.length} approved fact${approved.length === 1 ? "" : "s"} in the sky. Hover a star to read it.`
                 : "No approved facts yet. Each one you approve becomes a star."}
           </p>
-        </div>
 
-        <div className="twin-stage">
-          <Constellation facts={approved} onFocusFact={setFocused} />
-          <div className="twin-stage-face">
-            <TwinFace ref={face} state="idle" />
-          </div>
           <div className="twin-doodle">
             {approved.length === 0 ? (
               <Doodle text="approve a fact, get a star" arrow="down-left" />
@@ -197,69 +228,78 @@ export default function TwinHome() {
       </section>
 
       <section className="twin-stats" aria-label="This week at a glance">
-        <SpotlightCard className="stat rise" style={{ ["--i" as string]: 1 }}>
-          <Ring
-            half
-            value={Math.min(twin.loadPct, 100) / 100}
-            colour={loadColour(twin.loadPct)}
-            size={112}
-            label={`Weekly load ${load}%`}
-          />
-          <div className="stat-num num">
-            <CountUp to={load} suffix="%" />
+        <SpotlightCard className="stat rise" style={{ ["--i" as string]: 1, ["--glass-accent" as string]: loadColour(twin.loadPct) }}>
+          <header className="stat-head">
+            <span className="stat-label">weekly load</span>
+            <span className="stat-tag" style={{ color: loadColour(twin.loadPct) }}>
+              {twin.loadPct > 85 ? "heavy" : twin.loadPct >= 60 ? "full" : "light"}
+            </span>
+          </header>
+          <div className="stat-body">
+            <div className="stat-num num">
+              <CountUp to={load} suffix="%" />
+            </div>
+            <Ring value={Math.min(twin.loadPct, 100) / 100} colour={loadColour(twin.loadPct)} size={76} label={`Weekly load ${load}%`} />
           </div>
-          <p className="stat-label">weekly load</p>
-          <p className="stat-note">open work due in 7 days vs 4 free hours a day</p>
+          <Sparkline values={series.load} colour={loadColour(twin.loadPct)} label="Estimated hours due each day for the next 7 days" />
+          <p className="stat-note">hours due per day, next 7 days, vs 4 free hours a day</p>
         </SpotlightCard>
 
-        <SpotlightCard className="stat rise" style={{ ["--i" as string]: 2 }}>
-          <div className="stat-ring">
-            <Ring
-              value={twin.habitConsistency}
-              colour="var(--green)"
-              size={72}
-              label={`Habit consistency ${Math.round(twin.habitConsistency * 100)}%`}
-            />
-            <span className="stat-num num">
+        <SpotlightCard className="stat rise" style={{ ["--i" as string]: 2, ["--glass-accent" as string]: "var(--green)" }}>
+          <header className="stat-head">
+            <span className="stat-label">habit consistency</span>
+            <span className="stat-tag" style={{ color: "var(--green)" }}>14 days</span>
+          </header>
+          <div className="stat-body">
+            <div className="stat-num num">
               <CountUp to={Math.round(twin.habitConsistency * 100)} suffix="%" />
-            </span>
+            </div>
+            <Ring value={twin.habitConsistency} colour="var(--green)" size={76} label={`Habit consistency ${Math.round(twin.habitConsistency * 100)}%`} />
           </div>
-          <p className="stat-label">habit consistency</p>
-          <p className="stat-note">check-ins done, last 14 days</p>
+          <Sparkline values={series.habits} colour="var(--green)" label="Share of habits done each day, last 14 days" />
+          <p className="stat-note">share of habits checked in, day by day</p>
         </SpotlightCard>
 
-        <SpotlightCard className="stat rise" style={{ ["--i" as string]: 3 }}>
-          <div className="stat-ring">
-            <Ring
-              value={twin.goalAlignment}
-              colour="var(--amber)"
-              size={72}
-              label={`Goal-linked work ${Math.round(twin.goalAlignment * 100)}%`}
-            />
-            <span className="stat-num num">
+        <SpotlightCard className="stat rise" style={{ ["--i" as string]: 3, ["--glass-accent" as string]: "var(--amber)" }}>
+          <header className="stat-head">
+            <span className="stat-label">goal-linked work</span>
+            <span className="stat-tag" style={{ color: "var(--amber)" }}>7 days</span>
+          </header>
+          <div className="stat-body">
+            <div className="stat-num num">
               <CountUp to={Math.round(twin.goalAlignment * 100)} suffix="%" />
-            </span>
+            </div>
+            <Ring value={twin.goalAlignment} colour="var(--amber)" size={76} label={`Goal-linked work ${Math.round(twin.goalAlignment * 100)}%`} />
           </div>
-          <p className="stat-label">goal-linked work</p>
-          <p className="stat-note">share of last week&rsquo;s hours on a goal</p>
+          <Sparkline values={series.goalHours} colour="var(--amber)" label="Goal-linked hours logged each day, last 7 days" />
+          <p className="stat-note">hours finished on a goal, day by day</p>
         </SpotlightCard>
 
-        <SpotlightCard className="stat stat-fidelity rise" style={{ ["--i" as string]: 4 }}>
-          <span className="fidelity-chip">
-            <span className="fidelity-dot" aria-hidden="true" />
-            fidelity {Math.round(twin.fidelity * 100)}%
-          </span>
-          <div className="stat-num stat-num-big num">
-            {guesses.total > 0 ? (
-              <>
-                <CountUp to={guesses.hits} />
-                <span className="stat-of"> of {guesses.total}</span>
-              </>
-            ) : (
-              "–"
-            )}
+        <SpotlightCard className="stat stat-fidelity rise" style={{ ["--i" as string]: 4, ["--glass-accent" as string]: "var(--violet)" }}>
+          <header className="stat-head">
+            <span className="stat-label">twin&rsquo;s guess vs your choice</span>
+            <span className="fidelity-chip">
+              <span className="fidelity-dot" aria-hidden="true" />
+              fidelity {Math.round(twin.fidelity * 100)}%
+            </span>
+          </header>
+          <div className="stat-body">
+            <div className="stat-num num">
+              {guesses.total > 0 ? (
+                <>
+                  <CountUp to={guesses.hits} />
+                  <span className="stat-of"> of {guesses.total}</span>
+                </>
+              ) : (
+                "–"
+              )}
+            </div>
           </div>
-          <p className="stat-label">twin&rsquo;s guess vs your choice</p>
+          <div className="guess-dots" role="img" aria-label={`${guesses.hits} of ${guesses.total} guesses matched`}>
+            {series.guesses.map((hit, i) => (
+              <span key={i} className={hit ? "hit" : "miss"} style={{ animationDelay: `${0.6 + i * 0.07}s` }} />
+            ))}
+          </div>
           <p className="stat-note">
             {guesses.total > 0
               ? `last ${guesses.total} decisions. An estimate, not a prediction.`
@@ -269,13 +309,13 @@ export default function TwinHome() {
       </section>
 
       <section className="twin-grid">
-        <div className="glass twin-panel twin-heat rise" style={{ ["--i" as string]: 5 }}>
+        <div className="glass twin-panel twin-heat rise" style={{ ["--i" as string]: 5, ["--glass-accent" as string]: "var(--teal)" }}>
           <h2>Focus hours</h2>
           <p className="twin-panel-note">When finished work usually happens, by weekday and hour.</p>
           <Heatmap data={twin.heatmap} />
         </div>
 
-        <div className="glass twin-panel rise" style={{ ["--i" as string]: 6 }}>
+        <div className="glass twin-panel rise" style={{ ["--i" as string]: 6, ["--glass-accent" as string]: "var(--rose)" }}>
           <h2>Coming up</h2>
           <p className="twin-panel-note">On-time odds from 500 simulated runs of {name}&rsquo;s own pace.</p>
           {deadlines.length === 0 ? (

@@ -4,21 +4,27 @@ import { motion, useReducedMotion } from "motion/react";
 import type { Fact, FactKind } from "@/lib/types";
 import "./Constellation.css";
 
-// Six hubs, three on each side of her. Every kind always has a hub, so the sky reads the
-// same before anything is approved. Stars fan inward, toward her.
-const W = 1100;
-const H = 860;
-const FACE_EDGE = 262; // spokes stop this far from the centre line, just short of her hair
-const PER_HUB = 7;
+// Six hubs, three on each side of her, spread wide. Every kind always has a hub, so the sky
+// reads the same before anything is approved (empty hubs show dashed placeholder stars).
+// Stars stack in a column between the hub and her, each with a short label.
+const W = 1500;
+const H = 900;
+const HUB_X = 560; // hub distance from the centre line
+const FACE_EDGE = 300; // spokes stop this far from the centre line, just short of her hair
+const PER_HUB = 6;
+const GHOSTS = 3;
+const GAP = 34; // vertical gap between stars in a column
 
 const HUBS: Array<{ kind: FactKind; label: string; colour: string; side: -1 | 1; y: number }> = [
-  { kind: "task", label: "tasks", colour: "var(--teal)", side: -1, y: 170 },
-  { kind: "deadline", label: "deadlines", colour: "var(--rose)", side: -1, y: 430 },
-  { kind: "goal", label: "goals", colour: "var(--amber)", side: -1, y: 690 },
-  { kind: "habit", label: "habits", colour: "var(--green)", side: 1, y: 170 },
-  { kind: "routine", label: "routines", colour: "var(--violet)", side: 1, y: 430 },
-  { kind: "preference", label: "preferences", colour: "var(--lilac)", side: 1, y: 690 },
+  { kind: "task", label: "tasks", colour: "var(--teal)", side: -1, y: 440 },
+  { kind: "deadline", label: "deadlines", colour: "var(--rose)", side: -1, y: 630 },
+  { kind: "goal", label: "goals", colour: "var(--amber)", side: -1, y: 815 },
+  { kind: "habit", label: "habits", colour: "var(--green)", side: 1, y: 440 },
+  { kind: "routine", label: "routines", colour: "var(--violet)", side: 1, y: 630 },
+  { kind: "preference", label: "preferences", colour: "var(--lilac)", side: 1, y: 815 },
 ];
+
+const short = (t: string, n = 22) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
 
 interface Placed {
   fact: Fact;
@@ -47,20 +53,30 @@ export default function Constellation({
 }) {
   const reduce = useReducedMotion();
 
-  const hubs = HUBS.map((h) => ({ ...h, x: W / 2 + h.side * 440 }));
+  const hubs = HUBS.map((h) => ({ ...h, x: W / 2 + h.side * HUB_X }));
   const placed: Placed[] = [];
   const byHub = hubs.map((hub) => {
     const mine = facts.filter((f) => f.kind === hub.kind).slice(0, PER_HUB);
-    const toward = hub.side === -1 ? 0 : Math.PI; // inward
+    const inward = -hub.side; // +1 means towards +x
+    // A gently curved column: the middle stars sit closest to her.
     const nodes = mine.map((fact, j) => {
-      const spread = mine.length > 1 ? (j / (mine.length - 1) - 0.5) * 2.6 : 0;
-      const ang = toward + spread * (hub.side === -1 ? 1 : -1);
-      const dist = 46 + (j % 3) * 24;
-      const p: Placed = { fact, x: hub.x + dist * Math.cos(ang), y: hub.y + dist * Math.sin(ang), side: hub.side };
+      const t = mine.length > 1 ? j / (mine.length - 1) - 0.5 : 0;
+      const p: Placed = {
+        fact,
+        x: hub.x + inward * (64 + (0.25 - t * t) * 120),
+        y: hub.y + (j - (mine.length - 1) / 2) * GAP,
+        side: hub.side,
+      };
       placed.push(p);
       return p;
     });
-    return { hub, nodes };
+    const ghosts = mine.length === 0
+      ? Array.from({ length: GHOSTS }, (_, j) => ({
+          x: hub.x + inward * (64 + (0.25 - (j / (GHOSTS - 1) - 0.5) ** 2) * 120),
+          y: hub.y + (j - (GHOSTS - 1) / 2) * GAP,
+        }))
+      : [];
+    return { hub, nodes, ghosts };
   });
 
   // Facts that share a source get a faint link (same side only, so nothing crosses her).
@@ -85,7 +101,7 @@ export default function Constellation({
         };
 
   return (
-    <svg className="constellation" viewBox={`0 0 ${W} ${H}`} aria-label="Knowledge constellation">
+    <svg className="constellation" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" aria-label="Knowledge constellation">
       {links.map(([a, b], i) => (
         <motion.path
           key={`l${i}`}
@@ -95,7 +111,7 @@ export default function Constellation({
         />
       ))}
 
-      {byHub.map(({ hub, nodes }, i) => {
+      {byHub.map(({ hub, nodes, ghosts }, i) => {
         const empty = nodes.length === 0;
         return (
           <g
@@ -124,21 +140,22 @@ export default function Constellation({
               />
             ))}
             <g transform={`translate(${hub.x} ${hub.y})`}>
-              <circle r={empty ? 8 : 10.5} className={`const-hub ${empty ? "empty" : ""}`} stroke={hub.colour} style={{ ["--c" as string]: hub.colour }} />
+              <circle r={empty ? 13 : 16} className={`const-hub ${empty ? "empty" : ""}`} stroke={hub.colour} style={{ ["--c" as string]: hub.colour }} />
+              {!empty && <circle r="4" fill={hub.colour} />}
             </g>
-            <text
-              x={hub.x}
-              y={hub.y + 34}
-              textAnchor="middle"
-              className="const-label"
-            >
+            <text x={hub.x} y={hub.y - 34} textAnchor="middle" className="const-label">
               {hub.label}
-              {!empty && <tspan className="const-count"> {facts.filter((f) => f.kind === hub.kind).length}</tspan>}
+              <tspan className="const-count" dx="8">
+                {facts.filter((f) => f.kind === hub.kind).length}
+              </tspan>
             </text>
+            {ghosts.map((g, j) => (
+              <circle key={`g${j}`} cx={g.x} cy={g.y} r="7" className="const-ghost" style={{ ["--c" as string]: hub.colour }} />
+            ))}
             {nodes.map((n, j) => (
               <g key={n.fact.id} transform={`translate(${n.x} ${n.y})`}>
                 <motion.circle
-                  r={3.6 + n.fact.confidence * 3.4}
+                  r={6 + n.fact.confidence * 4}
                   fill={hub.colour}
                   className="const-star"
                   tabIndex={0}
@@ -153,6 +170,14 @@ export default function Constellation({
                   transition={{ type: "spring", stiffness: 200, damping: 16, delay: 1.3 + i * 0.07 + j * 0.05 }}
                   style={{ ["--c" as string]: hub.colour }}
                 />
+                <text
+                  x={hub.side === -1 ? 18 : -18}
+                  y="4"
+                  textAnchor={hub.side === -1 ? "start" : "end"}
+                  className="const-node-label"
+                >
+                  {short(n.fact.text)}
+                </text>
               </g>
             ))}
           </g>

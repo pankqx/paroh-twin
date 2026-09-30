@@ -12,8 +12,8 @@
 }
 
 .const-spoke {
-  stroke: color-mix(in srgb, var(--violet) 30%, transparent);
-  stroke-width: 1;
+  stroke: color-mix(in srgb, var(--violet) 38%, transparent);
+  stroke-width: 1.2;
   stroke-dasharray: 2 6;
 }
 
@@ -34,8 +34,8 @@
 
 .const-hub {
   fill: color-mix(in srgb, var(--c) 18%, var(--bg));
-  stroke-width: 1.5;
-  filter: drop-shadow(0 0 6px var(--c));
+  stroke-width: 2;
+  filter: drop-shadow(0 0 8px var(--c));
 }
 
 .const-hub.empty {
@@ -47,19 +47,39 @@
 
 .const-label {
   font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
-  fill: var(--muted);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--text-soft);
 }
 
 .const-count {
-  fill: var(--text-soft);
+  fill: var(--text);
   font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.const-node-label {
+  font-family: var(--font-body);
+  font-size: 15px;
+  fill: var(--text-soft);
+  pointer-events: none;
+}
+
+.const-ghost {
+  fill: none;
+  stroke: var(--c);
+  stroke-opacity: 0.4;
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
 }
 
 .const-star {
   cursor: pointer;
-  filter: drop-shadow(0 0 5px var(--c));
+  filter: drop-shadow(0 0 8px var(--c));
   outline: none;
 }
 

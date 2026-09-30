@@ -4,23 +4,41 @@
   padding-right: 2.5rem;
 }
 
-/* ---------- Hero: text + orbit stage ---------- */
+/* ---------- Hero: one stage, face + constellation fill the first screen ----------
+   The stage is a size container. The constellation SVG (1500 x 900) is scaled to fit it, and
+   the face is sized from the same unit (--u), so stars and face always stay in proportion. */
 
 .twin-hero {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.62fr) minmax(0, 1.7fr);
-  gap: 1rem;
-  align-items: center;
-  min-height: min(760px, calc(100vh - 100px));
+  margin-top: -1rem;
+}
+
+.twin-stage {
+  --u: min(100cqh, 60cqw); /* rendered height of the constellation */
+  position: relative;
+  container-type: size;
+  width: 100%;
+  height: clamp(560px, calc(100vh - var(--bar-h) - 1.5rem), 1000px);
+}
+
+.twin-stage-face {
+  position: absolute;
+  left: 50%;
+  top: calc((100cqh - var(--u)) / 2 + var(--u) * 0.02);
+  height: calc(var(--u) * 0.96);
+  transform: translateX(-50%);
+  --face-h: 100%;
 }
 
 .twin-hero-text {
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  z-index: 3;
+  top: 1.25rem;
+  left: 0.5rem;
+  width: min(360px, 26cqw);
 }
 
 .twin-eyebrow {
-  margin: 0 0 1rem;
+  margin: 0 0 0.6rem;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -29,16 +47,15 @@
 }
 
 .twin-title {
-  font-size: 3rem;
-  line-height: 1.05;
-  max-width: 12ch;
-  margin-bottom: 1.1rem;
+  font-size: clamp(2.2rem, 3.2cqw, 3rem);
+  line-height: 1.04;
+  margin-bottom: 0.8rem;
 }
 
 .twin-lede {
-  max-width: 40ch;
-  font-size: 1.05rem;
-  margin-bottom: 1.9rem;
+  max-width: 38ch;
+  font-size: 1rem;
+  margin-bottom: 1.2rem;
 }
 
 .twin-actions {
@@ -47,36 +64,26 @@
   gap: 0.75rem;
 }
 
+/* The line under her: which star you are reading. */
 .twin-caption {
-  margin: 2rem 0 0;
-  min-height: 3em;
-  max-width: 44ch;
-  padding-left: 0.9rem;
-  border-left: 1.5px solid var(--stroke-glow);
-  font-size: 0.86rem;
-  color: var(--muted);
-}
-
-.twin-stage {
-  position: relative;
-  width: 100%;
-  max-height: calc(100vh - 80px);
-  aspect-ratio: 1100 / 860;
-  margin: 0 auto;
-}
-
-.twin-stage-face {
   position: absolute;
-  top: 3%;
+  z-index: 3;
   left: 50%;
-  height: 94%;
+  bottom: 0.25rem;
   transform: translateX(-50%);
-  --face-h: 100%;
+  margin: 0;
+  width: max-content;
+  max-width: min(560px, 90%);
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  text-align: center;
+  color: var(--text-soft);
 }
 
 .twin-doodle {
   position: absolute;
-  top: 2%;
+  top: 1.5rem;
   right: 3%;
   pointer-events: none;
 }
@@ -92,56 +99,64 @@
 }
 
 .stat {
-  padding: 1.9rem 2rem 1.7rem;
+  padding: 1.4rem 1.6rem 1.3rem;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
+  gap: 0.35rem;
 }
 
-.stat-ring {
-  position: relative;
-  display: grid;
-  place-items: center;
-  margin-bottom: 0.4rem;
-}
-
-.stat-ring > * {
-  grid-area: 1 / 1;
-}
-
-.stat-ring .stat-num {
-  font-size: 1.5rem;
-  margin: 0;
-}
-
-.stat-num {
-  margin-top: -0.4rem;
-  font-size: 2.7rem;
-  font-weight: 500;
-  line-height: 1.1;
-  color: var(--text);
-}
-
-.stat-num-big {
-  margin-top: 1rem;
-  font-size: 3.4rem;
-}
-
-.stat-of {
-  font-size: 1.1rem;
-  color: var(--muted);
+.stat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .stat-label {
-  margin: 0.4rem 0 0.15rem;
-  font-size: 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.stat-tag {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stat-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 76px;
+}
+
+.stat-num {
+  font-size: clamp(3.4rem, 4.6vw, 4.6rem);
   font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
 
+.stat-fidelity .stat-num {
+  font-size: clamp(3.6rem, 5vw, 5rem);
+}
+
+.stat-of {
+  font-size: 1.3rem;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
 .stat-note {
-  margin: 0;
-  font-size: 0.84rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
@@ -149,10 +164,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.3rem 0.8rem;
+  padding: 0.25rem 0.7rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 600;
+  white-space: nowrap;
   color: var(--violet);
   background: color-mix(in srgb, var(--violet) 14%, transparent);
   border: 1px solid var(--stroke-glow);
@@ -164,6 +180,38 @@
   border-radius: 50%;
   background: var(--violet);
   box-shadow: 0 0 8px var(--violet);
+}
+
+/* One dot per recent decision: filled when the twin guessed your choice. */
+.guess-dots {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  height: 44px;
+}
+
+.guess-dots span {
+  flex: 1;
+  max-width: 22px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: guess-in 0.5s var(--ease) both;
+}
+
+.guess-dots .hit {
+  background: var(--violet);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--violet) 70%, transparent);
+}
+
+.guess-dots .miss {
+  border: 1.5px solid color-mix(in srgb, var(--violet) 50%, transparent);
+}
+
+@keyframes guess-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
 }
 
 /* ---------- Lower grid ---------- */
@@ -295,13 +343,45 @@
     padding-right: 1.25rem;
   }
 
-  .twin-hero {
-    grid-template-columns: 1fr;
-    min-height: 0;
+  /* Text above, stage below. */
+  .twin-stage {
+    height: auto;
+    container-type: normal;
+    display: flex;
+    flex-direction: column;
   }
 
-  .twin-stage {
-    max-height: none;
+  .twin-hero-text {
+    position: static;
+    width: auto;
+    order: -1;
+    margin-bottom: 0.5rem;
+  }
+
+  .twin-stage-face {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    align-self: center;
+    --face-h: clamp(340px, 62vh, 620px);
+    height: auto;
+    margin-top: calc(var(--face-h) * -0.16); /* the drawing has empty space above the crown */
+  }
+
+  .twin-stage .constellation {
+    display: none;
+  }
+
+  .twin-caption {
+    position: static;
+    transform: none;
+    align-self: center;
+    margin-top: 0.75rem;
+  }
+
+  .twin-doodle {
+    display: none;
   }
 
   .coverage {
