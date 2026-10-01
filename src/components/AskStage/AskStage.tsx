@@ -20,7 +20,12 @@ const EXAMPLES = ["What if I revise tonight and finish the assignment tomorrow?"
 export default function AskStage() {
   const [step, setStep] = useState<Step>("idle");
   const [prompt, setPrompt] = useState("");
+  // A what-if handed over from Pulse (?q=...) is pre-filled, ready to send.
   const [typed, setTyped] = useState("");
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setTyped(q); // eslint-disable-line react-hooks/set-state-in-effect
+  }, []);
   const [clarify, setClarify] = useState("");
   const [chips, setChips] = useState<string[]>([]);
   const [degraded, setDegraded] = useState(false);
