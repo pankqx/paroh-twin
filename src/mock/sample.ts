@@ -1,7 +1,7 @@
 import type { Category, Decision, Fact, Goal, Habit, JournalEntry, SampleData, Scenario, Task, CheckIn } from "../lib/types";
 
 // Fictional demo persona. All dates are generated from the seed date, not a calendar year.
-export const SAMPLE_STUDENT_NAME = "Asha (sample)";
+export const SAMPLE_STUDENT_NAME = "Frank (sample)";
 
 type TaskSeed = { title: string; category: Category; estHours: number; actualHours: number; goalId?: string; dueInDays?: number; dueHour?: number };
 const completedSeeds: TaskSeed[] = [
@@ -69,8 +69,8 @@ const dateKey = (date: Date) => date.toISOString().slice(0, 10);
 function makeDecisions(seed: Date): Decision[] {
   return Array.from({ length: 6 }, (_, i) => {
     const scenarios: Scenario[] = [
-      { id: `decision-${i + 1}-a`, label: "Deadline first", summary: "Make progress on the closest deadline.", onTimeProb: 0.76 - i * 0.02, peakLoad: 0.72, goalImpact: 0.12, assumptions: ["Uses Asha's recorded task-hour ratios."] },
-      { id: `decision-${i + 1}-b`, label: "Take a lighter evening", summary: "Choose a smaller task and leave time to rest.", onTimeProb: 0.64 - i * 0.02, peakLoad: 0.48, goalImpact: -0.03, assumptions: ["Uses Asha's recorded task-hour ratios."] },
+      { id: `decision-${i + 1}-a`, label: "Deadline first", summary: "Make progress on the closest deadline.", onTimeProb: 0.76 - i * 0.02, peakLoad: 0.72, goalImpact: 0.12, assumptions: ["Uses Frank's recorded task-hour ratios."] },
+      { id: `decision-${i + 1}-b`, label: "Take a lighter evening", summary: "Choose a smaller task and leave time to rest.", onTimeProb: 0.64 - i * 0.02, peakLoad: 0.48, goalImpact: -0.03, assumptions: ["Uses Frank's recorded task-hour ratios."] },
     ];
     const predictedChoiceId = scenarios[i % 2].id;
     const hasChoice = i < 5;

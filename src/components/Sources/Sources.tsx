@@ -66,7 +66,7 @@ const HONESTY = [
   "Monitoring and notifications run on sample data while the app is open. Real, continuous monitoring needs the connectors, which are roadmap.",
   "The twin is an explainable approximation with a fidelity score, not a perfect prediction.",
   "Not a therapy or mental-health product. Mood and energy are planning inputs only.",
-  "Everything here is sample data for the student \"Asha\". Nothing is connected to a real account.",
+  "Everything here is sample data for the student \"Frank\". Nothing is connected to a real account.",
 ];
 
 // Position of each of the 7 tiles on the orbit, as a share of the stage (matches the SVG viewBox).

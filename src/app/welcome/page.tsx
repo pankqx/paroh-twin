@@ -85,7 +85,7 @@ export default function WelcomePage() {
         </button>
 
         <p className="welcome-note">
-          This demo runs on sample data about a made-up student, Asha. When you ask the twin to
+          This demo runs on sample data about a made-up student, Frank. When you ask the twin to
           read or explain something, the text you allow is sent to a hosted language model. You
           approve every fact before the twin learns it.
         </p>

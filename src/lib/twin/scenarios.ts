@@ -47,7 +47,7 @@ export function simulate(spec: ScenarioSpec, data: TwinData, seed = 42, trials =
   const goalImpact = relevant.length ? relevant.filter(t => t!.goalId).length / relevant.length : 0;
   return { id: spec.id, label: spec.label, summary: spec.summary, onTimeProb: successes / trials,
     peakLoad: peak / trials, goalImpact: spec.priority === "goal" ? Math.max(goalImpact, 0.5) : goalImpact,
-    assumptions: [`500 seeded trials resample ${ratios.length ? "Asha's completed actual/estimate ratios" : "a conservative estimate ratio centred on 1.0"}.`, `Study estimate multiplier: ${bias.study.toFixed(2)}x.`] };
+    assumptions: [`500 seeded trials resample ${ratios.length ? "Frank's completed actual/estimate ratios" : "a conservative estimate ratio centred on 1.0"}.`, `Study estimate multiplier: ${bias.study.toFixed(2)}x.`] };
 }
 
 export function recommend(scenarios: Scenario[]): Scenario | undefined {

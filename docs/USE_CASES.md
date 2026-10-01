@@ -1,6 +1,6 @@
 # Paroh use cases (for judges and the demo)
 
-Sample student: **Asha (sample data)**. Every screen shows only data she allowed and facts she approved.
+Sample student: **Frank (sample data)**. Every screen shows only data she allowed and facts she approved.
 
 | # | Use case | Where | What data | What the student sees and gets |
 |---|---|---|---|---|
