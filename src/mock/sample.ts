@@ -111,7 +111,11 @@ export function createSampleData(seedDate = new Date()): SampleData {
     { date: previousWeekday(seed, 0, 1), hour: 10 },
     { date: previousWeekday(seed, 6, 3), hour: 17 },
   ];
-  const completedTimes = [...weekdaySlots, ...weekendSlots].sort((a, b) => a.date.getTime() - b.date.getTime());
+  // Newest first, then spread the seeds across the weeks so the last 7 days hold a realistic mix of
+  // goal-linked and other work (otherwise every goal task lands weeks ago and goal-linked work reads 0%).
+  const byDate = [...weekdaySlots, ...weekendSlots].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const step = byDate.length % 3 === 0 ? 7 : 3;
+  const completedTimes = byDate.map((_, i) => byDate[(i * step) % byDate.length]);
 
   const tasks: Task[] = [
     ...completedSeeds.map((task, i) => {
