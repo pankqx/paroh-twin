@@ -1,5 +1,5 @@
 export interface ListenResult { transcript: string; isFinal: boolean }
-export interface ListenOptions { measureLevel?: boolean; autoRestart?: boolean }
+export interface ListenOptions { measureLevel?: boolean; autoRestart?: boolean; /** Keep listening through pauses until stop() is called. */ continuous?: boolean }
 export type ListenState = "idle" | "listening" | "error";
 export type ListenErrorCode = "not-allowed" | "no-speech" | "network" | "audio-capture" | "service-not-allowed" | string;
 
@@ -37,6 +37,7 @@ let state: ListenState = "idle";
 let generation = 0;
 let autoRestart = false;
 let meterRequested = false;
+let continuousMode = false;
 
 function recognitionConstructor(): RecognitionConstructor | undefined {
   if (typeof window === "undefined") return undefined;
@@ -127,7 +128,7 @@ async function requestPermissionAndStart(Constructor: RecognitionConstructor, ex
 
     const instance = new Constructor();
     instance.lang = "en-IN";
-    instance.continuous = false;
+    instance.continuous = continuousMode;
     instance.interimResults = true;
     instance.onresult = event => {
       for (let i = Math.max(0, event.resultIndex ?? 0); i < event.results.length; i++) {
@@ -138,10 +139,14 @@ async function requestPermissionAndStart(Constructor: RecognitionConstructor, ex
         for (const callback of resultListeners) callback(value);
         for (const callback of result.isFinal ? finalListeners : interimListeners) callback(transcript);
         clearSilenceTimer();
-        silenceTimer = setTimeout(() => finish(expectedGeneration), 1800);
+        if (!continuousMode) silenceTimer = setTimeout(() => finish(expectedGeneration), 1800);
       }
     };
-    instance.onerror = event => fail(expectedGeneration, event.error || "network");
+    instance.onerror = event => {
+      // In continuous mode a quiet pause ("no-speech") or a dropped session is not an error: keep going.
+      if (continuousMode && (event.error === "no-speech" || event.error === "aborted")) return;
+      fail(expectedGeneration, event.error || "network");
+    };
     instance.onend = () => {
       if (expectedGeneration !== generation) return;
       if (autoRestart && state === "listening") {
@@ -170,7 +175,8 @@ export function start(options: ListenOptions = {}): boolean {
   if (!Constructor || state === "listening") return false;
   generation++;
   const currentGeneration = generation;
-  autoRestart = options.autoRestart ?? false;
+  continuousMode = options.continuous ?? false;
+  autoRestart = options.autoRestart ?? continuousMode;
   meterRequested = options.measureLevel ?? false;
   publishState("listening");
   void requestPermissionAndStart(Constructor, currentGeneration);

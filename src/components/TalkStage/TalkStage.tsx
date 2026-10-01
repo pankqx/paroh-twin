@@ -115,7 +115,8 @@ export default function TalkStage() {
   const confirmIdx = useRef(0);
   const lastLevel = useRef(0);
   const submitRef = useRef<(raw: string, tapped: boolean) => void>(() => {});
-  const interimRef = useRef(""); // live transcript, used if recognition ends on a pause
+  const interimRef = useRef(""); // the phrase being spoken right now
+  const partsRef = useRef<string[]>([]); // finished phrases in this listening turn
   const handledRef = useRef(false); // this listening turn is already submitted or stopped
 
   // Questions come from the engine, lowest-confidence domain first.
@@ -160,22 +161,21 @@ export default function TalkStage() {
       setSentence(s.currentSentence);
       setMouth(s.mouth);
     });
+    // Continuous dictation: keep every finished phrase until you stop; show the live words.
     const offResult = listen.onResult(({ transcript, isFinal }) => {
-      setHeard(transcript);
-      interimRef.current = transcript;
       if (isFinal) {
+        partsRef.current.push(transcript);
         interimRef.current = "";
-        handledRef.current = true;
-        listen.stop();
-        chime("stop");
-        setLevel(0);
-        submitRef.current(transcript, false);
+      } else {
+        interimRef.current = transcript;
       }
+      setHeard([...partsRef.current, interimRef.current].join(" ").trim());
     });
     const offEnd = listen.onEnd(() => {
       setLevel(0);
-      // The browser often ends on a pause before marking the text final: use what it heard.
-      const pending = interimRef.current.trim();
+      // Ended by the browser (not by you): use whatever was heard.
+      const pending = [...partsRef.current, interimRef.current].join(" ").trim();
+      partsRef.current = [];
       interimRef.current = "";
       if (!handledRef.current && pending) {
         handledRef.current = true;
@@ -259,11 +259,19 @@ export default function TalkStage() {
     }
 
     const text = tapped ? (STATEMENT[q.domain]?.(answer) ?? answer) : answer;
-    const facts = await dataService.extractFacts({
+    let facts = await dataService.extractFacts({
       text,
       source: "question",
       sourceId: `${q.id}-${Date.now()}`, // unique, so a repeat answer never overwrites an earlier fact
     });
+    // Spoken answers are often short ("evening") or unpunctuated: retry as a full statement for
+    // this question, then as a plain preference. It is still only a candidate you approve or edit.
+    const short = answer.split(/\s+/).length <= 4;
+    const tries = [short ? STATEMENT[q.domain]?.(answer.replace(/[.?!]+$/, "")) : undefined, `I prefer ${answer.replace(/^i\s+/i, "").replace(/[.?!]+$/, "")}.`];
+    for (const retry of tries) {
+      if (facts.length > 0 || !retry || retry === text) continue;
+      facts = await dataService.extractFacts({ text: retry, source: "question", sourceId: `${q.id}-${Date.now()}-r` });
+    }
     notifyFactsChanged();
 
     if (facts.length === 0) {
@@ -315,14 +323,25 @@ export default function TalkStage() {
     speech.speak(CONFIRMATIONS[confirmIdx.current++ % CONFIRMATIONS.length]);
   }
 
+  /** Stop listening and send everything heard so far. */
+  function finishListening() {
+    const text = [...partsRef.current, interimRef.current].join(" ").trim();
+    handledRef.current = true;
+    partsRef.current = [];
+    interimRef.current = "";
+    listen.stop();
+    chime("stop");
+    setLevel(0);
+    if (text) submit(text, false);
+    else {
+      setStep("ask");
+      setNotice("I didn't catch anything. Try again, or type your answer.");
+    }
+  }
+
   function dictate() {
     if (step === "listening") {
-      handledRef.current = true;
-      interimRef.current = "";
-      listen.stop();
-      chime("stop");
-      setLevel(0);
-      setStep("ask");
+      finishListening();
       return;
     }
     // Tapping while she talks interrupts her and starts listening straight away.
@@ -333,20 +352,44 @@ export default function TalkStage() {
     setNotice("");
     handledRef.current = false;
     interimRef.current = "";
-    if (listen.start({ measureLevel: true })) {
+    partsRef.current = [];
+    if (listen.start({ measureLevel: true, continuous: true })) {
       chime("start");
       setStep("listening");
-      setLine("Yes? I'm listening.");
+      setLine("Yes? I'm listening. Tap again or press Space when you're done.");
       faceRef.current?.react("nod", 700);
     } else {
       setNotice("Dictation isn't available here. Type your answer instead.");
     }
   }
 
+  // Space starts and stops listening (when you are not typing); Esc stops everything.
+  const dictateRef = useRef(dictate);
+  const stopRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    dictateRef.current = dictate;
+    stopRef.current = stopAll;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (e.code === "Space" && !e.repeat) {
+        e.preventDefault();
+        dictateRef.current();
+      } else if (e.key === "Escape") {
+        stopRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   function stopAll() {
     if (step === "listening" || speaking) chime("stop");
     handledRef.current = true;
     interimRef.current = "";
+    partsRef.current = [];
     speech.stop();
     listen.stop();
     setLevel(0);
