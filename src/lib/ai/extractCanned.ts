@@ -16,6 +16,31 @@ function explicitDate(text: string): string | undefined {
   return undefined;
 }
 
+const WORD_NUM: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+
+/**
+ * A long-range horizon for goals: "in the next 2 years", "within six months", "by 2028",
+ * "by the end of the year", "this year", "next year". Returns an ISO date or undefined.
+ */
+export function goalHorizon(text: string, now = new Date()): string | undefined {
+  const lower = text.toLowerCase();
+  const rel = lower.match(/\b(?:in|within|over)\s+(?:the\s+)?(?:next|coming)?\s*(\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten)\s+(years?|months?|weeks?)\b/);
+  if (rel) {
+    const n = /^\d+$/.test(rel[1]) ? Number(rel[1]) : WORD_NUM[rel[1]] ?? 1;
+    const d = new Date(now);
+    if (rel[2].startsWith("year")) d.setFullYear(d.getFullYear() + n);
+    else if (rel[2].startsWith("month")) d.setMonth(d.getMonth() + n);
+    else d.setDate(d.getDate() + n * 7);
+    d.setHours(9, 0, 0, 0);
+    return d.toISOString();
+  }
+  const year = lower.match(/\b(?:by|in|before)\s+(?:the\s+end\s+of\s+)?(20\d\d)\b/);
+  if (year) return new Date(Number(year[1]), 11, 31, 9).toISOString();
+  if (/\b(?:by\s+the\s+end\s+of\s+(?:the|this)\s+year|this\s+year)\b/.test(lower)) return new Date(now.getFullYear(), 11, 31, 9).toISOString();
+  if (/\bnext\s+year\b/.test(lower)) return new Date(now.getFullYear() + 1, 11, 31, 9).toISOString();
+  return undefined;
+}
+
 /** Keyword and explicit-date extraction only; this does not infer feelings or diagnoses. */
 export function extractCanned(text: string, sourceId: string, source: "journal" | "question" = "journal"): Fact[] {
   const chunks = text.split(/(?<=[.!?\n])\s+/).map(s => s.trim()).filter(Boolean);
@@ -34,7 +59,11 @@ export function extractCanned(text: string, sourceId: string, source: "journal" 
     if (/\b(i will|i need to|i plan to|i have to|finish|complete|work on|revise|review|study|submit)\b/i.test(sentence)) {
       add("task", { title: sentence.replace(/^(i will|i need to|i plan to|i have to)\s+/i, ""), ...(hours ? { estHours: Number(hours[1]) } : {}), ...(date ? { due: date } : {}) });
     }
-    if (/\b(goal|want to achieve|aim to|my target)\b/i.test(sentence)) add("goal", { title: sentence });
+    // Goals: explicit words, or ambitions like "I want to be a ... in the next 2 years".
+    const horizon = goalHorizon(sentence);
+    if (/\b(goal|want to achieve|aim to|my target|i want to (?:be|become)|i'd like to (?:be|become)|i would like to (?:be|become)|my dream|i dream of|i hope to (?:be|become))\b/i.test(sentence) || (horizon && /\b(i want|i'd like|i would like|i hope|i plan)\b/i.test(sentence))) {
+      add("goal", { title: sentence, ...(horizon ? { targetDate: horizon } : {}) });
+    }
     if (/\b(habit|every day|daily|each morning|routine)\b/i.test(sentence)) add("habit", { title: sentence });
     if (/\b(i prefer|i like|works well for me|i work best|i (?:usually )?(?:focus|study|concentrate|work) (?:best|better)|i(?:'m| am) (?:most )?productive)\b/i.test(sentence)) add("preference", { preference: sentence });
   }

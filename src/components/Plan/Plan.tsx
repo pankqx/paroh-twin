@@ -120,6 +120,7 @@ export default function Plan() {
           <motion.div key="year" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
             <Year
               year={cursor.getFullYear()}
+              setYear={(y) => setCursor(new Date(y, cursor.getMonth(), 1))}
               today={today}
               days={days}
               goals={goals}
@@ -331,7 +332,7 @@ function Section({ title, empty, children }: { title: string; empty: string; chi
 
 /* ---------------- Year wheel ---------------- */
 
-function Year({ year, today, days, goals, tasks, onMonth }: { year: number; today: Date; days: Map<string, Day>; goals: Goal[]; tasks: Task[]; onMonth: (m: number) => void }) {
+function Year({ year, setYear, today, days, goals, tasks, onMonth }: { year: number; setYear: (y: number) => void; today: Date; days: Map<string, Day>; goals: Goal[]; tasks: Task[]; onMonth: (m: number) => void }) {
   const [hover, setHover] = useState<string>("");
   const R = 300;
   const start = new Date(year, 0, 1).getTime();
@@ -351,7 +352,10 @@ function Year({ year, today, days, goals, tasks, onMonth }: { year: number; toda
   const maxH = Math.max(1, ...dayList.map((d) => days.get(dkey(d))?.doneHours ?? 0));
   const deadlines = tasks.filter((t) => !t.done && t.dueAt && new Date(t.dueAt).getFullYear() === year);
   const tAng = ang(today.getTime());
-  const yearGoals = goals.filter((g) => g.targetDate);
+  const yearEnd = new Date(year + 1, 0, 1).getTime();
+  // Every goal whose span (created → target) overlaps this year, including multi-year ambitions.
+  const yearGoals = goals.filter((g) => g.targetDate && new Date(g.targetDate).getTime() >= start && new Date(g.createdAt).getTime() < yearEnd);
+  const allGoals = goals.filter((g) => g.targetDate).sort((a, b) => a.targetDate!.localeCompare(b.targetDate!));
 
   return (
     <div className="pl-year">
@@ -389,13 +393,17 @@ function Year({ year, today, days, goals, tasks, onMonth }: { year: number; toda
             const e = new Date(g.targetDate!).getTime();
             if (e < start) return null;
             const a0 = ang(s), a1 = ang(Math.min(e, start + total * 86400000 - 1));
-            const r = 230 - i * 26;
+            const r = 230 - (i % 5) * 26;
             const am = a0 + (a1 - a0) * g.progress;
             return (
               <g key={g.id} onMouseEnter={() => setHover(`${g.title}: ${Math.round(g.progress * 100)}% done, target ${new Date(g.targetDate!).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`)} onMouseLeave={() => setHover("")}>
                 <path d={arc(a0, a1, r)} className="pl-goal-track" style={{ stroke: CAT[g.category] }} />
                 <motion.path d={arc(a0, Math.max(a0 + 0.001, am), r)} className="pl-goal" style={{ stroke: CAT[g.category] }} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2, delay: 0.2 + i * 0.15 }} />
-                <circle cx={pt(a1, r)[0]} cy={pt(a1, r)[1]} r="6" className="pl-goal-end" style={{ fill: CAT[g.category] }} />
+                {e < yearEnd ? (
+                  <circle cx={pt(a1, r)[0]} cy={pt(a1, r)[1]} r="6" className="pl-goal-end" style={{ fill: CAT[g.category] }} />
+                ) : (
+                  <text x={pt(a1, r + 18)[0]} y={pt(a1, r + 18)[1]} className="pl-goal-cont" style={{ fill: CAT[g.category] }}>→ {new Date(g.targetDate!).getFullYear()}</text>
+                )}
               </g>
             );
           })}
@@ -424,15 +432,20 @@ function Year({ year, today, days, goals, tasks, onMonth }: { year: number; toda
         <p className="pl-hover" aria-live="polite">{hover || "Hover a goal arc or a deadline pin."}</p>
       </section>
       <aside className="glass pl-side">
-        <h2>Goals this year</h2>
+        <div className="pl-yearnav">
+          <button className="btn-ghost btn-small" onClick={() => setYear(year - 1)} aria-label="Previous year">←</button>
+          <b className="num">{year}</b>
+          <button className="btn-ghost btn-small" onClick={() => setYear(year + 1)} aria-label="Next year">→</button>
+        </div>
+        <h2>Your goals</h2>
         <ul className="pl-goals">
-          {yearGoals.map((g) => (
+          {allGoals.map((g) => (
             <li key={g.id}>
               <span className="pl-goal-dot" style={{ background: CAT[g.category] }} />
               <div>
                 <b>{g.title}</b>
                 <div className="pl-bar"><i style={{ transform: `scaleX(${g.progress})`, background: CAT[g.category] }} /></div>
-                <span>{Math.round(g.progress * 100)}% · target {new Date(g.targetDate!).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                <span>{Math.round(g.progress * 100)}% · target {new Date(g.targetDate!).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
               </div>
             </li>
           ))}

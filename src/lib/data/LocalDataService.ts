@@ -2,7 +2,7 @@ import type { CheckIn, ConsentCategory, ConsentSettings, Decision, Fact, Goal, H
 import type { ConnectorKind, ConverseInput, ConverseResult, DataService, Repo, WhatIfParseResult } from "./DataService";
 import { createSampleData } from "../../mock/sample";
 import { connectorSamples } from "../../mock/connectorSamples";
-import { extractCanned } from "../ai/extractCanned";
+import { extractCanned, goalHorizon } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
 import { buildMemoryGraph, deriveTwinState, detectConflicts, feedbackDelta as deriveFeedbackDelta, insights as deriveInsights, predictedNeeds as derivePredictedNeeds, privacyBoundary, retrieveRelevant, staleFacts } from "../twin";
 import { explainComparison, parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
@@ -116,7 +116,10 @@ export class LocalDataService implements DataService {
       }
       if (fact.kind === "goal") {
         const title = String(data.title ?? fact.text);
-        if (!(await this.goals.list()).some(g => g.title.toLowerCase() === title.toLowerCase())) await this.goals.upsert({ id: `fact-goal-${fact.id}`, title, category: fact.category, progress: 0, createdAt: now, updatedAt: now });
+        // Long-range goals land in the yearly planner: use the stated horizon ("in 2 years", "by 2028").
+        const inAYear = new Date(); inAYear.setFullYear(inAYear.getFullYear() + 1);
+        const target = typeof data.targetDate === "string" ? data.targetDate : typeof data.due === "string" ? data.due : goalHorizon(fact.text) ?? inAYear.toISOString();
+        if (!(await this.goals.list()).some(g => g.title.toLowerCase() === title.toLowerCase())) await this.goals.upsert({ id: `fact-goal-${fact.id}`, title, category: fact.category, progress: 0, ...(target ? { targetDate: target } : {}), createdAt: now, updatedAt: now });
       }
       if (fact.kind === "habit" && !(await this.habits.list()).some(h => h.title.toLowerCase() === String(data.title ?? fact.text).toLowerCase())) {
         await this.habits.upsert({ id: `fact-habit-${fact.id}`, title: String(data.title ?? fact.text), category: fact.category, log: {}, createdAt: now, updatedAt: now });

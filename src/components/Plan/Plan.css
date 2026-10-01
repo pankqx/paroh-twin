@@ -86,3 +86,6 @@
 @media (prefers-reduced-motion: reduce) {
   .pl-day { transition: none; }
 }
+.pl-goal-cont { font-size: 15px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+.pl-yearnav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+.pl-yearnav b { font-size: 1.3rem; }
