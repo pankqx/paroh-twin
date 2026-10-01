@@ -16,11 +16,12 @@ import FactCard from "@/components/FactCard/FactCard";
 import { notifyFactsChanged } from "@/components/shell/events";
 import { setVoiceEnabled, useVoicePref } from "@/components/shell/useVoicePref";
 import { ViewTransition } from "react";
+import VoiceButton from "@/components/VoiceButton/VoiceButton";
+import { chime } from "@/components/VoiceButton/chime";
 import TwinAvatar, { type AvatarState, type TwinAvatarHandle } from "@/components/TwinAvatar/TwinAvatar";
 import { onAction, usePrefs } from "@/components/TwinAvatar/avatarStore";
 import Gauges from "@/components/TwinStage/Gauges";
 import "@/components/TwinAvatar/TwinAvatar.css";
-import Waveform from "@/components/Waveform/Waveform";
 import Karaoke from "./Karaoke";
 import Aurora from "@/components/fx/Aurora";
 import { mindTarget } from "@/components/TwinAvatar/mindPoint";
@@ -166,6 +167,7 @@ export default function TalkStage() {
         interimRef.current = "";
         handledRef.current = true;
         listen.stop();
+        chime("stop");
         setLevel(0);
         submitRef.current(transcript, false);
       }
@@ -184,6 +186,7 @@ export default function TalkStage() {
     });
     const offError = listen.onError((_code, message) => {
       setNotice(`${message} You can type your answer below.`);
+      setLine("Sorry, I couldn't hear that.");
       setStep((s) => (s === "listening" ? "ask" : s));
     });
     const offLevel = listen.onLevel((l) => {
@@ -317,24 +320,31 @@ export default function TalkStage() {
       handledRef.current = true;
       interimRef.current = "";
       listen.stop();
+      chime("stop");
       setLevel(0);
       setStep("ask");
       return;
     }
+    // Tapping while she talks interrupts her and starts listening straight away.
     speech.stop();
+    // A recognition left hanging by the browser would block a new start: clear it first.
+    if (listen.getState() === "listening") listen.stop();
     setHeard("");
     setNotice("");
     handledRef.current = false;
     interimRef.current = "";
     if (listen.start({ measureLevel: true })) {
+      chime("start");
       setStep("listening");
-      setLine("I'm listening.");
+      setLine("Yes? I'm listening.");
+      faceRef.current?.react("nod", 700);
     } else {
-      setNotice("Dictation isn't available here. Tap a reply or type instead.");
+      setNotice("Dictation isn't available here. Type your answer instead.");
     }
   }
 
   function stopAll() {
+    if (step === "listening" || speaking) chime("stop");
     handledRef.current = true;
     interimRef.current = "";
     speech.stop();
@@ -381,7 +391,7 @@ export default function TalkStage() {
   const past = history.length && history[history.length - 1].who === "twin" ? history.slice(0, -1) : history;
 
   const listening = step === "listening";
-  const asking = step === "ask" || listening;
+  const asking = step === "ask" || listening || step === "thinking";
 
   return (
     <main className={`talk${ready ? " ready" : ""}`}>
@@ -592,32 +602,12 @@ export default function TalkStage() {
               >
                 <div className={`talk-input-row${canDictate ? "" : " no-mic"}`}>
                   {canDictate && (
-                    <button
-                      type="button"
-                      className={`talk-mic${listening ? " on" : ""}`}
+                    <VoiceButton
+                      state={listening ? "listening" : step === "thinking" ? "busy" : speaking ? "speaking" : "idle"}
+                      level={level}
                       onClick={dictate}
-                      aria-pressed={listening}
-                      aria-label={
-                        listening ? "Stop dictating" : "Dictate your answer"
-                      }
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="22"
-                        height="22"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <rect x="9" y="3" width="6" height="11" rx="3" />
-                        <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
-                      </svg>
-                    </button>
+                    />
                   )}
-                  <Waveform level={level} live={listening} />
                   <form
                     className="talk-type"
                     onSubmit={(e) => {

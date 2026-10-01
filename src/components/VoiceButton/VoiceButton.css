@@ -1,0 +1,119 @@
+.vb {
+  --vb-size: 64px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+.vb-btn {
+  position: relative;
+  width: var(--vb-size);
+  height: var(--vb-size);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: var(--text);
+}
+.vb-btn:disabled {
+  cursor: default;
+}
+.vb-core {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--stroke-glow);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--violet) 45%, transparent), color-mix(in srgb, var(--violet) 14%, #0b0916));
+  box-shadow: 0 0 24px -6px var(--violet);
+  transition: transform 0.25s var(--ease), background 0.3s var(--ease), box-shadow 0.3s var(--ease), color 0.3s;
+  animation: vb-breathe 3.2s ease-in-out infinite;
+}
+.vb-btn:hover .vb-core {
+  transform: scale(1.06);
+}
+.vb-btn:active .vb-core {
+  transform: scale(0.94);
+}
+@keyframes vb-breathe {
+  0%, 100% { box-shadow: 0 0 18px -6px var(--violet); }
+  50% { box-shadow: 0 0 34px -4px var(--violet); }
+}
+
+/* Ripples and the voice-level ring only show while listening. */
+.vb-ripple,
+.vb-level {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+.vb-listening .vb-ripple {
+  border: 2px solid var(--teal);
+  animation: vb-ripple 1.8s ease-out infinite;
+}
+.vb-listening .vb-ripple.r2 { animation-delay: 0.6s; }
+.vb-listening .vb-ripple.r3 { animation-delay: 1.2s; }
+@keyframes vb-ripple {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+.vb-listening .vb-level {
+  opacity: 0.9;
+  background: radial-gradient(circle, color-mix(in srgb, var(--teal) 45%, transparent) 55%, transparent 72%);
+  transform: scale(calc(1.05 + var(--lvl) * 0.75));
+  transition: transform 80ms linear;
+}
+.vb-listening .vb-core {
+  color: #062a26;
+  background: radial-gradient(circle at 35% 30%, #b6fff2, var(--teal));
+  border-color: var(--teal);
+  animation: none;
+  box-shadow: 0 0 34px -2px var(--teal);
+}
+
+/* The twin is speaking: amber, tap to stop her. */
+.vb-speaking .vb-core {
+  color: #2a1a02;
+  background: radial-gradient(circle at 35% 30%, #ffe7a8, var(--amber));
+  border-color: var(--amber);
+  animation: vb-talk 0.9s ease-in-out infinite;
+}
+@keyframes vb-talk {
+  0%, 100% { box-shadow: 0 0 16px -4px var(--amber); }
+  50% { box-shadow: 0 0 34px 0 var(--amber); }
+}
+
+/* Reading what you said. */
+.vb-busy .vb-core {
+  animation: none;
+}
+.vb-orbit {
+  position: relative;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--violet) 35%, transparent);
+  border-top-color: var(--teal);
+  animation: vb-spin 0.8s linear infinite;
+}
+@keyframes vb-spin {
+  to { transform: rotate(360deg); }
+}
+
+.vb-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--text-soft);
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+.vb-listening .vb-label { color: var(--teal); }
+.vb-speaking .vb-label { color: var(--amber); }
+
+@media (prefers-reduced-motion: reduce) {
+  .vb-core, .vb-ripple, .vb-orbit { animation: none !important; }
+}

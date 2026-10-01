@@ -633,3 +633,10 @@
   width: 28px;
   height: 28px;
 }
+
+/* Mic button + typing, side by side (the button shows the live level itself). */
+.talk-input-row,
+.talk-input-row.no-mic {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}

@@ -1,5 +1,7 @@
 "use client";
 
+import VoiceButton from "@/components/VoiceButton/VoiceButton";
+import { chime } from "@/components/VoiceButton/chime";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { dataService } from "@/app/dataService";
@@ -27,6 +29,7 @@ export default function AskStage() {
   const [caption, setCaption] = useState("");
   const [speaking, setSpeaking] = useState(false);
   const [listening, setListening] = useState(false);
+  const [level, setLevel] = useState(0);
   const [heard, setHeard] = useState("");
   const [delta, setDelta] = useState<FeedbackDelta | null>(null);
   const [learned, setLearned] = useState<string[]>([]);
@@ -34,6 +37,8 @@ export default function AskStage() {
   const [stale, setStale] = useState<Fact[]>([]);
   const promptRef = useRef("");
   const submitRef = useRef<(text: string) => void>(() => {});
+  const interimRef = useRef("");
+  const handledRef = useRef(false);
   const canListen = typeof window !== "undefined" && listen.isSupported();
 
   const refreshMemory = useCallback(async () => {
@@ -47,17 +52,33 @@ export default function AskStage() {
     const offSpeak = speech.subscribe((s) => setSpeaking(s.isSpeaking));
     const offResult = listen.onResult(({ transcript, isFinal }) => {
       setHeard(transcript);
+      interimRef.current = transcript;
       if (isFinal) {
+        interimRef.current = "";
+        handledRef.current = true;
         listen.stop();
+        chime("stop");
         setListening(false);
         submitRef.current(transcript);
       }
     });
-    const offEnd = listen.onEnd(() => setListening(false));
+    const offLevel = listen.onLevel(setLevel);
+    const offEnd = listen.onEnd(() => {
+      setListening(false);
+      setLevel(0);
+      // Ended on a pause before a final result: use what was heard.
+      const pending = interimRef.current.trim();
+      interimRef.current = "";
+      if (!handledRef.current && pending) {
+        handledRef.current = true;
+        submitRef.current(pending);
+      }
+    });
     return () => {
       offSpeak();
       offResult();
       offEnd();
+      offLevel();
       listen.stop();
       speech.stop();
     };
@@ -134,12 +155,22 @@ export default function AskStage() {
 
   const dictate = () => {
     if (listening) {
+      handledRef.current = true;
+      interimRef.current = "";
       listen.stop();
+      chime("stop");
       setListening(false);
       return;
     }
     speech.stop();
-    if (listen.start({ measureLevel: false })) setListening(true);
+    if (listen.getState() === "listening") listen.stop();
+    handledRef.current = false;
+    interimRef.current = "";
+    setHeard("");
+    if (listen.start({ measureLevel: true })) {
+      chime("start");
+      setListening(true);
+    }
   };
 
   async function choose(kind: "accept" | "reject" | "modify", id?: string) {
@@ -224,12 +255,7 @@ export default function AskStage() {
           }}
         >
           {canListen && (
-            <button type="button" className={`ask-mic${listening ? " on" : ""}`} onClick={dictate} aria-pressed={listening} aria-label={listening ? "Stop dictating" : "Dictate"}>
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="9" y="3" width="6" height="11" rx="3" />
-                <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
-              </svg>
-            </button>
+<VoiceButton state={listening ? "listening" : speaking ? "speaking" : "idle"} level={level} onClick={dictate} size={52} />
           )}
           <input
             type="text"
