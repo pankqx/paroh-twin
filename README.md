@@ -40,9 +40,43 @@ Every source (voice, journal, sample connectors) ends at the same approval gate.
 | **Rhythm** (`/rhythm`) | Habit chains (tap a day to tick), streaks and 14-day rings; a 1 to 5 energy and mood check-in with a 14-day ribbon; estimate vs actual hours per task and the estimate multiplier the simulation uses; mark open tasks done with real hours. | The personal statistics the twin tailors to. |
 | **Pulse** (`/pulse`) | Re-scans every 30 s while the tab is open: load spikes, deadline risk (same simulation as Ask), streaks at risk, plus calm notes with on-time odds. "Turn into a what-if" pre-fills Ask; "Say it" reads it aloud. Insights and "tomorrow you will probably need". | Monitoring and proactive notifications (sample data). |
 | **Sources** (`/sources`) | Live sources (Voice, Journal) vs roadmap connectors (Gmail, WhatsApp, Telegram, Calendar) with "Preview with sample messages"; per-category consent toggles; **"What is sent to the model"** payload preview that shrinks when a category is switched off; twin appearance and voice; delete all data. | Trust, privacy and the roadmap. |
-| **Plan** (`/plan`) | Month and year planner views (coming next). | Roadmap. |
+| **Plan** (`/plan`) | Month calendar (category dots, goal stars, habit rings, hours-due bars, heavy days flagged, click a day to see it or add a task) and a year wheel (months, finished work on the rim, goal arcs with progress, deadline pins, today; click a month to open it). | Visual planning built from the same data. |
 
 Detailed use cases: [`docs/USE_CASES.md`](docs/USE_CASES.md).
+
+### How what you tell the twin changes the dashboard
+
+Every answer goes through the same path, and each step is visible:
+
+1. **You say or write something** (Talk, Journal, or a sample connector preview). Example: *"I need to finish my chemistry lab report, about 3 hours."*
+2. **It becomes a candidate fact** (`/api/extract`: the hosted model, or Paroh's own rules if the model is slow or finds nothing). Kind: task, deadline, goal, habit, routine, preference or decision.
+3. **You approve it** (Talk card, Approvals tray). Nothing changes before this.
+4. **Approval writes structured data**: a task or deadline fact becomes a real task in the planner (due this week if you gave no date, with your hours or 1.5 h), a goal fact becomes a goal, a habit fact becomes a tracked habit; every approved fact becomes a star and a memory.
+5. **Every number is recomputed from that data** (TypeScript, `src/lib/twin`), so the dashboard moves: weekly load, Coming up, the star count, "How well she knows you", Plan, Pulse and the what-if odds.
+6. **The Twin page tells you what moved.** A "What changed since you last taught her" card lists it, for the example above: *Stars 0 → 1 · new task in the planner · weekly load 30% → 41% · how well she knows your planner 58% → 67%*.
+7. **She asks something new next time.** Areas you already answered move to the back and get a fresh question, so she does not repeat herself.
+
+### Every widget, and how it is computed
+
+| Widget (Twin page) | Computed from | Formula |
+|---|---|---|
+| Stars around the twin | Approved facts | One star per approved fact, grouped by kind |
+| Weekly load | Open tasks due in the next 7 days | Hours due per day ÷ 4 free hours per day |
+| Habit consistency | Habit check-ins, last 14 days | Share of habits ticked per day |
+| Goal-linked work | Tasks finished in the last 7 days | Hours on tasks linked to a goal ÷ all hours finished |
+| Twin's guess vs your choice, fidelity | Decisions in Ask | How often the twin's predicted choice matched yours (last 5) |
+| Focus hours heatmap | Finished task times | When finished work happens, by weekday and hour |
+| Coming up | Open tasks with a due date | Grouped by day, with on-time odds from the simulation |
+| How well she knows you | Approved facts and data per area | Confidence per area (tasks, habits, routines, energy, goals, planner) |
+| What-if odds (Ask, Pulse) | Open tasks, your real actual/estimate hour ratios | 500 seeded trials; a plan succeeds when each task fits before its deadline in order |
+
+### Where the data lives
+
+- All of a student's data (facts, tasks, goals, habits, check-ins, decisions, consent) is stored **in their own browser** (localStorage key `paroh-local-data-v1`), behind one `DataService` interface. Nothing is stored on our server and there are no accounts.
+- On the first visit in a browser, it starts with the labelled sample student Frank. After that, every change persists in that browser across visits. A different browser or device starts from the sample again; **Sources → Delete all my data** resets it.
+- Only the text needed for a request (plus consented, relevant approved facts, shown in the payload preview) is sent to the hosted model, from our server route, and nothing is kept there.
+- Because the UI only talks to `DataService`, a server database with accounts (for example a graph database for memory) can replace browser storage without changing the screens. That is on the roadmap.
+
 
 ## 3. Three-minute demo script
 

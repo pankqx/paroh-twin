@@ -35,22 +35,29 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const stamp = () => new Date().toISOString();
 
 const questionOrder = ["tasks", "habits", "routines", "energy", "goals", "planner"] as const;
-const questionTemplates: Record<(typeof questionOrder)[number], { text: string; quickReplies: string[] }> = {
-  tasks: { text: "Which task should we plan first this week?", quickReplies: ["Exam revision", "Project work", "A smaller task"] },
-  habits: { text: "Which habit would you like to keep steady this week?", quickReplies: ["Morning review", "Focused study", "Evening walk"] },
-  routines: { text: "When do you usually focus best?", quickReplies: ["Morning", "Afternoon", "Evening"] },
-  energy: { text: "When do you usually have the most energy for study?", quickReplies: ["Morning", "Afternoon", "Evening"] },
-  goals: { text: "Which goal matters most to you this week?", quickReplies: ["Exam preparation", "Project", "Steady routine"] },
-  planner: { text: "How much time can you set aside for study tomorrow?", quickReplies: ["1–2 hours", "2–3 hours", "3 or more hours"] },
+const questionTemplates: Record<(typeof questionOrder)[number], { text: string; quickReplies: string[]; more: string[] }> = {
+  tasks: { text: "Which task should we plan first this week?", quickReplies: ["Exam revision", "Project work", "A smaller task"], more: ["Is there anything due soon that I don't know about yet?", "What is one task you keep putting off?"] },
+  habits: { text: "Which habit would you like to keep steady this week?", quickReplies: ["Morning review", "Focused study", "Evening walk"], more: ["What is one small thing you want to do every day?", "Which habit slipped recently?"] },
+  routines: { text: "When do you usually focus best?", quickReplies: ["Morning", "Afternoon", "Evening"], more: ["Where do you study best: home, library or somewhere else?", "How long can you focus before you need a break?"] },
+  energy: { text: "When do you usually have the most energy for study?", quickReplies: ["Morning", "Afternoon", "Evening"], more: ["What usually drains your energy during the week?", "How do you like to recharge after a long day?"] },
+  goals: { text: "Which goal matters most to you this week?", quickReplies: ["Exam preparation", "Project", "Steady routine"], more: ["What do you want to achieve by the end of this month?", "What would make this semester a success for you?"] },
+  planner: { text: "How much time can you set aside for study tomorrow?", quickReplies: ["1–2 hours", "2–3 hours", "3 or more hours"], more: ["Which day this week is your busiest?", "Do you plan your week ahead or day by day?"] },
 };
 
 /** Stable tie-breaking keeps the same low-confidence prompt order between visits. */
-export function questionsForTwinState(state: TwinState) {
+export function questionsForTwinState(state: TwinState, facts: Fact[] = []) {
+  // How often each question area was already answered: answered areas move back and the next
+  // answer gets a fresh question, so the twin does not repeat itself between visits.
+  const answered = (domain: string) => facts.filter(f => f.sourceType === "question" && f.status !== "rejected" && f.sourceId.startsWith(`twin-question-${domain}-`)).length;
   return [...questionOrder]
-    .map((domain, index) => ({ domain, index, confidence: state.confidenceByDomain[domain === "energy" ? "mood" : domain] ?? 0 }))
-    .sort((a, b) => a.confidence - b.confidence || a.index - b.index)
+    .map((domain, index) => ({ domain, index, n: answered(domain), confidence: state.confidenceByDomain[domain === "energy" ? "mood" : domain] ?? 0 }))
+    .sort((a, b) => a.n - b.n || a.confidence - b.confidence || a.index - b.index)
     .slice(0, 3)
-    .map(({ domain }) => ({ id: `twin-question-${domain}`, text: questionTemplates[domain].text, domain, quickReplies: [...questionTemplates[domain].quickReplies] }));
+    .map(({ domain, n }) => {
+      const t = questionTemplates[domain];
+      const texts = [t.text, ...t.more];
+      return { id: `twin-question-${domain}`, text: texts[n % texts.length], domain, quickReplies: n === 0 ? [...t.quickReplies] : [] };
+    });
 }
 
 function seededState(): State {
@@ -103,7 +110,9 @@ export class LocalDataService implements DataService {
       if (fact.kind === "task" || fact.kind === "deadline") {
         const title = String(data.title ?? fact.text);
         const existing = (await this.tasks.list()).find(t => t.title.toLowerCase() === title.toLowerCase());
-        if (!existing) await this.tasks.upsert({ id: `fact-task-${fact.id}`, title, category: fact.category, dueAt: typeof data.due === "string" ? data.due : undefined, estHours: typeof data.estHours === "number" ? data.estHours : 1, done: false, createdAt: now, updatedAt: now });
+        // No date given: plan it for three days from now so it shows in this week's load, Coming up and Plan.
+        const soon = new Date(); soon.setDate(soon.getDate() + 3); soon.setHours(18, 0, 0, 0);
+        if (!existing) await this.tasks.upsert({ id: `fact-task-${fact.id}`, title, category: fact.category, dueAt: typeof data.due === "string" ? data.due : soon.toISOString(), estHours: typeof data.estHours === "number" ? data.estHours : 1.5, done: false, createdAt: now, updatedAt: now });
       }
       if (fact.kind === "goal") {
         const title = String(data.title ?? fact.text);
@@ -147,7 +156,7 @@ export class LocalDataService implements DataService {
   async getStale() { return staleFacts(await this.permittedApprovedFacts(), new Date()); }
   async retrieve(question: string) { return retrieveRelevant(await this.permittedApprovedFacts(), question); }
   async nextQuestions() {
-    return questionsForTwinState(await this.getTwinState());
+    return questionsForTwinState(await this.getTwinState(), await this.facts.list());
   }
   async extractFacts(input: { text: string; source: "journal" | "question"; sourceId: string }) {
     if (!this.state.consent.journal) return [];

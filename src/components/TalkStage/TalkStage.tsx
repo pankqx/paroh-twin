@@ -266,7 +266,7 @@ export default function TalkStage() {
     });
     // Spoken answers are often short ("evening") or unpunctuated: retry as a full statement for
     // this question, then as a plain preference. It is still only a candidate you approve or edit.
-    const short = answer.split(/\s+/).length <= 4;
+    const short = answer.split(/\s+/).length <= 4 && q.quickReplies.length > 0;
     const tries = [short ? STATEMENT[q.domain]?.(answer.replace(/[.?!]+$/, "")) : undefined, `I prefer ${answer.replace(/^i\s+/i, "").replace(/[.?!]+$/, "")}.`];
     for (const retry of tries) {
       if (facts.length > 0 || !retry || retry === text) continue;
