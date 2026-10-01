@@ -96,6 +96,9 @@ export default function TalkStage() {
   const [level, setLevel] = useState(0);
   const [cards, setCards] = useState<Array<{ fact: Fact; said: string }>>([]);
   const [notice, setNotice] = useState("");
+  // "guided" = she asks short questions; "free" = you talk freely, like a voice journal.
+  const [mode, setMode] = useState<"guided" | "free">("guided");
+  const freeNext = useRef(""); // what she asks next in free talk
   const [history, setHistory] = useState<Array<{ who: "twin" | "you"; text: string }>>([]);
   const histRef = useRef<HTMLOListElement>(null);
   const [voiceOn] = useVoicePref();
@@ -231,8 +234,53 @@ export default function TalkStage() {
     if (!questions) return;
     // A click is the gesture that lets her speak. Captions always show either way.
     setVoiceEnabled(true);
-    ask(0, questions);
     faceRef.current?.react("wave", 2400); // hello
+    if (mode === "free") {
+      setCards([]);
+      setNotice("");
+      setStep("ask");
+      say("I'm all ears. Tell me about your day, a plan, or anything on your mind. Press Space or tap the mic when you're done.");
+      return;
+    }
+    ask(0, questions);
+  }
+
+  /** Free talk: save it like a journal entry, find what is worth remembering, and reply naturally. */
+  async function submitFree(answer: string) {
+    speech.stop();
+    listen.stop();
+    setStep("thinking");
+    setHeard(answer);
+    setNotice("");
+    setHistory((h) => [...h.slice(-19), { who: "you" as const, text: answer }]);
+    const consent = await dataService.getConsent();
+    if (!consent.journal) {
+      setStep("ask");
+      say("Journal sharing is switched off, so I can listen but not keep anything. You can turn it on in Sources.");
+      return;
+    }
+    const now = new Date().toISOString();
+    const id = `voice-journal-${Date.now()}`;
+    // Only the words are kept, as a journal entry. No audio is recorded or stored.
+    await dataService.entries.upsert({ id, title: answer.split(/\s+/).slice(0, 6).join(" "), body: answer, tags: ["voice"], createdAt: now, updatedAt: now });
+    const [facts, talk] = await Promise.all([
+      dataService.extractFacts({ text: answer, source: "journal", sourceId: id }),
+      dataService.converse({ utterance: answer, history: history.slice(-8).map((m) => ({ role: m.who === "you" ? ("user" as const) : ("twin" as const), text: m.text })) }).catch(() => null),
+    ]);
+    notifyFactsChanged();
+    const next = (await dataService.nextQuestions().catch(() => []))[0]?.text ?? "What else is on your mind?";
+    freeNext.current = talk?.followUp?.text ?? next;
+    const natural = talk && !talk.degraded && talk.reply ? talk.reply : "Thanks for telling me.";
+    if (talk?.intent === "whatif") setNotice("That sounds like a decision. Open Ask to compare both paths with your real numbers.");
+    if (facts.length) {
+      approved.current = 0;
+      setCards(facts.map((fact) => ({ fact, said: `From what you said: “${answer.length > 90 ? `${answer.slice(0, 88)}…` : answer}”` })));
+      setStep("review");
+      say(`${natural} I noted ${facts.length === 1 ? "one thing" : `${facts.length} things`} worth remembering. Approve what's right.`);
+    } else {
+      setStep("ask");
+      say(`${natural} ${freeNext.current}`);
+    }
   }
 
   async function submit(raw: string, tapped: boolean) {
@@ -241,6 +289,10 @@ export default function TalkStage() {
     if (!answer) return;
     handledRef.current = true;
     interimRef.current = "";
+    if (mode === "free") {
+      await submitFree(answer);
+      return;
+    }
     const q = questions[qi];
     speech.stop();
     listen.stop();
@@ -295,6 +347,13 @@ export default function TalkStage() {
 
   function afterRound() {
     if (!questions) return;
+    if (mode === "free") {
+      window.setTimeout(() => {
+        setStep("ask");
+        say(freeNext.current || "What else is on your mind?");
+      }, 900);
+      return;
+    }
     if (qi + 1 < questions.length) {
       window.setTimeout(() => ask(qi + 1, questions), 900);
     } else {
@@ -478,9 +537,19 @@ export default function TalkStage() {
             <div className="talk-start">
               <p className="talk-eyebrow">Voice check-in</p>
               <h1>Talk to your twin</h1>
+              <div className="talk-mode" role="radiogroup" aria-label="How do you want to talk?">
+                <button type="button" role="radio" aria-checked={mode === "guided"} className={mode === "guided" ? "on" : ""} onClick={() => setMode("guided")}>
+                  Guided questions
+                </button>
+                <button type="button" role="radio" aria-checked={mode === "free"} className={mode === "free" ? "on" : ""} onClick={() => setMode("free")}>
+                  Free talk · voice journal
+                </button>
+              </div>
               <p>
-                She asks a few short questions. Answer by voice, a tap, or
-                typing. Nothing joins her memory until you approve it.
+                {mode === "guided"
+                  ? "She asks a few short questions. Answer by voice or typing."
+                  : "Talk naturally for as long as you like, like a voice journal. She saves your words as a journal entry, replies, and picks out what is worth remembering."}{" "}
+                Nothing joins her memory until you approve it.
               </p>
               <div className="talk-start-row">
                 <button
@@ -509,6 +578,7 @@ export default function TalkStage() {
           ) : (
             <>
               <div
+                style={mode === "free" ? { display: "none" } : undefined}
                 className="talk-steps"
                 role="img"
                 aria-label={
@@ -536,7 +606,7 @@ export default function TalkStage() {
                 </span>
               </div>
 
-              <p className="talk-eyebrow">{q ? q.domain : "Check-in"}</p>
+              <p className="talk-eyebrow">{mode === "free" ? "Free talk · voice journal" : q ? q.domain : "Check-in"}</p>
               <p className="talk-caption">
                 <Karaoke line={typedLine} sentence={sentence} speaking={speaking} />
               </p>
@@ -569,6 +639,17 @@ export default function TalkStage() {
               <div className="talk-foot">
                 <button type="button" className="talk-stop" onClick={stopAll}>
                   <span aria-hidden="true" /> Stop
+                </button>
+                <button
+                  type="button"
+                  className="btn-text talk-switch"
+                  onClick={() => {
+                    stopAll();
+                    setMode(mode === "free" ? "guided" : "free");
+                    setStep("start");
+                  }}
+                >
+                  {mode === "free" ? "Switch to guided questions" : "Switch to free talk"}
                 </button>
                 <span className="talk-voice">
                   {voiceOn ? "voice on" : "voice off, captions only"}
@@ -634,7 +715,7 @@ export default function TalkStage() {
         {/* Bottom centre: quick replies, dictate, live waveform, typing. */}
         <div className="talk-dock-wrap">
           <AnimatePresence>
-            {asking && q && (
+            {asking && (q || mode === "free") && (
               <motion.section
                 className="glass glass-blur talk-dock"
                 aria-label="Your answer"
