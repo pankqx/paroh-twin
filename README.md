@@ -44,6 +44,16 @@ Every source (voice, journal, sample connectors) ends at the same approval gate.
 
 Detailed use cases: [`docs/USE_CASES.md`](docs/USE_CASES.md).
 
+### Free talk: a voice journal
+
+On **Talk**, choose **Free talk · voice journal** and speak naturally, for as long as you like:
+
+1. Press **Space** (or tap the mic) to start and again to stop; pauses are fine and your words appear live.
+2. Your words are saved as a **journal entry** (tagged "voice" on the Journal page). Only text is kept; **no audio is recorded or stored**.
+3. Paroh picks out what is worth remembering (deadlines, tasks, habits, goals, preferences) as **fact cards** for you to approve; approved facts update the dashboard exactly as described above.
+4. The twin **replies conversationally** (`/api/converse`, hosted model, with a simple local reply if the model is unavailable) and asks a follow-up, so the conversation keeps going.
+5. If what you said is a decision, she points you to **Ask** to compare the paths. You can switch back to guided questions at any time.
+
 ### How what you tell the twin changes the dashboard
 
 Every answer goes through the same path, and each step is visible:
@@ -81,7 +91,7 @@ Every answer goes through the same path, and each step is visible:
 ## 3. Three-minute demo script
 
 1. **Twin (20 s).** "This is Frank's twin, on sample data. It is a model of what he permitted, not a chat history." Click *What am I looking at?*.
-2. **Talk (50 s).** Click *Talk to your twin*: she morphs into colour and waves. Press Space, answer aloud, press Space. Approve the card: it flies into her and *Learned today* grows.
+2. **Talk (50 s).** Click *Talk to your twin*: she morphs into colour and waves. Choose *Free talk · voice journal*, press Space, talk naturally about your day, press Space. She replies, saves it as a journal entry and shows fact cards. Approve one: it flies into her and *Learned today* grows.
 3. **Memory / Rhythm (20 s).** The new fact in the graph; habits and the "study takes 1.3x your estimate" multiplier.
 4. **Ask (50 s).** Ask by voice: "What if I spend tonight completing my project instead of preparing for tomorrow's exam?" (our Round 1 demo question). Fork, probabilities from his own history, spoken recommendation. Choose the other option: the "After your feedback" panel shows how the twin changed and fidelity moves.
 5. **Pulse (15 s).** The twin re-checks the week and whispers; turn one into a what-if.
