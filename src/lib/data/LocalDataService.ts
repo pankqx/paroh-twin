@@ -162,6 +162,8 @@ export class LocalDataService implements DataService {
       const payload: unknown = await response.json();
       if (!payload || typeof payload !== "object" || !Array.isArray((payload as { facts?: unknown }).facts)) throw new Error("Fact extraction route returned an invalid response");
       const facts = (payload as { facts: unknown[] }).facts;
+      // The model found nothing: let the local rules have a go before giving up.
+      if (facts.length === 0) throw new Error("Model returned no facts");
       if (facts.some(fact => !fact || typeof fact !== "object" || typeof (fact as { text?: unknown }).text !== "string" || typeof (fact as { kind?: unknown }).kind !== "string")) throw new Error("Fact extraction route returned invalid facts");
       const now = stamp();
       result = facts.map((value, index) => {

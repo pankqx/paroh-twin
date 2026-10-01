@@ -36,7 +36,7 @@ export function extractCanned(text: string, sourceId: string, source: "journal" 
     }
     if (/\b(goal|want to achieve|aim to|my target)\b/i.test(sentence)) add("goal", { title: sentence });
     if (/\b(habit|every day|daily|each morning|routine)\b/i.test(sentence)) add("habit", { title: sentence });
-    if (/\b(i prefer|i like|works well for me|i work best)\b/i.test(sentence)) add("preference", { preference: sentence });
+    if (/\b(i prefer|i like|works well for me|i work best|i (?:usually )?(?:focus|study|concentrate|work) (?:best|better)|i(?:'m| am) (?:most )?productive)\b/i.test(sentence)) add("preference", { preference: sentence });
   }
   return facts;
 }
