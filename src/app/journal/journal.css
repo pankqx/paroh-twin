@@ -1,5 +1,15 @@
 .journal {
-  max-width: 640px;
+  max-width: 1240px;
+}
+
+.journal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .journal-layout { grid-template-columns: 1fr; }
 }
 
 .journal > h1 {
@@ -84,3 +94,46 @@
   justify-content: flex-end;
   margin-top: 0.4rem;
 }
+
+/* Previous journals */
+.journal-history {
+  position: sticky;
+  top: calc(var(--bar-h) + 1rem);
+  max-height: calc(100vh - var(--bar-h) - 2rem);
+  overflow-y: auto;
+  padding: 1.2rem 1.2rem 1.4rem;
+  scrollbar-width: thin;
+  animation: rise 800ms var(--ease) 240ms both;
+}
+.journal-history header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.7rem; }
+.journal-history h2 { margin: 0; font-size: 1.2rem; }
+.journal-history header .num { font-size: 1.6rem; color: var(--violet); }
+.jh-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid var(--stroke); margin-bottom: 0.9rem; }
+.jh-tabs button { flex: 1; padding: 0.4rem 0.6rem; border: 0; border-radius: 999px; background: none; color: var(--text-soft); font: inherit; font-size: 0.86rem; cursor: pointer; }
+.jh-tabs button.on { background: color-mix(in srgb, var(--violet) 26%, transparent); color: var(--text); }
+.jh-tabs em { font-style: normal; opacity: 0.6; margin-left: 0.2rem; }
+.jh-empty { color: var(--muted); font-size: 0.9rem; }
+.jh-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.jh-list > li { border: 1px solid var(--stroke); border-radius: 14px; background: rgba(255, 255, 255, 0.025); overflow: hidden; }
+.jh-item { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; padding: 0.75rem 0.9rem; border: 0; background: none; color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.jh-item:hover { background: rgba(255, 255, 255, 0.03); }
+.jh-item.open { background: color-mix(in srgb, var(--violet) 10%, transparent); }
+.jh-top { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); }
+.jh-kind.voice { color: var(--teal); }
+.jh-kind.written { color: var(--amber); }
+.jh-item b { font-size: 0.98rem; }
+.jh-snip { font-size: 0.85rem; color: var(--text-soft); line-height: 1.45; }
+.jh-read { padding: 0 0.9rem 0.9rem; }
+.jh-read > p { margin: 0 0 0.5rem; font-size: 0.92rem; line-height: 1.6; color: var(--text); }
+.jh-meta { font-size: 0.78rem !important; color: var(--muted) !important; }
+.jh-facts { margin: 0.5rem 0; font-size: 0.82rem; }
+.jh-facts > span { color: var(--violet); font-weight: 600; }
+.jh-facts ul { list-style: none; margin: 0.3rem 0 0; padding: 0; display: grid; gap: 0.3rem; }
+.jh-facts li { color: var(--text-soft); }
+.jh-facts li i { font-style: normal; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 0.3rem; }
+.jh-facts li em { font-style: normal; margin-left: 0.4rem; font-size: 0.72rem; color: var(--muted); }
+.jh-facts li.approved em { color: var(--green); }
+.jh-facts li.pending em { color: var(--amber); }
+.jh-badges { display: flex; gap: 0.4rem; padding: 0 0.9rem 0.7rem; font-size: 0.72rem; }
+.jh-badges .ok { color: var(--green); }
+.jh-badges .wait { color: var(--amber); }

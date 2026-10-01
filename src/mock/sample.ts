@@ -164,6 +164,16 @@ export function createSampleData(seedDate = new Date()): SampleData {
     return { id: `entry-${i + 1}`, title: ["Study notes", "A longer practice set", "A good reset", "Project progress", "My study setup", "Mock exam", "A late night", "Nearly there"][i],
       body, tags: [i < 2 || i === 5 ? "study" : "journal"], mood: ([4, 3, 4, 3, 4, 3, 2, 4][i]) as JournalEntry["mood"], createdAt, updatedAt: createdAt };
   });
+  // Three longer voice-journal entries (spoken in Talk's free-talk mode; only the words are kept).
+  const voice: Array<[number, string, string, JournalEntry["mood"]]> = [
+    [-6, "Talking it through", "Honestly this week feels packed. The biology exam is coming up and I keep underestimating how long genetics questions take me. I think I should start revision earlier in the evening because I focus better after dinner. I also want to keep my morning review habit going, even if it is only fifteen minutes.", 3],
+    [-3, "After the mock exam", "The mock exam went better than I expected, around seventy percent. I lost marks on diagrams, so I will practise drawing them twice before the real exam. The research project is the thing I am avoiding. I want to finish the discussion section by Sunday and ask my friend to proofread it.", 4],
+    [-1, "Bigger picture", "I was thinking about the next two years. I want to become a confident researcher and maybe publish something small before I graduate. For now that means finishing this project properly and building a portfolio. A walk every day really helps me reset, so I want to keep that.", 4],
+  ];
+  for (const [day, title, body, mood] of voice) {
+    const createdAt = iso(dayAt(seed, day, 21));
+    entries.push({ id: `voice-entry${day}`, title, body, tags: ["voice"], mood, createdAt, updatedAt: createdAt });
+  }
   const decisions = makeDecisions(seed);
   const facts: Fact[] = [];
   return { studentName: SAMPLE_STUDENT_NAME, tasks, goals, habits, checkins, entries, decisions, facts };

@@ -7,6 +7,7 @@ import Doodle from "@/components/Doodle/Doodle";
 import { notifyFactsChanged } from "@/components/shell/events";
 import { demoEntry } from "@/mock/demoEntry";
 import type { JournalEntry, Level } from "@/lib/types";
+import JournalHistory from "./JournalHistory";
 import "./journal.css";
 
 const LEVELS = ["Low", "Meh", "Ok", "Good", "Great"] as const;
@@ -62,6 +63,7 @@ export default function JournalPage() {
   const [listening, setListening] = useState(false);
   const recogRef = useRef<Recognition | null>(null);
   const usedDemo = useRef(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     return () => recogRef.current?.stop();
@@ -125,6 +127,7 @@ export default function JournalPage() {
         updatedAt: now,
       };
       await dataService.saveEntry(entry);
+      setRefreshKey((k) => k + 1);
       const consent = await dataService.getConsent();
       if (!consent.journal) {
         setOutcome({ kind: "off" });
@@ -137,6 +140,7 @@ export default function JournalPage() {
       });
       notifyFactsChanged();
       setOutcome(facts.length ? { kind: "found", count: facts.length } : { kind: "none" });
+      setRefreshKey((k) => k + 1);
     } catch {
       setOutcome({ kind: "error" });
     } finally {
@@ -148,9 +152,10 @@ export default function JournalPage() {
     <main className="page journal">
       <h1>Journal</h1>
       <p className="journal-sub">
-        Write it down however it comes. Paroh will suggest what to remember, and you decide.
+        Write it down however it comes, or talk it out in Talk&rsquo;s free-talk mode. Paroh will suggest what to remember, and you decide.
       </p>
 
+      <div className="journal-layout">
       <form className="card journal-form" onSubmit={submit}>
         <div className="field-block">
           <label htmlFor="j-title">Title</label>
@@ -253,6 +258,18 @@ export default function JournalPage() {
           </p>
         )}
       </form>
+      <JournalHistory
+        refreshKey={refreshKey}
+        onUse={(e) => {
+          setTitle(e.title);
+          setBody(e.body);
+          setTags(e.tags.filter((t) => t !== "voice").join(", "));
+          setLevel(e.mood);
+          setOutcome(null);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
+      </div>
     </main>
   );
 }
