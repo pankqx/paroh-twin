@@ -83,6 +83,8 @@ export interface Scenario {
   peakLoad: number; // 0-1+
   goalImpact: number; // -1..1
   assumptions: string[];
+  /** Chance each deadline in the plan is met, in plan order (from the simulation). */
+  taskOdds?: Array<{ title: string; dueAt?: string; onTime: number; hours: number }>;
 }
 
 export interface Whisper {

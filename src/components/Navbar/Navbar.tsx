@@ -15,16 +15,16 @@ const LINKS = [
   { href: "/", label: "Twin" },
   { href: "/talk", label: "Talk" },
   { href: "/journal", label: "Journal" },
+  { href: "/ask", label: "Ask" },
   { href: "/rhythm", label: "Rhythm" },
   { href: "/plan", label: "Plan" },
   { href: "/pulse", label: "Pulse" },
-  { href: "/ask", label: "Ask" },
   { href: "/memory", label: "Memory" },
   { href: "/sources", label: "Sources" },
 ];
 
 // Mobile: four main tabs, the rest in a sheet.
-const MAIN_TABS = ["/", "/talk", "/ask", "/journal"];
+const MAIN_TABS = ["/", "/talk", "/journal", "/ask"];
 
 const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href);

@@ -15,7 +15,11 @@ import "./AskStage.css";
 
 type Step = "idle" | "parsing" | "clarify" | "fork" | "answered";
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-const EXAMPLES = ["What if I revise tonight and finish the assignment tomorrow?", "Should I study 3 hours or go to the gym?"];
+const EXAMPLES = [
+  "What will happen if I spend the next two days preparing for my exam instead of working on my assignment?",
+  "What if I go to the fest tonight?",
+  "What if I go to the gym for 2 hours today?",
+];
 
 export default function AskStage() {
   const [step, setStep] = useState<Step>("idle");
@@ -308,6 +312,17 @@ export default function AskStage() {
                       <div><dt>Peak load</dt><dd className="num">{pct(s.peakLoad)}</dd></div>
                       <div><dt>Goal fit</dt><dd className="num">{s.goalImpact >= 0 ? "+" : ""}{s.goalImpact.toFixed(1)}</dd></div>
                     </dl>
+                    {s.taskOdds && s.taskOdds.length > 0 && (
+                      <ul className="ask-odds" aria-label="Chance each deadline is met">
+                        {s.taskOdds.map((t) => (
+                          <li key={t.title} className={t.onTime < 0.7 ? "risk" : ""}>
+                            <span>{t.title}{t.dueAt ? <em> · {new Date(t.dueAt).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</em> : null}</span>
+                            <i style={{ ["--p" as string]: t.onTime }} />
+                            <b className="num">{pct(t.onTime)}</b>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     {step === "fork" && (
                       <button type="button" className="btn-ghost btn-small" onClick={() => choose("modify", s.id)}>
                         {s.id === rec ? "Pick this" : "Pick this instead"}
@@ -331,7 +346,7 @@ export default function AskStage() {
                   </>
                 )}
               </div>
-              {degraded && <p className="ask-hint">Scenarios built from your saved tasks by Paroh's own rules; the numbers always come from the simulation.</p>}
+              {degraded && <p className="ask-hint">Built from Frank's saved tasks; every number comes from the simulation, not the AI.</p>}
             </div>
           </motion.section>
         )}

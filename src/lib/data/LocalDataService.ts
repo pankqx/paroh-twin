@@ -5,7 +5,8 @@ import { connectorSamples } from "../../mock/connectorSamples";
 import { extractCanned } from "../ai/extractCanned";
 import { buildTwinContext } from "../ai/buildTwinContext";
 import { buildMemoryGraph, deriveTwinState, detectConflicts, feedbackDelta as deriveFeedbackDelta, insights as deriveInsights, predictedNeeds as derivePredictedNeeds, privacyBoundary, retrieveRelevant, staleFacts } from "../twin";
-import { parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
+import { explainComparison, parseWhatIfCanned, recommend, simulate } from "../twin/scenarios";
+import { estimationBias } from "../twin";
 
 type State = { entries: JournalEntry[]; facts: Fact[]; tasks: Task[]; goals: Goal[]; habits: Habit[]; checkins: CheckIn[]; decisions: Decision[]; memories: MemoryItem[]; consent: ConsentSettings };
 const KEY = "paroh-local-data-v1";
@@ -234,26 +235,12 @@ export class LocalDataService implements DataService {
   async explain(decisionId: string) {
     const decision = await this.decisions.get(decisionId);
     if (!decision) return { text: "I do not have enough saved scenario data to explain this yet.", spoken: "I need more saved data to explain this choice.", usedFactIds: [] };
-    let usedFactIds: string[] = [];
-    try {
-      const context = await buildTwinContext(this.state.consent, this, decision.prompt);
-      usedFactIds = context.approvedFacts.map(fact => fact.id);
-      const response = await fetch("/api/explain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarios: decision.scenarios, recommendedId: decision.recommendedId, approvedFacts: context.approvedFacts, context }),
-      });
-      if (!response.ok) throw new Error("Explain route failed");
-      const payload: unknown = await response.json();
-      if (!payload || typeof payload !== "object" || typeof (payload as { text?: unknown }).text !== "string" || typeof (payload as { spoken?: unknown }).spoken !== "string") throw new Error("Explain route returned an invalid response");
-      const result = payload as { text: string; spoken: string; usedFactIds?: unknown };
-      const allowedIds = new Set(usedFactIds);
-      return { text: result.text, spoken: result.spoken.split(/\s+/).slice(0, 55).join(" "), usedFactIds: Array.isArray(result.usedFactIds) ? result.usedFactIds.filter((id): id is string => typeof id === "string" && allowedIds.has(id)) : usedFactIds };
-    } catch {
-      const best = recommend(decision.scenarios);
-      const text = best ? `${best.label} fits the current comparison. ${best.summary}` : "I do not have enough scenario data to compare these options.";
-      return { text, spoken: text.split(/\s+/).slice(0, 55).join(" "), usedFactIds };
-    }
+    // Built from the simulation and Frank's own approved facts only, so it can never drift from
+    // the numbers on screen (the model is not asked to invent an explanation).
+    const context = await buildTwinContext(this.state.consent, this, decision.prompt).catch(() => undefined);
+    const facts = (context?.approvedFacts ?? []).map(f => ({ id: f.id, text: f.text }));
+    const tasks = this.state.consent.tasks ? await this.tasks.list() : [];
+    return explainComparison(decision.scenarios, decision.recommendedId, facts, estimationBias(tasks).study);
   }
   async converse(input: ConverseInput): Promise<ConverseResult> {
     try {

@@ -38,3 +38,12 @@
 .ask-deltachip.down { background: color-mix(in srgb, var(--amber) 25%, transparent); color: var(--amber); }
 .ask-learned { margin: 0; color: var(--teal); font-size: 0.9rem; }
 @media (max-width: 720px) { .ask-paths { grid-template-columns: 1fr; } .ask-forklines { display: none; } }
+
+.ask-odds { list-style: none; margin: 0.2rem 0 0.4rem; padding: 0; display: grid; gap: 0.35rem; }
+.ask-odds li { display: grid; grid-template-columns: minmax(0, 1fr) 70px 3rem; gap: 0.6rem; align-items: center; font-size: 0.82rem; color: var(--text-soft); }
+.ask-odds li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ask-odds li em { font-style: normal; color: var(--muted); }
+.ask-odds li i { height: 6px; border-radius: 4px; background: linear-gradient(90deg, var(--teal) calc(var(--p) * 100%), var(--stroke) 0); }
+.ask-odds li.risk i { background: linear-gradient(90deg, var(--rose) calc(var(--p) * 100%), var(--stroke) 0); }
+.ask-odds li.risk b { color: var(--rose); }
+.ask-odds li b { text-align: right; }
