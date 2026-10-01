@@ -1,6 +1,8 @@
 # Paroh: a digital twin for students
 
-**GATEWAYS 2026 · Team http dino · Problem statement: "HumanTwin AI: The Intelligent Digital Twin of a Person" (Domain 3)**
+**GATEWAYS 2026 · Team http dino · Domain 3, Personal Productivity & Lifestyle · "HumanTwin AI: The Intelligent Digital Twin of a Person"**
+
+Team: Frank Ndagula (Developer) · Merel Riha D souza (Ideation) · Siddharth Bhat (Front end) · K S Pankaj (Research)
 
 Paroh builds an explainable model of a student from what they choose to share. The twin asks
 questions out loud, turns the answers and journal entries into **candidate facts**, and the student
@@ -47,12 +49,41 @@ Detailed use cases: [`docs/USE_CASES.md`](docs/USE_CASES.md).
 1. **Twin (20 s).** "This is Frank's twin, on sample data. It is a model of what he permitted, not a chat history." Click *What am I looking at?*.
 2. **Talk (50 s).** Click *Talk to your twin*: she morphs into colour and waves. Press Space, answer aloud, press Space. Approve the card: it flies into her and *Learned today* grows.
 3. **Memory / Rhythm (20 s).** The new fact in the graph; habits and the "study takes 1.3x your estimate" multiplier.
-4. **Ask (50 s).** "What if I go to the fest tonight?" Fork, probabilities from his own history, spoken recommendation. Accept: fidelity ticks.
+4. **Ask (50 s).** Ask by voice: "What if I spend tonight completing my project instead of preparing for tomorrow's exam?" (our Round 1 demo question). Fork, probabilities from his own history, spoken recommendation. Choose the other option: the "After your feedback" panel shows how the twin changed and fidelity moves.
 5. **Pulse (15 s).** The twin re-checks the week and whispers; turn one into a what-if.
 6. **Sources (20 s).** Toggle a category off: the model payload shrinks. Connectors are roadmap, previewed with sample messages.
 7. **Close (5 s).** "Not perfect prediction: an explainable, improving model of you."
 
-## 4. How it is built
+## 4. How it meets the brief
+
+| The problem statement asks the solution to... | Where Paroh does it |
+|---|---|
+| Build an evolving picture of a person from information they chose to share (preferences, routines, goals, past decisions) | Talk, Journal and sample connectors produce candidate facts; only approved facts and consented data feed the twin (Twin page, Memory graph). |
+| Understand current context and identify behaviour patterns | Twin state: load, habit consistency, goal alignment, estimation bias, focus-hours heatmap; insights on Pulse; Rhythm. |
+| Simulate "what if" scenarios and compare outcomes and risks | Ask: Monte Carlo simulation of each path (on-time probability, peak load, goal impact) with stated assumptions. |
+| Give personalised recommendations and improve from feedback | Spoken, explained recommendation citing the facts used; accept / change / reject updates fidelity and the twin's guess of future choices. |
+| Give the user clear control over what the twin can access | Consent toggles per category, approve-before-learn, edit or reject any fact, payload preview, delete all data. |
+| Demo: a sample person asks a what-if, sees the comparison, the recommendation, and how the twin changes after feedback | Demo script step 4 with sample student Frank. |
+
+### Round 1 architecture, as built
+| Round 1 layer | Implementation |
+|---|---|
+| User interaction (text, voice, dashboard) | Talk (voice + typing), Journal, Ask, Twin dashboard, Rhythm, Pulse |
+| Consent and privacy | Sources: per-category toggles, payload preview, approvals tray |
+| Personal memory and context | Approved facts, tasks, habits, check-ins, decisions in `DataService`; Memory graph |
+| Context and pattern engine | `src/lib/twin` (state, patterns, insights, predicted needs) |
+| Scenario and decision engine | `/api/parse-whatif` + TypeScript simulation (`scenarios.ts`) |
+| Recommendation and feedback | `/api/explain` (spoken), feedback delta and fidelity |
+
+### Round 1 edge cases, as built
+- **Missing information:** the simulation reports what it needs instead of inventing facts; recommendations state their assumptions.
+- **Ambiguous what-ifs:** Ask asks one clarifying question before simulating.
+- **Conflicting information:** conflicting facts (e.g. "morning" vs "evening") are flagged as chips to resolve; the latest explicit update wins.
+- **Stale information:** facts not re-confirmed for 30 days are flagged.
+- **Changing circumstances:** a new task, habit or approved fact re-runs the numbers (Pulse rescans on every change; Ask simulates on current data).
+- **Privacy boundary:** switched-off categories never reach prompts or patterns.
+
+## 5. How it is built
 
 | Layer | Choice |
 |---|---|
@@ -74,7 +105,7 @@ src/mock/         sample student data (Frank)
 docs/             plan, design system, use cases
 ```
 
-## 5. Privacy and honesty
+## 6. Privacy and honesty
 
 - **Consent first:** per-category toggles (journal, tasks and habits, mood and energy, planner). Facts are only candidates until approved; rejected facts never enter the twin.
 - **Payload preview:** Sources shows exactly what would be sent to the model; switching a category off removes it.
@@ -84,7 +115,7 @@ docs/             plan, design system, use cases
 - **Mood and energy** are a 1 to 5 planning check-in, not a health measure.
 - **Prediction:** an explainable estimate with a fidelity score, never a promise.
 
-## 6. Implemented vs planned
+## 7. Implemented vs planned
 
 **Implemented:** voice Q&A with approval, journal extraction, approvals, twin visual model, memory graph, what-if simulation with spoken explanation and feedback, Rhythm (habits, check-ins, estimates), Pulse (monitoring on sample data), Sources with consent and payload preview, sample connector previews, LLM with fallback.
 
@@ -98,7 +129,7 @@ docs/             plan, design system, use cases
 | Embeddings for retrieval | Keyword and domain scoring | No extra infrastructure; explainable. |
 | Database | Browser localStorage behind a `DataService` interface | Private by default; a server database can replace it without touching the UI. |
 
-## 7. Run it
+## 8. Run it
 
 ```bash
 npm install
