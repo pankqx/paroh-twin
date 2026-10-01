@@ -1,44 +1,120 @@
-# Paroh — student digital twin
+# Paroh: a digital twin for students
 
-Paroh is a hackathon prototype that uses approved student planning facts to derive patterns, compare what-if scenarios, and explain recommendations. The app includes clearly labelled sample student data. It is a planning tool, not a therapy or mental-health product. AI calls run on the server; OpenRouter is the default hosted provider and consent filters the data sent to it.
+**GATEWAYS 2026 · Team http dino · Problem statement: "HumanTwin AI: The Intelligent Digital Twin of a Person" (Domain 3)**
 
-## AI configuration
+Paroh builds an explainable model of a student from what they choose to share. The twin asks
+questions out loud, turns the answers and journal entries into **candidate facts**, and the student
+**approves** each one before the twin learns it. The twin then shows what it knows as a living
+picture, simulates "what if" choices with real numbers, speaks its recommendation, and learns from
+the student's feedback.
 
-Copy `.env.example` to `.env.local` and set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and optionally `OPENROUTER_FALLBACK_MODEL`. `LLM_BASE_URL` defaults to `https://openrouter.ai/api/v1`. To use an OpenAI-compatible local service such as Ollama, set `LLM_BASE_URL` to its `/v1` base URL and set `OPENROUTER_MODEL` to a model available there; a key is not required for a custom base URL.
+Built from scratch during the hackathon. Demo data belongs to the labelled sample student
+**"Frank (sample)"**. Paroh is a planning and productivity tool, **not** a therapy or mental-health
+product, and it does **not** claim perfect prediction.
 
-LLM output only structures text. Scenario probabilities and student patterns are computed in TypeScript. If a provider is unavailable, the engine uses canned results.
+Live demo: https://paroh-twin-git-main-mass-dcca.vercel.app (use Chrome for voice)
 
-## Getting Started
+---
 
-First, run the development server:
+## 1. The loop (what the demo shows)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+data sources ─► extract facts ─► you approve (consent gate) ─► twin state (visual)
+     ▲                                                              │
+     └──── feedback (accept / change / reject) ◄── spoken recommendation ◄── what-if simulation
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Every source (voice, journal, sample connectors) ends at the same approval gate.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 2. Screens
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Screen | What you see | What it proves |
+|---|---|---|
+| **Twin** (`/`) | Line-art twin who mouths her speech bubble, stars around her (one per approved fact, grouped by kind), weekly load, habit consistency, goal-linked work, "twin's guess vs your choice" with fidelity, focus-hours heatmap, upcoming deadlines, "How well she knows you". **"What am I looking at?"** explains every visual and its data source. | It is a living model of the student, built only from consented data. |
+| **Talk** (`/talk`) | Opening Talk morphs the line-art twin into a coloured, animated character. She waves, asks the question about her least-known area aloud, and listens until you stop (tap the mic or press **Space**, **Esc** cancels). The answer becomes a fact card; **Approve** sends it flying into her mind point and she celebrates. Chat history and the mic are on the right, details on the left. | Voice-first data collection with consent. |
+| **Journal** (`/journal`) + **Approvals** | Write an entry; facts are extracted and wait in the Approvals tray. | A second data source behind the same gate. |
+| **Memory** (`/memory`) | Obsidian-style graph: facts linked to domains, tasks, goals and habits. Drag nodes, hover to see neighbours, click a fact to edit or reject it. | The twin's memory is visible and editable. |
+| **Ask** (`/ask`) | Type or speak a what-if ("What if I go to the fest tonight?"). The twin asks one clarifying question if needed, simulates both paths, shows on-time probability and load, speaks a recommendation and which facts it used. Accept / change / reject updates fidelity ("After your feedback"). Conflicting or stale facts appear as chips. | Decision support from the student's own history, with feedback. |
+| **Rhythm** (`/rhythm`) | Habit chains (tap a day to tick), streaks and 14-day rings; a 1 to 5 energy and mood check-in with a 14-day ribbon; estimate vs actual hours per task and the estimate multiplier the simulation uses; mark open tasks done with real hours. | The personal statistics the twin tailors to. |
+| **Pulse** (`/pulse`) | Re-scans every 30 s while the tab is open: load spikes, deadline risk (same simulation as Ask), streaks at risk, plus calm notes with on-time odds. "Turn into a what-if" pre-fills Ask; "Say it" reads it aloud. Insights and "tomorrow you will probably need". | Monitoring and proactive notifications (sample data). |
+| **Sources** (`/sources`) | Live sources (Voice, Journal) vs roadmap connectors (Gmail, WhatsApp, Telegram, Calendar) with "Preview with sample messages"; per-category consent toggles; **"What is sent to the model"** payload preview that shrinks when a category is switched off; twin appearance and voice; delete all data. | Trust, privacy and the roadmap. |
+| **Plan** (`/plan`) | Month and year planner views (coming next). | Roadmap. |
 
-## Learn More
+Detailed use cases: [`docs/USE_CASES.md`](docs/USE_CASES.md).
 
-To learn more about Next.js, take a look at the following resources:
+## 3. Three-minute demo script
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Twin (20 s).** "This is Frank's twin, on sample data. It is a model of what he permitted, not a chat history." Click *What am I looking at?*.
+2. **Talk (50 s).** Click *Talk to your twin*: she morphs into colour and waves. Press Space, answer aloud, press Space. Approve the card: it flies into her and *Learned today* grows.
+3. **Memory / Rhythm (20 s).** The new fact in the graph; habits and the "study takes 1.3x your estimate" multiplier.
+4. **Ask (50 s).** "What if I go to the fest tonight?" Fork, probabilities from his own history, spoken recommendation. Accept: fidelity ticks.
+5. **Pulse (15 s).** The twin re-checks the week and whispers; turn one into a what-if.
+6. **Sources (20 s).** Toggle a category off: the model payload shrinks. Connectors are roadmap, previewed with sample messages.
+7. **Close (5 s).** "Not perfect prediction: an explainable, improving model of you."
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 4. How it is built
 
-## Deploy on Vercel
+| Layer | Choice |
+|---|---|
+| App | Next.js 16 (App Router) + TypeScript + React 19 |
+| Motion and visuals | `motion` (Framer Motion), plain CSS tokens, custom SVG for the twin, constellation, graph, heatmap, rings, charts. Five React Bits components (Aurora, Orb, CountUp, BlurText, SpotlightCard). No UI kits or chart libraries. |
+| Twin character | Hand-built SVG: line-art layer plus colour layers driven by a CSS `--form` variable (0 = line art, 1 = colour), a procedural rig (head, body, arms) animated with `requestAnimationFrame`, lip shapes from the speech engine, view-transition morph from Home to Talk. |
+| Engine (`src/lib/`) | Plain TypeScript, unit-tested (Vitest): twin state (load, habit consistency, goal alignment, estimation bias, focus heatmap, confidence per domain, fidelity), Monte Carlo what-if simulation (500 seeded trials using the student's real actual/estimate ratios), insights, predicted needs, pulse whispers, conflict and stale-fact detection, keyword retrieval, memory graph. |
+| Data | `DataService` interface; `LocalDataService` stores everything in the browser's localStorage. The UI only talks to `DataService`. |
+| AI | Hosted LLM through **OpenRouter**, called only from server routes (`/api/extract`, `/api/explain`, `/api/converse`, `/api/parse-whatif`). 12 s timeout, main model then fallback model, then canned local rules (`degraded: true`), so the demo never breaks. The LLM only structures text and explains; it never produces the numbers. |
+| Voice | Browser `SpeechRecognition` for dictation (continuous until you stop) and `speechSynthesis` for her voice (female voice preferred for her look). No audio is recorded or stored by Paroh. |
+| Hosting | Vercel. |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Folder map
+```
+src/app/          pages and API routes
+src/components/   UI (TwinAvatar, TalkStage, TwinHome, AskStage, Rhythm, Pulse, MemoryGraph, Sources, ...)
+src/lib/          engine: types, DataService, LocalDataService, twin/, ai/, voice/
+src/mock/         sample student data (Frank)
+docs/             plan, design system, use cases
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 5. Privacy and honesty
+
+- **Consent first:** per-category toggles (journal, tasks and habits, mood and energy, planner). Facts are only candidates until approved; rejected facts never enter the twin.
+- **Payload preview:** Sources shows exactly what would be sent to the model; switching a category off removes it.
+- **Hosted model:** prompts go to a hosted LLM via OpenRouter, not an on-device model.
+- **Voice:** no audio is recorded or stored. Browser speech input may use the browser vendor's cloud speech service (Chrome).
+- **Monitoring:** Pulse runs on sample data only while the app is open. Real continuous monitoring needs the connectors (roadmap).
+- **Mood and energy** are a 1 to 5 planning check-in, not a health measure.
+- **Prediction:** an explainable estimate with a fidelity score, never a promise.
+
+## 6. Implemented vs planned
+
+**Implemented:** voice Q&A with approval, journal extraction, approvals, twin visual model, memory graph, what-if simulation with spoken explanation and feedback, Rhythm (habits, check-ins, estimates), Pulse (monitoring on sample data), Sources with consent and payload preview, sample connector previews, LLM with fallback.
+
+**Planned (roadmap):** real Gmail / WhatsApp / Telegram / Calendar connectors, always-on monitoring and notifications, accounts and cloud sync (a graph database such as Neo4j for memory), on-device small language model, audio journal, month and year planners.
+
+### Changes from our Round 1 proposal (approved by our supervisor)
+| Round 1 | Built | Why |
+|---|---|---|
+| Python backend | TypeScript engine in the Next.js app | One language, one deploy, testable in the time available. |
+| Local small language model | Hosted LLM via OpenRouter with local fallback rules | Reliable on any laptop for the demo; the payload preview keeps it transparent. |
+| Embeddings for retrieval | Keyword and domain scoring | No extra infrastructure; explainable. |
+| Database | Browser localStorage behind a `DataService` interface | Private by default; a server database can replace it without touching the UI. |
+
+## 7. Run it
+
+```bash
+npm install
+cp .env.example .env.local   # then fill in the values below
+npm run dev                  # http://localhost:3000
+npm test                     # engine unit tests
+npm run check:ai             # checks the OpenRouter key and model
+```
+
+`.env.local`:
+```
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_MODEL=<an OpenRouter model id>
+OPENROUTER_FALLBACK_MODEL=<optional second model id>
+LLM_BASE_URL=            # optional, defaults to OpenRouter
+```
+Without a key the app still works on its local rules. Never commit `.env.local`.
+
+**Deploy:** import the repo in Vercel, add the same environment variables, deploy. Use Chrome for voice.
