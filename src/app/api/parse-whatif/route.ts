@@ -85,6 +85,11 @@ export async function POST(request: Request) {
     return Response.json({ scenarios: [], clarify: "Which two options should I compare, and how many hours for each?", degraded: true });
   }
 
+  // Our own rules first: if they match the sentence to two sets of real open tasks, answer at once
+  // (instant and reliable for the demo); the model is only needed for sentences they cannot place.
+  const local = canned(text, data);
+  if (local.scenarios.length >= 2) return Response.json(local);
+
   const context = safeContext(body.context) ?? (body.consent && typeof body.consent === "object" ? await buildTwinContext(body.consent as Parameters<typeof buildTwinContext>[0]) : undefined);
   const content = await openRouterJson([
     { role: "system", content: `Parse a student what-if sentence into exactly two scenario plans. Return only JSON: {"scenarios":[{"label":"...","summary":"...","priority":"deadline|goal|rest|health|neutral","tasks":[{"title":"...","hours":2,"taskId":"optional known task id","dueAt":"optional known ISO date","goalId":"optional known goal id"}]}]} or {"clarify":"one short focused question"}. Use the supplied open tasks and approved context. Never invent hours, deadlines, or tasks. Every task must have a known taskId or a stated numeric hours estimate. A vague sentence should ask for the two options and/or one missing estimate.` },

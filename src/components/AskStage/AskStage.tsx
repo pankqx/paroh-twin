@@ -331,7 +331,7 @@ export default function AskStage() {
                   </>
                 )}
               </div>
-              {degraded && <p className="ask-hint">Offline estimate from saved data.</p>}
+              {degraded && <p className="ask-hint">Scenarios built from your saved tasks by Paroh's own rules; the numbers always come from the simulation.</p>}
             </div>
           </motion.section>
         )}
