@@ -12,6 +12,7 @@ Sample student: **Frank (sample data)**. Every screen shows only data she allowe
 | 6 | Correct the twin | Ask, Memory | Accept / change / reject feedback | Before each decision the twin guesses her choice; the feedback panel shows how fidelity moved. Conflicting or stale facts appear as chips to resolve. |
 | 7 | Control privacy | Sources | Consent toggles per category | Switch a category off and the "what is sent to the model" preview shrinks at once. Hosted model via OpenRouter; no audio recorded. |
 | 8 | Connect more sources (roadmap) | Sources | Sample Gmail, WhatsApp, Telegram, Calendar messages | "Preview with sample messages" shows the candidate facts a connector would propose; all still go through Approvals. Real connectors are roadmap. |
+| 10 | Track how you actually work | Rhythm | Habits, 1-5 energy/mood check-in, task estimate vs actual | Tick today's habits (streaks and 14-day rings update), log energy and mood (14-day ribbon), mark tasks done with real hours; the estimate multiplier shown is what the what-if simulation uses. |
 | 9 | Stay ahead | Pulse | Twin state, tasks, habits | Whispers such as load spikes, deadline risk, a streak at risk (sample data while the app is open). |
 
 ## What each Twin-page visual means
