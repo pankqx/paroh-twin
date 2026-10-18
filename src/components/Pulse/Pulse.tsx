@@ -1,6 +1,6 @@
 "use client";
 
-// Pulse: the twin keeps an eye on Frank's data while this tab is open and whispers when something
+// Pulse: the twin keeps an eye on Pankaj's data while this tab is open and whispers when something
 // needs attention (load spikes, deadline risk from the TypeScript simulation, streaks at risk).
 // Monitoring runs on sample data; real continuous monitoring needs the connectors (roadmap).
 

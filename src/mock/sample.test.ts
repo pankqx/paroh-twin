@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSampleData } from "./sample";
 import { estimationBias, heatmap } from "../lib/twin";
 
-describe("relative Frank sample seed", () => {
+describe("relative Pankaj sample seed", () => {
   const seed = new Date("2031-04-14T15:30:00.000Z");
   const sample = createSampleData(seed);
 

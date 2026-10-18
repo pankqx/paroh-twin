@@ -11,7 +11,7 @@ picture, simulates "what if" choices with real numbers, speaks its recommendatio
 the student's feedback.
 
 Built from scratch during the hackathon. Demo data belongs to the labelled sample student
-**"Frank (sample)"**. Paroh is a planning and productivity tool, **not** a therapy or mental-health
+**"Pankaj (sample)"**. Paroh is a planning and productivity tool, **not** a therapy or mental-health
 product, and it does **not** claim perfect prediction.
 
 Live demo: https://paroh-twin-git-main-mass-dcca.vercel.app (use Chrome for voice)
@@ -87,14 +87,14 @@ A small pill in the bottom-right corner shows how many people have opened the si
 ## Where the data lives
 
 - All of a student's data (facts, tasks, goals, habits, check-ins, decisions, consent) is stored **in their own browser** (localStorage key `paroh-local-data-v1`), behind one `DataService` interface. Nothing is stored on our server and there are no accounts.
-- On the first visit in a browser, it starts with the labelled sample student Frank. After that, every change persists in that browser across visits. A different browser or device starts from the sample again; **Sources → Delete all my data** resets it.
+- On the first visit in a browser, it starts with the labelled sample student Pankaj. After that, every change persists in that browser across visits. A different browser or device starts from the sample again; **Sources → Delete all my data** resets it.
 - Only the text needed for a request (plus consented, relevant approved facts, shown in the payload preview) is sent to the hosted model, from our server route, and nothing is kept there.
 - Because the UI only talks to `DataService`, a server database with accounts (for example a graph database for memory) can replace browser storage without changing the screens. That is on the roadmap.
 
 
 ## 3. Three-minute demo script
 
-1. **Twin (20 s).** "This is Frank's twin, on sample data. It is a model of what he permitted, not a chat history." Click *What am I looking at?*.
+1. **Twin (20 s).** "This is Pankaj's twin, on sample data. It is a model of what he permitted, not a chat history." Click *What am I looking at?*.
 2. **Talk (50 s).** Click *Talk to your twin*: she morphs into colour and waves. Choose *Free talk · voice journal*, press Space, talk naturally about your day, press Space. She replies, saves it as a journal entry and shows fact cards. Approve one: it flies into her and *Learned today* grows.
 3. **Memory / Rhythm (20 s).** The new fact in the graph; habits and the "study takes 1.3x your estimate" multiplier.
 4. **Ask (50 s).** Ask by voice: "What if I spend tonight completing my project instead of preparing for tomorrow's exam?" (our Round 1 demo question). Fork, probabilities from his own history, spoken recommendation. Choose the other option: the "After your feedback" panel shows how the twin changed and fidelity moves.
@@ -111,7 +111,7 @@ A small pill in the bottom-right corner shows how many people have opened the si
 | Simulate "what if" scenarios and compare outcomes and risks | Ask: Monte Carlo simulation of each path (on-time probability, peak load, goal impact) with stated assumptions. |
 | Give personalised recommendations and improve from feedback | Spoken, explained recommendation citing the facts used; accept / change / reject updates fidelity and the twin's guess of future choices. |
 | Give the user clear control over what the twin can access | Consent toggles per category, approve-before-learn, edit or reject any fact, payload preview, delete all data. |
-| Demo: a sample person asks a what-if, sees the comparison, the recommendation, and how the twin changes after feedback | Demo script step 4 with sample student Frank. |
+| Demo: a sample person asks a what-if, sees the comparison, the recommendation, and how the twin changes after feedback | Demo script step 4 with sample student Pankaj. |
 
 ### Round 1 architecture, as built
 | Round 1 layer | Implementation |
@@ -149,7 +149,7 @@ A small pill in the bottom-right corner shows how many people have opened the si
 src/app/          pages and API routes
 src/components/   UI (TwinAvatar, TalkStage, TwinHome, AskStage, Rhythm, Pulse, MemoryGraph, Sources, ...)
 src/lib/          engine: types, DataService, LocalDataService, twin/, ai/, voice/
-src/mock/         sample student data (Frank)
+src/mock/         sample student data (Pankaj)
 docs/             plan, design system, use cases
 ```
 

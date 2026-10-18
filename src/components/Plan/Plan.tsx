@@ -1,6 +1,6 @@
 "use client";
 
-// Plan: the month as a calendar and the year as a wheel, both drawn from Frank's own tasks, goals,
+// Plan: the month as a calendar and the year as a wheel, both drawn from Pankaj's own tasks, goals,
 // habits and check-ins (DataService only). Overloaded days are called out early; tasks can be added
 // straight onto a day.
 
@@ -85,7 +85,7 @@ export default function Plan() {
           <p className="pl-eyebrow">Plan · sample data</p>
           <h1>{view === "month" ? `${cursor.toLocaleDateString("en-IN", { month: "long" })} ${cursor.getFullYear()}` : `${cursor.getFullYear()} at a glance`}</h1>
           <p className="pl-lede">
-            Built from Frank&rsquo;s tasks, goals, habits and check-ins. Days with more than {FREE_HOURS} hours due are flagged before they arrive.
+            Built from Pankaj&rsquo;s tasks, goals, habits and check-ins. Days with more than {FREE_HOURS} hours due are flagged before they arrive.
           </p>
         </div>
         <div className="pl-tabs" role="tablist" aria-label="Planner view">

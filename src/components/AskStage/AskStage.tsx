@@ -346,7 +346,7 @@ export default function AskStage() {
                   </>
                 )}
               </div>
-              {degraded && <p className="ask-hint">Built from Frank's saved tasks; every number comes from the simulation, not the AI.</p>}
+              {degraded && <p className="ask-hint">Built from Pankaj's saved tasks; every number comes from the simulation, not the AI.</p>}
             </div>
           </motion.section>
         )}

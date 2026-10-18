@@ -247,7 +247,7 @@ export class LocalDataService implements DataService {
   async explain(decisionId: string) {
     const decision = await this.decisions.get(decisionId);
     if (!decision) return { text: "I do not have enough saved scenario data to explain this yet.", spoken: "I need more saved data to explain this choice.", usedFactIds: [] };
-    // Built from the simulation and Frank's own approved facts only, so it can never drift from
+    // Built from the simulation and Pankaj's own approved facts only, so it can never drift from
     // the numbers on screen (the model is not asked to invent an explanation).
     const context = await buildTwinContext(this.state.consent, this, decision.prompt).catch(() => undefined);
     const facts = (context?.approvedFacts ?? []).map(f => ({ id: f.id, text: f.text }));
