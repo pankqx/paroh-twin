@@ -80,7 +80,11 @@ Every answer goes through the same path, and each step is visible:
 | How well she knows you | Approved facts and data per area | Confidence per area (tasks, habits, routines, energy, goals, planner) |
 | What-if odds (Ask, Pulse) | Open tasks, your real actual/estimate hour ratios | 500 seeded trials; a plan succeeds when each task fits before its deadline in order |
 
-### Where the data lives
+### Visit counter
+
+A small pill in the bottom-right corner shows how many people have opened the site. Each browser is counted once (a flag in localStorage stops refreshes adding visits). The number is kept by `/api/visits`, which uses a Redis database if `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` (or Vercel's `KV_REST_API_*`) are set, and otherwise the free keyless counterapi.dev counter. Only the number is stored: no name, IP address or twin data. If the counter is unreachable the pill simply does not appear.
+
+## Where the data lives
 
 - All of a student's data (facts, tasks, goals, habits, check-ins, decisions, consent) is stored **in their own browser** (localStorage key `paroh-local-data-v1`), behind one `DataService` interface. Nothing is stored on our server and there are no accounts.
 - On the first visit in a browser, it starts with the labelled sample student Frank. After that, every change persists in that browser across visits. A different browser or device starts from the sample again; **Sources → Delete all my data** resets it.

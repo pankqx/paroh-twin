@@ -66,6 +66,7 @@ const HONESTY = [
   "Monitoring and notifications run on sample data while the app is open. Real, continuous monitoring needs the connectors, which are roadmap.",
   "The twin is an explainable approximation with a fidelity score, not a perfect prediction.",
   "Not a therapy or mental-health product. Mood and energy are planning inputs only.",
+  "A small visit counter at the corner of the page stores one anonymous number. No name, IP address or twin data is saved with it.",
   "Everything here is sample data for the student \"Frank\". Nothing is connected to a real account.",
 ];
 

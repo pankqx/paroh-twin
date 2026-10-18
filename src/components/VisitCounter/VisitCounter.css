@@ -1,0 +1,30 @@
+.visit-counter {
+  position: fixed;
+  right: 14px;
+  bottom: 12px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font: 500 12px/1 Inter, system-ui, sans-serif;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(14, 12, 28, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: none;
+  animation: visit-in 0.6s ease-out both;
+}
+.visit-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal, #5eead4);
+  box-shadow: 0 0 8px var(--teal, #5eead4);
+}
+.visit-num { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
+.visit-label { opacity: 0.7; }
+@keyframes visit-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .visit-counter { animation: none; } }
