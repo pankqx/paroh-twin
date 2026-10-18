@@ -41,7 +41,7 @@ interface Props {
 
 const EASE = [0.2, 0.7, 0.2, 1] as const;
 const clamp = (v: number, lo = -1, hi = 1) => Math.min(hi, Math.max(lo, v));
-const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const easeSine = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * x);
 
 function useReducedMotionState(): boolean {
   const [reduce, setReduce] = useState(false);
@@ -134,13 +134,11 @@ export default function TwinAvatar({
   const gapRef = useRef<SVGPathElement>(null);
   const lipFillRef = useRef<SVGPathElement>(null);
   const gapFleshRef = useRef<SVGPathElement>(null);
-  const bloomRef = useRef<SVGCircleElement>(null);
   const refs = useRef<RigRefs>({ body: null, headFront: null, headBack: null, armL: null, foreL: null, armR: null, foreR: null });
   const rig = useRef(new Rig());
   const openRef = useRef(0);
   const lookRef = useRef<{ x: number; y: number } | null>(null);
   const [flareKey, setFlareKey] = useState(0);
-  const [blooming, setBlooming] = useState(false);
 
   // Live props for the animation loop (so it never restarts).
   const live = useRef({ state, level, action, form, freezeT, reduce });
@@ -186,7 +184,7 @@ export default function TwinAvatar({
     t.from = t.cur;
     t.to = form;
     t.start = performance.now();
-    t.dur = Math.abs(form - t.cur) < 0.05 ? 1 : 1700;
+    t.dur = Math.abs(form - t.cur) < 0.05 ? 1 : 2300;
   }, [form, freezeT, reduce]);
 
   // ---- The frame loop: form tween, action envelope, rig. ----
@@ -195,17 +193,10 @@ export default function TwinAvatar({
     if (!root) return;
     let raf = 0;
     let last = performance.now();
-    let wasBloom = false;
 
     const paintForm = (f: number) => {
       root.style.setProperty("--form", String(Math.round(f * 1000) / 1000));
       root.dataset.flat = f < 0.002 ? "true" : "false";
-      const bloom = f > 0.002 && f < 0.995;
-      if (bloom !== wasBloom) {
-        wasBloom = bloom;
-        setBlooming(bloom);
-      }
-      bloomRef.current?.setAttribute("r", String(Math.round(easeInOut(Math.min(1, f * 1.08)) * 1250)));
     };
 
     const frame = (now: number, snap: boolean) => {
@@ -217,7 +208,7 @@ export default function TwinAvatar({
       if (snap) tw.cur = tw.to;
       else {
         const x = clamp((now - tw.start) / tw.dur, 0, 1);
-        tw.cur = tw.from + (tw.to - tw.from) * easeInOut(x);
+        tw.cur = tw.from + (tw.to - tw.from) * easeSine(x);
       }
       paintForm(tw.cur);
 
@@ -365,13 +356,12 @@ export default function TwinAvatar({
   const swayDur = state === "thinking" ? 3.6 : 9;
   const amp = state === "speaking" ? Math.max(clamp(level, 0, 1), mouth === undefined ? 0.6 : mouth / 3) : clamp(level, 0, 1);
   const figureProps = { fill: "none", stroke: `url(#${grad})`, strokeLinecap: "round", strokeLinejoin: "round" } as const;
-  const fm = blooming ? `url(#${id("bloom")})` : undefined; // bloom mask for colour layers
 
   const eye = (side: "left" | "right", c: { cx: number; cy: number }, order: number) => (
     <g key={side} transform={`translate(${c.cx} ${c.cy + 20}) scale(1.28 1.5)`}>
       <g className="tf-eye">
         <g transform={`translate(${-c.cx} ${-c.cy})`}>
-          <g className="ta-flesh" mask={fm}>
+          <g className="ta-flesh" style={{ ["--d" as string]: 0.12 }}>
             <path d={G.EYE[side].crease} className="ta-lidshade" />
             <path d={G.EYE[side].clip} className="ta-sclera" />
           </g>
@@ -381,23 +371,23 @@ export default function TwinAvatar({
           <g clipPath={`url(#${id("clip")}-${side})`}>
             <g className="tf-pupil">
               <g transform={`translate(${c.cx} ${c.cy})`}>
-                <circle r="11.8" fill={`url(#${id("iris")})`} className="ta-flesh" mask={fm} />
+                <circle r="11.8" fill={`url(#${id("iris")})`} className="ta-flesh" style={{ ["--d" as string]: 0.12 }} />
                 <circle r="11.5" className="tf-iris" stroke={`url(#${grad})`} fill="none" strokeWidth="1.5" />
                 <circle r="7.6" stroke={`url(#${grad})`} fill="none" strokeWidth="0.7" opacity="0.5" />
                 <path d={G.IRIS_SPOKES} stroke={`url(#${grad})`} strokeWidth="0.7" opacity="0.6" />
                 <g className="tf-pupil-dot">
                   <circle r="4.8" className="tf-pupil-fill ta-pupil-light" />
-                  <circle r="5.4" className="ta-pupil-dark ta-flesh" mask={fm} />
+                  <circle r="5.4" className="ta-pupil-dark ta-flesh" style={{ ["--d" as string]: 0.14 }} />
                 </g>
                 <circle cx={side === "left" ? 4 : -4} cy="-3.4" r="1.7" className="tf-glint ta-glint-line" />
-                <g className="ta-flesh" mask={fm}>
+                <g className="ta-flesh" style={{ ["--d" as string]: 0.16 }}>
                   <circle cx={side === "left" ? 4.2 : -4.2} cy="-4" r="3" className="ta-catch" />
                   <circle cx={side === "left" ? -3.6 : 3.6} cy="3.6" r="1.3" className="ta-catch soft" />
                 </g>
               </g>
             </g>
           </g>
-          <g className="ta-flesh ta-ink" mask={fm}>
+          <g className="ta-flesh ta-ink" style={{ ["--d" as string]: 0.14 }}>
             <path d={G.EYE[side].upper} strokeWidth="3.6" />
             <path d={G.LASHES[side].split(/(?=M )/).slice(0, 9).join(" ")} strokeWidth="1.3" />
           </g>
@@ -468,7 +458,7 @@ export default function TwinAvatar({
         }}
         transform={`translate(0 ${A.UPPER_LEN})`}
       >
-        <g className="ta-flesh" mask={fm}>
+        <g className="ta-flesh" style={{ ["--d" as string]: 0.42 }}>
           <path d={A.FOREARM} fill={`url(#${id("arm")})`} />
           <g transform="translate(0 158)">
             <path d={A.THUMB} className="ta-thumb" />
@@ -478,7 +468,7 @@ export default function TwinAvatar({
           <path d={A.CUFF} fill={`url(#${id("sleeve")})`} />
         </g>
       </g>
-      <g className="ta-flesh" mask={fm}>
+      <g className="ta-flesh" style={{ ["--d" as string]: 0.38 }}>
         <path d={A.UPPER_ARM} fill={`url(#${id("sleeve")})`} />
         <path d="M -30 150 C -10 166, 10 166, 30 150" className="ta-sleeve-fold" />
       </g>
@@ -561,16 +551,6 @@ export default function TwinAvatar({
             <stop offset="0" stopColor="#fff" stopOpacity="0.34" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id={id("bloomg")} cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stopColor="#fff" />
-            <stop offset="0.7" stopColor="#fff" />
-            <stop offset="1" stopColor="#000" />
-          </radialGradient>
-
-          <mask id={id("bloom")} maskUnits="userSpaceOnUse" x="-300" y="-200" width="1300" height="1600">
-            <rect x="-300" y="-200" width="1300" height="1600" fill="#000" />
-            <circle ref={bloomRef} cx={G.MIND_POINT.x} cy={G.MIND_POINT.y} r="0" fill={`url(#${id("bloomg")})`} />
-          </mask>
 
           {/* Fade at the bottom: line art fades early, colour runs further down. */}
           <linearGradient id={id("fadea")} gradientUnits="userSpaceOnUse" x1="0" y1="560" x2="0" y2="800">
@@ -600,7 +580,7 @@ export default function TwinAvatar({
                 refs.current.headBack = el;
               }}
             >
-              <g className="ta-flesh" mask={fm}>
+              <g className="ta-flesh" style={{ ["--d" as string]: 0.22 }}>
                 <path d={A.HAIR_BACK_FILL} fill={`url(#${id("hair")})`} />
                 <path d="M 200 200 C 150 260, 130 380, 118 500 C 106 600, 84 690, 62 770" className="ta-sheen" />
                 <path d="M 400 200 C 450 260, 470 380, 482 500 C 494 600, 516 690, 538 770" className="ta-sheen b" />
@@ -617,7 +597,7 @@ export default function TwinAvatar({
             {/* ---- Neck, garment, arms (shifted up a little so the neck is not too long) ---- */}
             {bodyLines}
             <g transform={`translate(0 ${A.BODY_SHIFT})`}>
-              <g className="ta-flesh" mask={fm}>
+              <g className="ta-flesh" style={{ ["--d" as string]: 0.28 }}>
                 <path d={A.NECK_FILL} fill={`url(#${id("neck")})`} />
                 <path d={A.GARMENT} fill={`url(#${id("garment")})`} />
                 <path d={A.GARMENT_FOLD_L} className="ta-fold" />
@@ -629,7 +609,7 @@ export default function TwinAvatar({
               {arm("L")}
               {arm("R")}
             </g>
-            <g className="ta-flesh" mask={fm}>
+            <g className="ta-flesh" style={{ ["--d" as string]: 0.3 }}>
               <path d={A.NECK_SHADOW} fill={`url(#${id("neckshadow")})`} />
             </g>
 
@@ -639,7 +619,7 @@ export default function TwinAvatar({
                 refs.current.headFront = el;
               }}
             >
-              <g className="ta-flesh" mask={fm}>
+              <g className="ta-flesh" style={{ ["--d" as string]: 0.0 }}>
                 <path d={A.FACE_FILL} fill={`url(#${id("skin")})`} />
                 <path d={A.FACE_FILL} fill={`url(#${id("faceshade")})`} />
                 <ellipse cx="262" cy="292" rx="56" ry="34" fill={`url(#${id("glow")})`} />
@@ -658,12 +638,12 @@ export default function TwinAvatar({
               </g>
               {eye("left", G.LEFT_EYE, 0.45)}
               {eye("right", G.RIGHT_EYE, 0.45)}
-              <g className="ta-flesh" mask={fm}>
+              <g className="ta-flesh" style={{ ["--d" as string]: 0.18 }}>
                 <path ref={lipFillRef} d={A.lipFillPath(closed.upper, closed.lower)} fill={`url(#${id("lip")})`} />
                 <path ref={gapFleshRef} d={closed.gap} className="ta-mouth-dark" />
                 <path d="M 286 494 C 294 499, 306 499, 314 494" className="ta-lipshine" />
               </g>
-              <g className="ta-flesh" mask={fm}>
+              <g className="ta-flesh" style={{ ["--d" as string]: 0.1 }}>
                 <path d={A.HAIR_CAP} fill={`url(#${id("hair")})`} />
                 <path d={A.LOCK_LEFT} fill={`url(#${id("hair")})`} />
                 <path d={A.LOCK_RIGHT} fill={`url(#${id("hair")})`} />
@@ -713,6 +693,8 @@ export default function TwinAvatar({
             </g>
           </g>
         </g>
+        {/* A soft light that swells over her face while the colour arrives, then fades away. */}
+        <circle className="ta-wake" cx="300" cy="400" r="430" fill={`url(#${id("glow")})`} />
       </svg>
     </div>
   );

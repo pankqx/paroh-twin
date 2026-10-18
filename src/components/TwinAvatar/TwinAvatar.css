@@ -7,8 +7,18 @@
   max-width: none;
 }
 
+/* Colour arrives in stages (face, eyes and hair, neck, then arms), each layer fading in over
+   the same window from its own start `--d`. Opacity only, so the bloom stays smooth. */
 .ta .ta-flesh {
-  opacity: var(--form, 0);
+  opacity: clamp(0, calc((var(--form, 0) - var(--d, 0)) / 0.58), 1);
+}
+.ta .ta-wake {
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: calc(var(--form, 0) * (1 - var(--form, 0)) * 2.6);
+}
+.ta[data-flat="true"] .ta-wake {
+  display: none;
 }
 .ta[data-flat="true"] .ta-flesh {
   display: none;
@@ -19,10 +29,10 @@
   opacity: calc(1 - var(--form, 0) * 0.42);
 }
 .ta .ta-hatch {
-  opacity: calc(1 - var(--form, 0));
+  opacity: clamp(0, calc(1 - (var(--form, 0) - 0.2) / 0.7), 1);
 }
 .ta .ta-bodylines {
-  opacity: calc(1 - var(--form, 0));
+  opacity: clamp(0, calc(1 - (var(--form, 0) - 0.3) / 0.7), 1);
 }
 
 /* Eyes */
